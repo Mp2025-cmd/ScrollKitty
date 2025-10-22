@@ -1,0 +1,19 @@
+{
+  "name": "tca-cursor-mcp-server",
+  "version": "1.0.0",
+  "description": "Comprehensive TCA MCP server for Cursor with docs, code analysis, and generation",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "keywords": ["mcp", "swift", "tca", "cursor"],
+  "author": "Peter",
+  "license": "MIT"
+}
+
+

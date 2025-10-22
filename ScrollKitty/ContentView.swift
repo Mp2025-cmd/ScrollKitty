@@ -6,19 +6,27 @@
 //
 
 import SwiftUI
+import ComposableArchitecture
 
 struct ContentView: View {
+    let store: StoreOf<AppFeature>
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        if store.isOnboardingComplete {
+            Text("Main App - Coming Soon")
+        } else {
+            OnboardingView(
+                store: store.scope(state: \.onboarding, action: \.onboarding)
+            )
         }
-        .padding()
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(
+        store: Store(
+            initialState: AppFeature.State(),
+            reducer: { AppFeature() }
+        )
+    )
 }

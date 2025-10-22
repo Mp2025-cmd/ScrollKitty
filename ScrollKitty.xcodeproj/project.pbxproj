@@ -29,6 +29,14 @@
 		D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin XCSwiftPackageProductDependency section */
+		D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D02C2C292EA5D71E0021841C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D02C2C012EA5D4E10021841C /* ScrollKitty */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -112,6 +120,7 @@
 			);
 			name = ScrollKitty;
 			packageProductDependencies = (
+				D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */,
 			);
 			productName = ScrollKitty;
 			productReference = D02C2BFF2EA5D4E10021841C /* ScrollKitty.app */;
@@ -195,6 +204,9 @@
 			);
 			mainGroup = D02C2BF62EA5D4E00021841C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D02C2C292EA5D71E0021841C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D02C2C002EA5D4E10021841C /* Products */;
 			projectDirPath = "";
@@ -605,6 +617,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D02C2C292EA5D71E0021841C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.23.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = D02C2BF72EA5D4E00021841C /* Project object */;
 }

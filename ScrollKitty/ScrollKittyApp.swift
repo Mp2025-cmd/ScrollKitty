@@ -6,12 +6,18 @@
 //
 
 import SwiftUI
+import ComposableArchitecture
 
 @main
 struct ScrollKittyApp: App {
+    let store = Store(
+        initialState: AppFeature.State(),
+        reducer: { AppFeature() }
+    )
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(store: store)
         }
     }
 }
