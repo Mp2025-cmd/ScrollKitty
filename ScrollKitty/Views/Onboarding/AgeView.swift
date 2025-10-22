@@ -64,15 +64,14 @@ struct AgeView: View {
 
             VStack(spacing: 0) {
                 // Progress indicator with back button
-                HStack(spacing: 16) {
+                HStack {
                     Button(action: { store.send(.backTapped) }) {
                         Image(systemName: "chevron.left")
                             .foregroundColor(.black)
                             .font(.system(size: 18, weight: .semibold))
                     }
-
+                    Spacer()
                     ProgressIndicator(currentStep: 5, totalSteps: 5)
-
                     Spacer()
                 }
                 .padding(.top, 24)

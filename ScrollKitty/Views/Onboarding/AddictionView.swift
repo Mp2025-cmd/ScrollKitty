@@ -63,16 +63,18 @@ struct AddictionView: View {
 
             VStack(spacing: 0) {
                 // Progress indicator with back button
-                HStack(spacing: 16) {
+                HStack {
                     Button(action: { store.send(.backTapped) }) {
                         Image(systemName: "chevron.left")
                             .foregroundColor(.black)
                             .font(.system(size: 18, weight: .semibold))
                     }
-
-                    ProgressIndicator(currentStep: 2, totalSteps: 5)
+                    
 
                     Spacer()
+                    ProgressIndicator(currentStep: 2, totalSteps: 5)
+                    Spacer()
+                    //
                 }
                 .padding(.top, 24)
                 .padding(.horizontal, 16)
