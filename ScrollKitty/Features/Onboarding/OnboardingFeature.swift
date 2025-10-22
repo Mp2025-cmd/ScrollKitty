@@ -4,7 +4,6 @@ import ComposableArchitecture
 struct OnboardingFeature {
     @ObservableState
     struct State: Equatable {
-        var splash = SplashFeature.State()
         var path = StackState<Path.State>()
 
         // Store selections as user progresses
@@ -16,7 +15,7 @@ struct OnboardingFeature {
     }
     
     enum Action: Equatable {
-        case splash(SplashFeature.Action)
+        case onAppear
         case path(StackAction<Path.State, Path.Action>)
         case delegate(Delegate)
         
@@ -34,6 +33,7 @@ struct OnboardingFeature {
     
     @Reducer(state: .equatable, action: .equatable)
     enum Path {
+        case splash(SplashFeature)
         case welcome(WelcomeFeature)
         case usageQuestion(UsageQuestionFeature)
         case addiction(AddictionFeature)
@@ -46,7 +46,11 @@ struct OnboardingFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .splash(.delegate(.splashCompleted)):
+            case .onAppear:
+                state.path.append(.splash(SplashFeature.State()))
+                return .none
+                
+            case .path(.element(id: _, action: .splash(.delegate(.splashCompleted)))):
                 state.path.append(.welcome(WelcomeFeature.State()))
                 return .none
                 
@@ -106,9 +110,6 @@ struct OnboardingFeature {
                 state.path.removeLast()
                 return .none
                 
-            case .splash:
-                return .none
-                
             case .path:
                 return .none
                 
@@ -117,9 +118,5 @@ struct OnboardingFeature {
             }
         }
         .forEach(\.path, action: \.path)
-        
-        Scope(state: \.splash, action: \.splash) {
-            SplashFeature()
-        }
     }
 }
