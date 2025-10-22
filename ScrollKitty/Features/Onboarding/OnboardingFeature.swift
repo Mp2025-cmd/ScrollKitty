@@ -6,6 +6,13 @@ struct OnboardingFeature {
     struct State: Equatable {
         var splash = SplashFeature.State()
         var path = StackState<Path.State>()
+
+        // Store selections as user progresses
+        var hourSelection: UsageQuestionFeature.HourOption?
+        var addictionSelection: AddictionFeature.AddictionOption?
+        var sleepSelection: SleepFeature.SleepOption?
+        var withoutPhoneSelection: WithoutPhoneFeature.WithoutPhoneOption?
+        var idleCheckSelection: IdleCheckFeature.IdleCheckOption?
     }
     
     enum Action: Equatable {
@@ -14,7 +21,14 @@ struct OnboardingFeature {
         case delegate(Delegate)
         
         enum Delegate: Equatable {
-            case onboardingCompleted(hourSelection: UsageQuestionFeature.HourOption)
+            case onboardingCompleted(
+                hourSelection: UsageQuestionFeature.HourOption,
+                addictionSelection: AddictionFeature.AddictionOption,
+                sleepSelection: SleepFeature.SleepOption,
+                withoutPhoneSelection: WithoutPhoneFeature.WithoutPhoneOption,
+                idleCheckSelection: IdleCheckFeature.IdleCheckOption,
+                ageSelection: AgeFeature.AgeOption
+            )
         }
     }
     
@@ -22,6 +36,11 @@ struct OnboardingFeature {
     enum Path {
         case welcome(WelcomeFeature)
         case usageQuestion(UsageQuestionFeature)
+        case addiction(AddictionFeature)
+        case sleep(SleepFeature)
+        case withoutPhone(WithoutPhoneFeature)
+        case idleCheck(IdleCheckFeature)
+        case age(AgeFeature)
     }
     
     var body: some Reducer<State, Action> {
@@ -36,7 +55,56 @@ struct OnboardingFeature {
                 return .none
                 
             case .path(.element(id: _, action: .usageQuestion(.delegate(.completeWithSelection(let selection))))):
-                return .send(.delegate(.onboardingCompleted(hourSelection: selection)))
+                state.hourSelection = selection
+                state.path.append(.addiction(AddictionFeature.State()))
+                return .none
+
+            case .path(.element(id: _, action: .addiction(.delegate(.completeWithSelection(let selection))))):
+                state.addictionSelection = selection
+                state.path.append(.sleep(SleepFeature.State()))
+                return .none
+
+            case .path(.element(id: _, action: .sleep(.delegate(.completeWithSelection(let selection))))):
+                state.sleepSelection = selection
+                state.path.append(.withoutPhone(WithoutPhoneFeature.State()))
+                return .none
+
+            case .path(.element(id: _, action: .withoutPhone(.delegate(.completeWithSelection(let selection))))):
+                state.withoutPhoneSelection = selection
+                state.path.append(.idleCheck(IdleCheckFeature.State()))
+                return .none
+
+            case .path(.element(id: _, action: .idleCheck(.delegate(.completeWithSelection(let selection))))):
+                state.idleCheckSelection = selection
+                state.path.append(.age(AgeFeature.State()))
+                return .none
+
+            case .path(.element(id: _, action: .age(.delegate(.completeWithSelection(let ageSelection))))):
+                // All selections collected, send completion
+                guard let hourSelection = state.hourSelection,
+                      let addictionSelection = state.addictionSelection,
+                      let sleepSelection = state.sleepSelection,
+                      let withoutPhoneSelection = state.withoutPhoneSelection,
+                      let idleCheckSelection = state.idleCheckSelection else {
+                    return .none
+                }
+
+                return .send(.delegate(.onboardingCompleted(
+                    hourSelection: hourSelection,
+                    addictionSelection: addictionSelection,
+                    sleepSelection: sleepSelection,
+                    withoutPhoneSelection: withoutPhoneSelection,
+                    idleCheckSelection: idleCheckSelection,
+                    ageSelection: ageSelection
+                )))
+                
+            case .path(.element(id: _, action: .addiction(.delegate(.backPressed)))),
+                 .path(.element(id: _, action: .sleep(.delegate(.backPressed)))),
+                 .path(.element(id: _, action: .withoutPhone(.delegate(.backPressed)))),
+                 .path(.element(id: _, action: .idleCheck(.delegate(.backPressed)))),
+                 .path(.element(id: _, action: .age(.delegate(.backPressed)))):
+                state.path.removeLast()
+                return .none
                 
             case .splash:
                 return .none

@@ -16,6 +16,21 @@ struct OnboardingView: View {
 
             case let .usageQuestion(store):
                 UsageQuestionView(store: store)
+
+            case let .addiction(store):
+                AddictionView(store: store)
+
+            case let .sleep(store):
+                SleepView(store: store)
+
+            case let .withoutPhone(store):
+                WithoutPhoneView(store: store)
+
+            case let .idleCheck(store):
+                IdleCheckView(store: store)
+
+            case let .age(store):
+                AgeView(store: store)
             }
         }
     }

@@ -2,27 +2,28 @@ import ComposableArchitecture
 import SwiftUI
 
 @Reducer
-struct UsageQuestionFeature {
-    enum HourOption: String, CaseIterable, Equatable {
-        case threeOrLess = "3hrs or less"
-        case threeToFive = "3hrs - 5hrs"
-        case sixToEight = "6hrs - 8hrs"
-        case nineToEleven = "9hrs - 11hrs"
-        case twelveOrMore = "12hrs+"
+struct SleepFeature {
+    enum SleepOption: String, CaseIterable, Equatable, RawRepresentable {
+        case almostEveryNight = "Almost every night"
+        case fewTimesWeek = "A few times a week"
+        case rarely = "Rarely"
+        case never = "Never"
     }
 
     @ObservableState
     struct State: Equatable {
-        var selectedOption: HourOption?
+        var selectedOption: SleepOption?
     }
 
     enum Action: Equatable {
-        case optionSelected(HourOption)
+        case optionSelected(SleepOption)
         case nextTapped
+        case backTapped
         case delegate(Delegate)
 
         enum Delegate: Equatable {
-            case completeWithSelection(HourOption)
+            case completeWithSelection(SleepOption)
+            case backPressed
         }
     }
 
@@ -39,6 +40,9 @@ struct UsageQuestionFeature {
                 }
                 return .none
 
+            case .backTapped:
+                return .send(.delegate(.backPressed))
+
             case .delegate:
                 return .none
             }
@@ -48,43 +52,49 @@ struct UsageQuestionFeature {
 
 // MARK: - View
 
-struct UsageQuestionView: View {
-    let store: StoreOf<UsageQuestionFeature>
-    
+struct SleepView: View {
+    let store: StoreOf<SleepFeature>
+
     var body: some View {
         ZStack {
-            // White background
             DesignSystem.Colors.background
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                // Progress indicator
-                ProgressIndicator(currentStep: 2, totalSteps: 3)
-                    .padding(.top, 24)
-                
-                // Title
-                VStack(spacing: 8) {
-                    Text("How many hours do you")
-                    Text("spend on your phone")
-                    Text("each day?")
+                // Progress indicator with back button
+                HStack(spacing: 16) {
+                    Button(action: { store.send(.backTapped) }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.black)
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+
+                    ProgressIndicator(currentStep: 3, totalSteps: 5)
+
+                    Spacer()
                 }
-                .largeTitleStyle()
-                .padding(.top, 40)
+                .padding(.top, 24)
                 .padding(.horizontal, 16)
-                .padding(.bottom, 100)
-                
+
+                // Title
+                Text("Does phone use interfere\nwith your sleep?")
+                    .largeTitleStyle()
+                    .padding(.top, 40)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
+
                 // Options
                 OptionSelector(
-                    options: UsageQuestionFeature.HourOption.allCases,
+                    options: SleepFeature.SleepOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))
                     }
                 )
                 .padding(.horizontal, 16)
-                
+
                 Spacer()
-                
+
                 // Next Button
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
@@ -96,10 +106,10 @@ struct UsageQuestionView: View {
 }
 
 #Preview {
-    UsageQuestionView(
+    SleepView(
         store: Store(
-            initialState: UsageQuestionFeature.State(),
-            reducer: { UsageQuestionFeature() }
+            initialState: SleepFeature.State(),
+            reducer: { SleepFeature() }
         )
     )
 }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D04FBCEF2EA8FCE200D6E6D6 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D02C2C0D2EA5D4E30021841C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -28,14 +32,6 @@
 		D02C2C0C2EA5D4E30021841C /* ScrollKittyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D02C2C292EA5D71E0021841C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
-			productName = ComposableArchitecture;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D02C2C012EA5D4E10021841C /* ScrollKitty */ = {
@@ -60,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D04FBCEF2EA8FCE200D6E6D6 /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -628,6 +625,14 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D02C2C292EA5D71E0021841C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D02C2BF72EA5D4E00021841C /* Project object */;
 }

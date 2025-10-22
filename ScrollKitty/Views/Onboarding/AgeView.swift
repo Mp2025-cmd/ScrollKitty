@@ -2,27 +2,30 @@ import ComposableArchitecture
 import SwiftUI
 
 @Reducer
-struct UsageQuestionFeature {
-    enum HourOption: String, CaseIterable, Equatable {
-        case threeOrLess = "3hrs or less"
-        case threeToFive = "3hrs - 5hrs"
-        case sixToEight = "6hrs - 8hrs"
-        case nineToEleven = "9hrs - 11hrs"
-        case twelveOrMore = "12hrs+"
+struct AgeFeature {
+    enum AgeOption: String, CaseIterable, Equatable, RawRepresentable {
+        case under18 = "under 18"
+        case age18to24 = "18 - 24yrs"
+        case age25to34 = "25 - 34yrs"
+        case age35to44 = "35 - 44yrs"
+        case age45to54 = "45 - 54yrs"
+        case age55plus = "55+yrs"
     }
 
     @ObservableState
     struct State: Equatable {
-        var selectedOption: HourOption?
+        var selectedOption: AgeOption?
     }
 
     enum Action: Equatable {
-        case optionSelected(HourOption)
+        case optionSelected(AgeOption)
         case nextTapped
+        case backTapped
         case delegate(Delegate)
 
         enum Delegate: Equatable {
-            case completeWithSelection(HourOption)
+            case completeWithSelection(AgeOption)
+            case backPressed
         }
     }
 
@@ -39,6 +42,9 @@ struct UsageQuestionFeature {
                 }
                 return .none
 
+            case .backTapped:
+                return .send(.delegate(.backPressed))
+
             case .delegate:
                 return .none
             }
@@ -48,43 +54,49 @@ struct UsageQuestionFeature {
 
 // MARK: - View
 
-struct UsageQuestionView: View {
-    let store: StoreOf<UsageQuestionFeature>
-    
+struct AgeView: View {
+    let store: StoreOf<AgeFeature>
+
     var body: some View {
         ZStack {
-            // White background
             DesignSystem.Colors.background
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                // Progress indicator
-                ProgressIndicator(currentStep: 2, totalSteps: 3)
-                    .padding(.top, 24)
-                
-                // Title
-                VStack(spacing: 8) {
-                    Text("How many hours do you")
-                    Text("spend on your phone")
-                    Text("each day?")
+                // Progress indicator with back button
+                HStack(spacing: 16) {
+                    Button(action: { store.send(.backTapped) }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.black)
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+
+                    ProgressIndicator(currentStep: 5, totalSteps: 5)
+
+                    Spacer()
                 }
-                .largeTitleStyle()
-                .padding(.top, 40)
+                .padding(.top, 24)
                 .padding(.horizontal, 16)
-                .padding(.bottom, 100)
-                
+
+                // Title
+                Text("How old are you?")
+                    .largeTitleStyle()
+                    .padding(.top, 40)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
+
                 // Options
                 OptionSelector(
-                    options: UsageQuestionFeature.HourOption.allCases,
+                    options: AgeFeature.AgeOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))
                     }
                 )
                 .padding(.horizontal, 16)
-                
+
                 Spacer()
-                
+
                 // Next Button
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
@@ -96,10 +108,10 @@ struct UsageQuestionView: View {
 }
 
 #Preview {
-    UsageQuestionView(
+    AgeView(
         store: Store(
-            initialState: UsageQuestionFeature.State(),
-            reducer: { UsageQuestionFeature() }
+            initialState: AgeFeature.State(),
+            reducer: { AgeFeature() }
         )
     )
 }
