@@ -20,21 +20,22 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 
 ### ✅ Completed Features
 
-#### 1. **Onboarding Flow (8 Screens)**
-- **Splash Screen** - Auto-advance after 2 seconds
+#### 1. **Onboarding Flow (7 Steps)**
+- **Splash Screen** - Auto-advance after 2 seconds (intro animation)
 - **Welcome Screen** - Introduction with cat mascot
-- **Usage Question** - Daily phone hours selection
-- **Addiction Assessment** - "Do you feel addicted to your phone?"
-- **Sleep Impact** - "Does phone use interfere with your sleep?"
-- **Without Phone** - "How do you feel without your phone?"
-- **Idle Check** - "How often do you check your phone when idle?"
-- **Age Selection** - User age range
+- **Usage Question** - Daily phone hours selection (3hrs → 12hrs+)
+- **Addiction Assessment** - "Do you feel addicted to your phone?" (Not at all → Yes)
+- **Sleep Impact** - "Does phone use interfere with your sleep?" (Never → Almost every night)
+- **Without Phone** - "How do you feel without your phone?" (Totally fine → Very anxious)
+- **Idle Check** - "How often do you check your phone when idle?" (Rarely → Every few minutes)
+- **Age Selection** - User age range (Under 18 → 55+)
 
 #### 2. **Navigation System**
-- EmptyView root pattern to prevent back button flickering
-- Stack-based navigation with proper state management
-- Progress indicator (2/5 to 5/5) showing user journey
-- Back button functionality on all screens except splash
+- EmptyView root pattern in NavigationStack to prevent back button flickering
+- Stack-based navigation with TCA's `StackState` and `StackAction`
+- Progress indicator (1/5 to 5/5) centered at top of each screen
+- Back button functionality on all question screens (not on splash/welcome)
+- `.onAppear` trigger to start navigation flow
 
 #### 3. **Results Loading Screen**
 - **Circular Progress Ring** - 3 concentric circles with percentage counter
@@ -61,18 +62,20 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 #### 5. **User Data Collection**
 - Hour selection (3hrs or less → 12hrs+)
 - Addiction level (Not at all → Yes)
-- Sleep interference (Never → Always)
-- Phone dependency (Totally fine → Panic)
-- Idle checking frequency (Rarely → Constantly)
-- Age range (Under 18 → 30+)
+- Sleep interference (Never → Almost every night)
+- Phone dependency (Totally fine → Very anxious)
+- Idle checking frequency (Rarely → Every few minutes)
+- Age range (Under 18 → 55+)
+- All data stored in AppFeature state for results calculation
 
 ## 🔮 Planned Features (Post-Results Screen)
 
-### 1. **Results Screen**
+### 1. **Results Screen** (In Progress)
 - **Personalized Score** - Based on user's onboarding responses
 - **Comparison Data** - Against Gen Z/Millennial averages (8 hours/day)
 - **Cat Reactions** - Different cat emotions based on severity
 - **Visual Breakdown** - Charts showing usage patterns
+- **ResultsFeature** - Reducer created with user data integration
 
 ### 2. **Bad News Delivery**
 - **Honest Assessment** - Direct feedback about phone addiction
@@ -105,21 +108,24 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 ```
 ScrollKitty/
 ├── Features/
-│   ├── App/AppFeature.swift
-│   └── Onboarding/OnboardingFeature.swift
+│   ├── App/
+│   │   └── AppFeature.swift (Root coordinator)
+│   └── Onboarding/
+│       └── OnboardingFeature.swift (Navigation coordinator)
 ├── Views/
 │   ├── Onboarding/
-│   │   ├── SplashView.swift
-│   │   ├── WelcomeView.swift
-│   │   ├── UsageQuestionView.swift
-│   │   ├── AddictionView.swift
-│   │   ├── SleepView.swift
-│   │   ├── WithoutPhoneView.swift
-│   │   ├── IdleCheckView.swift
-│   │   ├── AgeView.swift
-│   │   └── OnboardingView.swift
+│   │   ├── SplashView.swift (contains SplashFeature)
+│   │   ├── WelcomeView.swift (contains WelcomeFeature)
+│   │   ├── UsageQuestionView.swift (contains UsageQuestionFeature)
+│   │   ├── AddictionView.swift (contains AddictionFeature)
+│   │   ├── SleepView.swift (contains SleepFeature)
+│   │   ├── WithoutPhoneView.swift (contains WithoutPhoneFeature)
+│   │   ├── IdleCheckView.swift (contains IdleCheckFeature)
+│   │   ├── AgeView.swift (contains AgeFeature)
+│   │   └── OnboardingView.swift (NavigationStack wrapper)
 │   ├── Results/
-│   │   └── ResultsLoadingView.swift
+│   │   ├── ResultsLoadingView.swift (contains ResultsLoadingFeature)
+│   │   └── ResultsView.swift (contains ResultsFeature)
 │   └── Components/
 │       ├── PrimaryButton.swift
 │       ├── ProgressIndicator.swift
@@ -129,12 +135,18 @@ ScrollKitty/
 └── ScrollKittyApp.swift
 ```
 
+**Note:** Features are embedded directly in their view files (following the SplashView pattern) to eliminate duplicate declarations and keep related code together. Only coordinator features (AppFeature, OnboardingFeature) exist as standalone files.
+
 ### Key TCA Patterns
-- **Feature + View** combined in single files
-- **Delegate pattern** for inter-reducer communication
-- **Stack-based navigation** with proper state management
-- **Dependency injection** for clock/timer effects
-- **Observable state** for SwiftUI integration
+- **Feature + View in single files** - Each view file contains its `@Reducer` struct
+- **Coordinator pattern** - Separate coordinator features (AppFeature, OnboardingFeature) manage navigation
+- **Delegate pattern** - Child features communicate with parents via `.delegate(Delegate)` actions
+- **Stack-based navigation** - `StackState<Path.State>` and `StackAction` for navigation flows
+- **Path enum reducers** - `@Reducer(state: .equatable, action: .equatable)` for navigation destinations
+- **Dependency injection** - `@Dependency(\.continuousClock)` for timer effects
+- **Observable state** - `@ObservableState` for SwiftUI integration
+- **Effect.run** - Explicit `Effect<Action>` type annotations for async work
+- **Cancellable effects** - Using `CancelID` for cancellable timers and tasks
 
 ## 📊 Data & Statistics
 

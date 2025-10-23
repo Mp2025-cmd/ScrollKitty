@@ -71,7 +71,7 @@ struct AgeView: View {
                             .font(.system(size: 18, weight: .semibold))
                     }
                     Spacer()
-                    ProgressIndicator(currentStep: 5, totalSteps: 5)
+                    ProgressIndicator(currentStep: 6, totalSteps: 6)
                     Spacer()
                 }
                 .padding(.top, 24)

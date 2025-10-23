@@ -70,7 +70,7 @@ struct IdleCheckView: View {
                     }
                     
                     Spacer()
-                    ProgressIndicator(currentStep: 5, totalSteps: 5)
+                    ProgressIndicator(currentStep: 5, totalSteps: 6)
                     Spacer()
                 }
                 .padding(.top, 24)

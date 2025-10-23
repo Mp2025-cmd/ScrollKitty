@@ -70,7 +70,7 @@ struct SleepView: View {
                     }
                     
                     Spacer()
-                    ProgressIndicator(currentStep: 3, totalSteps: 5)
+                    ProgressIndicator(currentStep: 3, totalSteps: 6)
                     Spacer()
                 }
                 .padding(.top, 24)

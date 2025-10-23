@@ -59,7 +59,7 @@ struct UsageQuestionView: View {
             
             VStack(spacing: 0) {
                 // Progress indicator
-                ProgressIndicator(currentStep: 2, totalSteps: 3)
+                ProgressIndicator(currentStep: 1, totalSteps: 6)
                     .padding(.top, 24)
                 
                 // Title

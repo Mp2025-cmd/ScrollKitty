@@ -72,7 +72,7 @@ struct AddictionView: View {
                     
 
                     Spacer()
-                    ProgressIndicator(currentStep: 2, totalSteps: 5)
+                    ProgressIndicator(currentStep: 2, totalSteps: 6)
                     Spacer()
                     //
                 }

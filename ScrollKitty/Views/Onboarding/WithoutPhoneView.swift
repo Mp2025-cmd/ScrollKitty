@@ -70,7 +70,7 @@ struct WithoutPhoneView: View {
                     }
                     
                     Spacer()
-                    ProgressIndicator(currentStep: 4, totalSteps: 5)
+                    ProgressIndicator(currentStep: 4, totalSteps: 6)
                     Spacer()
                 }
                 .padding(.top, 24)
