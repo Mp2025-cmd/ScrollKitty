@@ -73,6 +73,9 @@ struct WithoutPhoneView: View {
                     ProgressIndicator(currentStep: 4, totalSteps: 5)
                     Spacer()
                 }
+                .padding(.top, 24)
+                .padding(.horizontal, 16)
+
 
                 // Title
                 Text("How do you feel without\nyour phone?")

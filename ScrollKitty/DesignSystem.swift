@@ -60,27 +60,22 @@ enum DesignSystem {
         // Font Styles
         static func splashTitle() -> Font {
             Font.custom(primaryFontFamily + "-Bold", size: 65)
-                .weight(.bold)
         }
         
         static func largeTitle() -> Font {
             Font.custom(primaryFontFamily + "-Bold", size: 35)
-                .weight(.bold)
         }
         
         static func buttonText() -> Font {
             Font.custom(primaryFontFamily + "-Regular", size: 20)
-                .weight(.regular)
         }
         
         static func subtitle() -> Font {
             Font.custom(primaryFontFamily + "-Medium", size: 16)
-                .weight(.medium)
         }
         
         static func body() -> Font {
             Font.custom(primaryFontFamily + "-Regular", size: 16)
-                .weight(.regular)
         }
         
         static func statusBarTime() -> Font {
@@ -203,7 +198,7 @@ extension View {
         self
             .frame(width: DesignSystem.ComponentSize.buttonWidth, 
                    height: DesignSystem.ComponentSize.buttonHeight)
-            .background(DesignSystem.Colors.buttonBackground)
+            .background(DesignSystem.Colors.black)
             .foregroundColor(DesignSystem.Colors.buttonTextColor)
             .clipShape(RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.button))
     }
