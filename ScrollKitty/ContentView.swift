@@ -12,7 +12,15 @@ struct ContentView: View {
     let store: StoreOf<AppFeature>
     
     var body: some View {
-        if store.isOnboardingComplete {
+        if store.showResults {
+            ResultsView(
+                store: store.scope(state: \.results, action: \.results)
+            )
+        } else if store.showResultsLoading {
+            ResultsLoadingView(
+                store: store.scope(state: \.resultsLoading, action: \.resultsLoading)
+            )
+        } else if store.isOnboardingComplete {
             Text("Main App - Coming Soon")
         } else {
             OnboardingView(
