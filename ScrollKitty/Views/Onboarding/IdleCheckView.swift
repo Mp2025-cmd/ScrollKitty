@@ -81,7 +81,7 @@ struct IdleCheckView: View {
                     .largeTitleStyle()
                     .padding(.top, 40)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 40)
 
                 // Options
                 OptionSelector(
@@ -99,7 +99,6 @@ struct IdleCheckView: View {
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
                 }
-                .padding(.bottom, 32)
             }
         }
     }

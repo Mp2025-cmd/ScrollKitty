@@ -84,7 +84,7 @@ struct AddictionView: View {
                     .largeTitleStyle()
                     .padding(.top, 40)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 65)
 
                 // Options
                 OptionSelector(
@@ -102,8 +102,7 @@ struct AddictionView: View {
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
                 }
-                .padding(.bottom, 32)
-            }
+             }
         }
     }
 }

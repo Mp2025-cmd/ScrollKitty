@@ -82,7 +82,7 @@ struct AgeView: View {
                     .largeTitleStyle()
                     .padding(.top, 40)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 40)
 
                 // Options
                 OptionSelector(
@@ -100,7 +100,7 @@ struct AgeView: View {
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
                 }
-                .padding(.bottom, 32)
+               
             }
         }
     }
