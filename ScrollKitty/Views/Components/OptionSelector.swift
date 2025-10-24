@@ -13,12 +13,13 @@ struct OptionSelector<Option>: View where Option: CaseIterable & Equatable & Raw
                         .bodyStyle()
                         .padding(.leading)
                     Spacer()
-                    
+
                     Image(systemName: selectedOption == option ? "checkmark.circle.fill" : "circle")
                         .foregroundColor(selectedOption == option ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.textGray)
                         .padding(.trailing)
                 }
-                 .selectionOptionStyle(isSelected: selectedOption == option)
+                .frame(maxWidth: .infinity)
+                .selectionOptionStyle(isSelected: selectedOption == option)
                 .onTapGesture {
                     onSelect(option)
                 }

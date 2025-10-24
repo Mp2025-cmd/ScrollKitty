@@ -105,12 +105,11 @@ enum DesignSystem {
     // MARK: - Component Sizes
     enum ComponentSize {
         // Buttons
-        static let buttonHeight: CGFloat = 52
-        static let buttonWidth: CGFloat = 187
+        static let buttonHeight: CGFloat = 56 // Increased from 52
+        static let buttonWidth: CGFloat = 327 // Increased from 187 for better touch
         
         // Selection Options
-        static let optionHeight: CGFloat = 35
-        static let optionWidth: CGFloat = 215
+        static let optionHeight: CGFloat = 64
         
         // Progress Bar
         static let progressBarHeight: CGFloat = 5
@@ -196,23 +195,26 @@ extension View {
 extension View {
     func primaryButtonStyle() -> some View {
         self
-            .frame(width: DesignSystem.ComponentSize.buttonWidth, 
+            .frame(width: DesignSystem.ComponentSize.buttonWidth,
                    height: DesignSystem.ComponentSize.buttonHeight)
             .background(DesignSystem.Colors.black)
             .foregroundColor(DesignSystem.Colors.buttonTextColor)
             .clipShape(RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.button))
+            .contentShape(Rectangle()) // Ensures entire frame is tappable
+            .padding(.horizontal, 16) // Add horizontal padding for easier tapping
     }
     
     func selectionOptionStyle(isSelected: Bool = false) -> some View {
         self
-            .frame(width: DesignSystem.ComponentSize.optionWidth,
-                   height: DesignSystem.ComponentSize.optionHeight)
+            .frame(maxWidth: .infinity)
+            .frame(height: DesignSystem.ComponentSize.optionHeight)
             .background(DesignSystem.Colors.selectionBackground)
             .overlay(
                 RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.selectionOption)
-                    .stroke(isSelected ? DesignSystem.Colors.selectionBorder : Color.clear, 
+                    .stroke(isSelected ? DesignSystem.Colors.selectionBorder : Color.clear,
                            lineWidth: isSelected ? DesignSystem.BorderWidth.selection : 0)
             )
             .clipShape(RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.selectionOption))
+            .contentShape(Rectangle())
     }
 }

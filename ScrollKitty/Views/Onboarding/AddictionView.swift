@@ -94,7 +94,7 @@ struct AddictionView: View {
                         store.send(.optionSelected(option))
                     }
                 )
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 25)
 
                 Spacer()
 
