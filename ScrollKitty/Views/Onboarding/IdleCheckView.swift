@@ -23,7 +23,7 @@ struct IdleCheckFeature {
 
         enum Delegate: Equatable {
             case completeWithSelection(IdleCheckOption)
-            case backPressed
+            case goBack
         }
     }
 
@@ -41,7 +41,7 @@ struct IdleCheckFeature {
                 return .none
 
             case .backTapped:
-                return .send(.delegate(.backPressed))
+                return .send(.delegate(.goBack))
 
             case .delegate:
                 return .none
@@ -61,20 +61,19 @@ struct IdleCheckView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Progress indicator with back button
+                // Back button
                 HStack {
-                    Button(action: { store.send(.backTapped) }) {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(.black)
-                            .font(.system(size: 18, weight: .semibold))
+                    BackButton {
+                        store.send(.backTapped)
                     }
-                    
-                    Spacer()
-                    ProgressIndicator(currentStep: 5, totalSteps: 6)
                     Spacer()
                 }
-                .padding(.top, 24)
                 .padding(.horizontal, 16)
+                .padding(.top, 8)
+                
+                // Progress indicator
+                ProgressIndicator(currentStep: 5, totalSteps: 6)
+                    .padding(.top, 16)
 
                 // Title
                 Text("How often do you check\nyour phone when idle?")

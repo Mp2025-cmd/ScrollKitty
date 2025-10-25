@@ -12,10 +12,12 @@ struct YearsLostFeature {
     enum Action: Equatable {
         case onAppear
         case continueTapped
+        case backTapped
         case delegate(Delegate)
         
         enum Delegate: Equatable {
             case showNextScreen
+            case goBack
         }
     }
     
@@ -27,6 +29,9 @@ struct YearsLostFeature {
                 
             case .continueTapped:
                 return .send(.delegate(.showNextScreen))
+                
+            case .backTapped:
+                return .send(.delegate(.goBack))
                 
             case .delegate:
                 return .none
@@ -45,22 +50,12 @@ struct YearsLostView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Status Bar (simulated)
+                // Back button
                 HStack {
-                    Text("9:41")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.primaryText)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 7) {
-                        Image(systemName: "cellularbars")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
-                        Image(systemName: "wifi")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
-                        Image(systemName: "battery.100")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
+                    BackButton {
+                        store.send(.backTapped)
                     }
+                    Spacer()
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -71,7 +66,8 @@ struct YearsLostView: View {
                 VStack(spacing: 0) {
                     Text("At this pace, you'll spend")
                     Text("17 years")
-                        .foregroundColor(DesignSystem.Colors.primaryBlue)
+                        .foregroundColor(.red)
+                        .font(.custom("Sofia Pro-Bold", size: 40))
                     Text("of your life looking at a screen.")
                     Text("That's decades you")
                     Text("could be living.")

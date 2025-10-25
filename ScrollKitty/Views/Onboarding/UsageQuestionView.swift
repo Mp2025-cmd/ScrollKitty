@@ -19,10 +19,12 @@ struct UsageQuestionFeature {
     enum Action: Equatable {
         case optionSelected(HourOption)
         case nextTapped
+        case backTapped
         case delegate(Delegate)
 
         enum Delegate: Equatable {
             case completeWithSelection(HourOption)
+            case goBack
         }
     }
 
@@ -38,6 +40,9 @@ struct UsageQuestionFeature {
                     return .send(.delegate(.completeWithSelection(selectedOption)))
                 }
                 return .none
+
+            case .backTapped:
+                return .send(.delegate(.goBack))
 
             case .delegate:
                 return .none
@@ -58,9 +63,19 @@ struct UsageQuestionView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
+                // Back button
+                HStack {
+                    BackButton {
+                        store.send(.backTapped)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                
                 // Progress indicator
                 ProgressIndicator(currentStep: 1, totalSteps: 6)
-                    .padding(.top, 24)
+                    .padding(.top, 16)
                 
                 // Title
                 VStack(spacing: 8) {

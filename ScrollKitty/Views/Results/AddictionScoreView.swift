@@ -24,10 +24,12 @@ struct AddictionScoreFeature {
         case calculateScore(UserPhoneData)
         case animationCompleted
         case continueTapped
+        case backTapped
         case delegate(Delegate)
         
         enum Delegate: Equatable {
             case showNextScreen
+            case goBack
         }
     }
     
@@ -70,6 +72,9 @@ struct AddictionScoreFeature {
             case .continueTapped:
                 return .send(.delegate(.showNextScreen))
                 
+            case .backTapped:
+                return .send(.delegate(.goBack))
+                
             case .delegate:
                 return .none
             }
@@ -81,6 +86,7 @@ struct AddictionScoreFeature {
 struct AnimatedBarGraph: View {
     let userPercentage: Double
     let averagePercentage: Double
+    let onAnimationCompleted: () -> Void
     @State private var userBarHeight: CGFloat = 0
     @State private var averageBarHeight: CGFloat = 0
     
@@ -151,6 +157,11 @@ struct AnimatedBarGraph: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 averageBarHeight = CGFloat(averagePercentage / 100 * 295)
             }
+            
+            // Trigger animation completion after all animations finish
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                onAnimationCompleted()
+            }
         }
     }
 }
@@ -165,22 +176,12 @@ struct AddictionScoreView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Status Bar (simulated)
+                // Back button
                 HStack {
-                    Text("9:41")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.primaryText)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 7) {
-                        Image(systemName: "cellularbars")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
-                        Image(systemName: "wifi")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
-                        Image(systemName: "battery.100")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
+                    BackButton {
+                        store.send(.backTapped)
                     }
+                    Spacer()
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -218,7 +219,10 @@ struct AddictionScoreView: View {
                 // Animated Bar Graph
                 AnimatedBarGraph(
                     userPercentage: store.userPercentage,
-                    averagePercentage: store.averagePercentage
+                    averagePercentage: store.averagePercentage,
+                    onAnimationCompleted: {
+                        store.send(.animationCompleted)
+                    }
                 )
                 .padding(.top, 40)
 
@@ -236,9 +240,10 @@ struct AddictionScoreView: View {
                 PrimaryButton(title: "Continue") {
                     store.send(.continueTapped)
                 }
-                .opacity(store.showContinueButton ? 1 : 0)
-                .animation(.easeInOut(duration: 0.5).delay(3.0), value: store.showContinueButton)
                 .padding(.bottom, 32)
+                .opacity(store.showContinueButton ? 1 : 0)
+                .animation(.easeInOut(duration: 0.5), value: store.showContinueButton)
+
                 
                 // Disclaimer
                 Text("*This result is an indication only and not a medical diagnosis.")

@@ -12,7 +12,15 @@ struct ContentView: View {
     let store: StoreOf<AppFeature>
     
     var body: some View {
-        if store.showSolutionIntro {
+        if store.showCharacterIntro {
+            CharacterIntroView(
+                store: store.scope(state: \.characterIntro, action: \.characterIntro)
+            )
+        } else if store.showScreenTimeAccess {
+            ScreenTimeAccessView(
+                store: store.scope(state: \.screenTimeAccess, action: \.screenTimeAccess)
+            )
+        } else if store.showSolutionIntro {
             SolutionIntroView(
                 store: store.scope(state: \.solutionIntro, action: \.solutionIntro)
             )

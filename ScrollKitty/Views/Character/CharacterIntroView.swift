@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Feature
 @Reducer
-struct SolutionIntroFeature {
+struct CharacterIntroFeature {
     @ObservableState
     struct State: Equatable {
         // No state needed for this static screen
@@ -41,8 +41,8 @@ struct SolutionIntroFeature {
 }
 
 // MARK: - View
-struct SolutionIntroView: View {
-    let store: StoreOf<SolutionIntroFeature>
+struct CharacterIntroView: View {
+    let store: StoreOf<CharacterIntroFeature>
     
     var body: some View {
         ZStack {
@@ -62,29 +62,33 @@ struct SolutionIntroView: View {
                 
                 Spacer()
                 
-                // Main Message
-                VStack(spacing: 0) {
-                    Text("The good news is that")
-                    Text("Scroll Kitty")
-                        .foregroundColor(DesignSystem.Colors.primaryBlue)
-                    Text("can help you")
-                    Text("get your time back!")
-                }
-                .font(.custom("Sofia Pro-Bold", size: 30))
-                .tracking(DesignSystem.Typography.titleLetterSpacing)
-                .foregroundColor(DesignSystem.Colors.primaryText)
-                .multilineTextAlignment(.center)
-                .lineSpacing(0)
-                .padding(.horizontal, 16)
-                
-                Spacer()
-                
                 // Character Image
                 Image("1_Healthy_Cheerful")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 237, height: 214)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 18)
+                
+                // Title
+                Text("Meet Scroll Kitty")
+                    .font(.custom("Sofia Pro-Bold", size: 35))
+                    .tracking(-2)
+                    .foregroundColor(DesignSystem.Colors.primaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
+                
+                // Subtitle
+                VStack(spacing: 0) {
+                    Text("Scroll Kitty is your friendly cat friend that loves")
+                    Text("when you spend less time on your phone.")
+                }
+                .font(.custom("Sofia Pro-Medium", size: 16))
+                .foregroundColor(DesignSystem.Colors.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(0)
+                .padding(.horizontal, 16)
+                
+                Spacer()
                 
                 // Continue Button
                 PrimaryButton(title: "Continue") {
@@ -100,10 +104,10 @@ struct SolutionIntroView: View {
 }
 
 #Preview {
-    SolutionIntroView(
+    CharacterIntroView(
         store: Store(
-            initialState: SolutionIntroFeature.State(),
-            reducer: { SolutionIntroFeature() }
+            initialState: CharacterIntroFeature.State(),
+            reducer: { CharacterIntroFeature() }
         )
     )
 }

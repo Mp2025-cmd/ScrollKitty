@@ -10,12 +10,16 @@ struct AppFeature {
         var addictionScore = AddictionScoreFeature.State()
         var yearsLost = YearsLostFeature.State()
         var solutionIntro = SolutionIntroFeature.State()
+        var screenTimeAccess = ScreenTimeAccessFeature.State()
+        var characterIntro = CharacterIntroFeature.State()
         var isOnboardingComplete = false
         var showResultsLoading = false
         var showResults = false
         var showAddictionScore = false
         var showYearsLost = false
         var showSolutionIntro = false
+        var showScreenTimeAccess = false
+        var showCharacterIntro = false
         var userHourSelection: UsageQuestionFeature.HourOption?
         var userAddictionSelection: AddictionFeature.AddictionOption?
         var userSleepSelection: SleepFeature.SleepOption?
@@ -31,11 +35,17 @@ struct AppFeature {
         case addictionScore(AddictionScoreFeature.Action)
         case yearsLost(YearsLostFeature.Action)
         case solutionIntro(SolutionIntroFeature.Action)
+        case screenTimeAccess(ScreenTimeAccessFeature.Action)
+        case characterIntro(CharacterIntroFeature.Action)
     }
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
+            case .onboarding(.delegate(.goBack)):
+                // Handle back navigation within onboarding flow
+                return .none
+                
             case .onboarding(.delegate(.onboardingCompleted(
                 let hourSelection,
                 let addictionSelection,
@@ -84,9 +94,34 @@ struct AppFeature {
                 
                 return .send(.addictionScore(.calculateScore(userData)))
 
+            case .addictionScore(.delegate(.goBack)):
+                state.showAddictionScore = false
+                state.showResults = true
+                return .none
+                
             case .addictionScore(.delegate(.showNextScreen)):
                 state.showAddictionScore = false
                 state.showYearsLost = true
+                return .none
+                
+            case .yearsLost(.delegate(.goBack)):
+                state.showYearsLost = false
+                state.showAddictionScore = true
+                return .none
+                
+            case .solutionIntro(.delegate(.goBack)):
+                state.showSolutionIntro = false
+                state.showYearsLost = true
+                return .none
+                
+            case .screenTimeAccess(.delegate(.goBack)):
+                state.showScreenTimeAccess = false
+                state.showSolutionIntro = true
+                return .none
+                
+            case .characterIntro(.delegate(.goBack)):
+                state.showCharacterIntro = false
+                state.showScreenTimeAccess = true
                 return .none
                 
             case .yearsLost(.delegate(.showNextScreen)):
@@ -96,6 +131,16 @@ struct AppFeature {
                 
             case .solutionIntro(.delegate(.showNextScreen)):
                 state.showSolutionIntro = false
+                state.showScreenTimeAccess = true
+                return .none
+                
+            case .screenTimeAccess(.delegate(.showNextScreen)):
+                state.showScreenTimeAccess = false
+                state.showCharacterIntro = true
+                return .none
+                
+            case .characterIntro(.delegate(.showNextScreen)):
+                state.showCharacterIntro = false
                 // TODO: Navigate to main app or next feature
                 return .none
                 
@@ -115,6 +160,12 @@ struct AppFeature {
                 return .none
                 
             case .solutionIntro:
+                return .none
+                
+            case .screenTimeAccess:
+                return .none
+                
+            case .characterIntro:
                 return .none
             }
         }
@@ -141,6 +192,14 @@ struct AppFeature {
         
         Scope(state: \.solutionIntro, action: \.solutionIntro) {
             SolutionIntroFeature()
+        }
+        
+        Scope(state: \.screenTimeAccess, action: \.screenTimeAccess) {
+            ScreenTimeAccessFeature()
+        }
+        
+        Scope(state: \.characterIntro, action: \.characterIntro) {
+            CharacterIntroFeature()
         }
     }
 }

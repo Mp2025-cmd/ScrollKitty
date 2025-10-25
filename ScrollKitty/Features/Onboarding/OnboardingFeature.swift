@@ -28,6 +28,7 @@ struct OnboardingFeature {
                 idleCheckSelection: IdleCheckFeature.IdleCheckOption,
                 ageSelection: AgeFeature.AgeOption
             )
+            case goBack
         }
     }
     
@@ -102,11 +103,12 @@ struct OnboardingFeature {
                     ageSelection: ageSelection
                 )))
                 
-            case .path(.element(id: _, action: .addiction(.delegate(.backPressed)))),
-                 .path(.element(id: _, action: .sleep(.delegate(.backPressed)))),
-                 .path(.element(id: _, action: .withoutPhone(.delegate(.backPressed)))),
-                 .path(.element(id: _, action: .idleCheck(.delegate(.backPressed)))),
-                 .path(.element(id: _, action: .age(.delegate(.backPressed)))):
+            case .path(.element(id: _, action: .usageQuestion(.delegate(.goBack)))),
+                 .path(.element(id: _, action: .addiction(.delegate(.goBack)))),
+                 .path(.element(id: _, action: .sleep(.delegate(.goBack)))),
+                 .path(.element(id: _, action: .withoutPhone(.delegate(.goBack)))),
+                 .path(.element(id: _, action: .idleCheck(.delegate(.goBack)))),
+                 .path(.element(id: _, action: .age(.delegate(.goBack)))):
                 state.path.removeLast()
                 return .none
                 

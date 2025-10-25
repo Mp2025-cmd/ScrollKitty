@@ -3,10 +3,10 @@ import SwiftUI
 
 // MARK: - Feature
 @Reducer
-struct SolutionIntroFeature {
+struct ScreenTimeAccessFeature {
     @ObservableState
     struct State: Equatable {
-        // No state needed for this static screen
+        // No state needed for this empty screen
     }
     
     enum Action: Equatable {
@@ -41,8 +41,8 @@ struct SolutionIntroFeature {
 }
 
 // MARK: - View
-struct SolutionIntroView: View {
-    let store: StoreOf<SolutionIntroFeature>
+struct ScreenTimeAccessView: View {
+    let store: StoreOf<ScreenTimeAccessFeature>
     
     var body: some View {
         ZStack {
@@ -62,29 +62,22 @@ struct SolutionIntroView: View {
                 
                 Spacer()
                 
-                // Main Message
-                VStack(spacing: 0) {
-                    Text("The good news is that")
-                    Text("Scroll Kitty")
-                        .foregroundColor(DesignSystem.Colors.primaryBlue)
-                    Text("can help you")
-                    Text("get your time back!")
+                // Placeholder content - will be implemented later
+                VStack(spacing: 24) {
+                    Text("Allow access to Screen Time")
+                        .font(.custom("Sofia Pro-Bold", size: 30))
+                        .tracking(DesignSystem.Typography.titleLetterSpacing)
+                        .foregroundColor(DesignSystem.Colors.primaryText)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("This screen will be implemented later")
+                        .font(.custom("Sofia Pro-Medium", size: 16))
+                        .foregroundColor(DesignSystem.Colors.secondaryText)
+                        .multilineTextAlignment(.center)
                 }
-                .font(.custom("Sofia Pro-Bold", size: 30))
-                .tracking(DesignSystem.Typography.titleLetterSpacing)
-                .foregroundColor(DesignSystem.Colors.primaryText)
-                .multilineTextAlignment(.center)
-                .lineSpacing(0)
                 .padding(.horizontal, 16)
                 
                 Spacer()
-                
-                // Character Image
-                Image("1_Healthy_Cheerful")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 237, height: 214)
-                    .padding(.bottom, 40)
                 
                 // Continue Button
                 PrimaryButton(title: "Continue") {
@@ -100,10 +93,10 @@ struct SolutionIntroView: View {
 }
 
 #Preview {
-    SolutionIntroView(
+    ScreenTimeAccessView(
         store: Store(
-            initialState: SolutionIntroFeature.State(),
-            reducer: { SolutionIntroFeature() }
+            initialState: ScreenTimeAccessFeature.State(),
+            reducer: { ScreenTimeAccessFeature() }
         )
     )
 }
