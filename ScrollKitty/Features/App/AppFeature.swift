@@ -105,7 +105,29 @@ struct AppFeature {
             case .addictionScore(.delegate(.showNextScreen)):
                 state.showAddictionScore = false
                 state.showYearsLost = true
-                return .none
+
+                // Pass userData and userScore to Years Lost screen
+                guard let hourSelection = state.userHourSelection,
+                      let addictionSelection = state.userAddictionSelection,
+                      let sleepSelection = state.userSleepSelection,
+                      let withoutPhoneSelection = state.userWithoutPhoneSelection,
+                      let idleCheckSelection = state.userIdleCheckSelection,
+                      let ageSelection = state.userAgeSelection else {
+                    return .none
+                }
+
+                let userData = UserPhoneData(
+                    dailyHours: hourSelection.dailyHours,
+                    addictionLevel: addictionSelection,
+                    sleepImpact: sleepSelection,
+                    withoutPhoneAnxiety: withoutPhoneSelection,
+                    idleCheckFrequency: idleCheckSelection,
+                    ageGroup: ageSelection
+                )
+
+                let userScore = state.addictionScore.userScore
+
+                return .send(.yearsLost(.calculateYearsLost(userData, userScore: userScore)))
                 
             case .yearsLost(.delegate(.goBack)):
                 state.showYearsLost = false

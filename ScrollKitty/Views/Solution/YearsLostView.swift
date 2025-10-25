@@ -6,33 +6,61 @@ import SwiftUI
 struct YearsLostFeature {
     @ObservableState
     struct State: Equatable {
-        // No state needed for this static screen
+        var userData: UserPhoneData?
+        var userScore: Double = 0
+        var yearsLost: Double = 0
     }
-    
+
     enum Action: Equatable {
         case onAppear
+        case calculateYearsLost(UserPhoneData, userScore: Double)
         case continueTapped
         case backTapped
         case delegate(Delegate)
-        
+
         enum Delegate: Equatable {
             case showNextScreen
             case goBack
         }
     }
-    
+
+    // Estimate remaining years of life based on age group
+    private func estimateRemainingYears(age: AgeFeature.AgeOption) -> Double {
+        switch age {
+        case .under18: return 70 // Assume avg age 15 → live to 85
+        case .age18to24: return 65 // Assume avg age 21 → live to 86
+        case .age25to34: return 55 // Assume avg age 30 → live to 85
+        case .age35to44: return 45 // Assume avg age 40 → live to 85
+        case .age45to54: return 35 // Assume avg age 50 → live to 85
+        case .age55plus: return 25 // Assume avg age 60 → live to 85
+        }
+    }
+
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
             case .onAppear:
                 return .none
-                
+
+            case let .calculateYearsLost(userData, userScore):
+                state.userData = userData
+                state.userScore = userScore
+
+                // Calculate total years that will be lost to screen time
+                let dailyHours = userScore
+                let yearsRemaining = estimateRemainingYears(age: userData.ageGroup)
+                let hoursPerYear = 365.25 * dailyHours
+                let totalHoursLost = hoursPerYear * yearsRemaining
+                state.yearsLost = totalHoursLost / 8760 // Convert hours to years
+
+                return .none
+
             case .continueTapped:
                 return .send(.delegate(.showNextScreen))
-                
+
             case .backTapped:
                 return .send(.delegate(.goBack))
-                
+
             case .delegate:
                 return .none
             }
@@ -65,7 +93,7 @@ struct YearsLostView: View {
                 // Main Message
                 VStack(spacing: 0) {
                     Text("At this pace, you'll spend")
-                    Text("17 years")
+                    Text("\(Int(store.yearsLost)) years")
                         .foregroundColor(.red)
                         .font(.custom("Sofia Pro-Bold", size: 40))
                     Text("of your life looking at a screen.")
