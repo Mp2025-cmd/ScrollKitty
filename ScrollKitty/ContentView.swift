@@ -12,7 +12,11 @@ struct ContentView: View {
     let store: StoreOf<AppFeature>
     
     var body: some View {
-        if store.showCharacterIntro {
+        if store.showScrollKittyLifecycle {
+            ScrollKittyLifecycleView(
+                store: store.scope(state: \.scrollKittyLifecycle, action: \.scrollKittyLifecycle)
+            )
+        } else if store.showCharacterIntro {
             CharacterIntroView(
                 store: store.scope(state: \.characterIntro, action: \.characterIntro)
             )

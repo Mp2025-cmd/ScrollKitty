@@ -12,6 +12,7 @@ struct AppFeature {
         var solutionIntro = SolutionIntroFeature.State()
         var screenTimeAccess = ScreenTimeAccessFeature.State()
         var characterIntro = CharacterIntroFeature.State()
+        var scrollKittyLifecycle = ScrollKittyLifecycleFeature.State()
         var isOnboardingComplete = false
         var showResultsLoading = false
         var showResults = false
@@ -20,6 +21,7 @@ struct AppFeature {
         var showSolutionIntro = false
         var showScreenTimeAccess = false
         var showCharacterIntro = false
+        var showScrollKittyLifecycle = false
         var userHourSelection: UsageQuestionFeature.HourOption?
         var userAddictionSelection: AddictionFeature.AddictionOption?
         var userSleepSelection: SleepFeature.SleepOption?
@@ -37,6 +39,7 @@ struct AppFeature {
         case solutionIntro(SolutionIntroFeature.Action)
         case screenTimeAccess(ScreenTimeAccessFeature.Action)
         case characterIntro(CharacterIntroFeature.Action)
+        case scrollKittyLifecycle(ScrollKittyLifecycleFeature.Action)
     }
 
     var body: some Reducer<State, Action> {
@@ -141,6 +144,16 @@ struct AppFeature {
                 
             case .characterIntro(.delegate(.showNextScreen)):
                 state.showCharacterIntro = false
+                state.showScrollKittyLifecycle = true
+                return .none
+                
+            case .scrollKittyLifecycle(.delegate(.goBack)):
+                state.showScrollKittyLifecycle = false
+                state.showCharacterIntro = true
+                return .none
+                
+            case .scrollKittyLifecycle(.delegate(.showNextScreen)):
+                state.showScrollKittyLifecycle = false
                 // TODO: Navigate to main app or next feature
                 return .none
                 
@@ -166,6 +179,9 @@ struct AppFeature {
                 return .none
                 
             case .characterIntro:
+                return .none
+                
+            case .scrollKittyLifecycle:
                 return .none
             }
         }
@@ -200,6 +216,10 @@ struct AppFeature {
         
         Scope(state: \.characterIntro, action: \.characterIntro) {
             CharacterIntroFeature()
+        }
+        
+        Scope(state: \.scrollKittyLifecycle, action: \.scrollKittyLifecycle) {
+            ScrollKittyLifecycleFeature()
         }
     }
 }
