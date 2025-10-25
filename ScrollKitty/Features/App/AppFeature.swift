@@ -8,10 +8,14 @@ struct AppFeature {
         var resultsLoading = ResultsLoadingFeature.State()
         var results = ResultsFeature.State()
         var addictionScore = AddictionScoreFeature.State()
+        var yearsLost = YearsLostFeature.State()
+        var solutionIntro = SolutionIntroFeature.State()
         var isOnboardingComplete = false
         var showResultsLoading = false
         var showResults = false
         var showAddictionScore = false
+        var showYearsLost = false
+        var showSolutionIntro = false
         var userHourSelection: UsageQuestionFeature.HourOption?
         var userAddictionSelection: AddictionFeature.AddictionOption?
         var userSleepSelection: SleepFeature.SleepOption?
@@ -25,6 +29,8 @@ struct AppFeature {
         case resultsLoading(ResultsLoadingFeature.Action)
         case results(ResultsFeature.Action)
         case addictionScore(AddictionScoreFeature.Action)
+        case yearsLost(YearsLostFeature.Action)
+        case solutionIntro(SolutionIntroFeature.Action)
     }
 
     var body: some Reducer<State, Action> {
@@ -80,7 +86,17 @@ struct AppFeature {
 
             case .addictionScore(.delegate(.showNextScreen)):
                 state.showAddictionScore = false
-                // TODO: Navigate to next screen (solutions/recommendations)
+                state.showYearsLost = true
+                return .none
+                
+            case .yearsLost(.delegate(.showNextScreen)):
+                state.showYearsLost = false
+                state.showSolutionIntro = true
+                return .none
+                
+            case .solutionIntro(.delegate(.showNextScreen)):
+                state.showSolutionIntro = false
+                // TODO: Navigate to main app or next feature
                 return .none
                 
             case .onboarding:
@@ -93,6 +109,12 @@ struct AppFeature {
                 return .none
                 
             case .addictionScore:
+                return .none
+                
+            case .yearsLost:
+                return .none
+                
+            case .solutionIntro:
                 return .none
             }
         }
@@ -111,6 +133,14 @@ struct AppFeature {
         
         Scope(state: \.addictionScore, action: \.addictionScore) {
             AddictionScoreFeature()
+        }
+        
+        Scope(state: \.yearsLost, action: \.yearsLost) {
+            YearsLostFeature()
+        }
+        
+        Scope(state: \.solutionIntro, action: \.solutionIntro) {
+            SolutionIntroFeature()
         }
     }
 }

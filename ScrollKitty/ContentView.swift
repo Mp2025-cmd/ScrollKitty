@@ -12,7 +12,15 @@ struct ContentView: View {
     let store: StoreOf<AppFeature>
     
     var body: some View {
-        if store.showAddictionScore {
+        if store.showSolutionIntro {
+            SolutionIntroView(
+                store: store.scope(state: \.solutionIntro, action: \.solutionIntro)
+            )
+        } else if store.showYearsLost {
+            YearsLostView(
+                store: store.scope(state: \.yearsLost, action: \.yearsLost)
+            )
+        } else if store.showAddictionScore {
             AddictionScoreView(
                 store: store.scope(state: \.addictionScore, action: \.addictionScore)
             )
