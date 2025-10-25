@@ -53,13 +53,33 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **10-second duration** with smooth progress animation
 - **"Analyzing..." title** with Sofia Pro Bold typography
 
-#### 4. **Design System**
+#### 4. **Results & Analysis Screens**
+- **Results Loading Screen** - 10-second analysis with Gen Z captions and circular progress
+- **Results Screen** - Personalized addiction score display
+- **Addiction Score Screen** - Bar graph comparing user vs population average with "guilt trip" messaging
+- **Years Lost Screen** - Shows "17 years" of life lost to screens (red emphasis)
+- **Solution Intro Screen** - Introduces Scroll Kitty as the solution
+
+#### 5. **Character Introduction & Lifecycle**
+- **Character Intro Screen** - Introduces "Scroll Kitty" mascot with cheerful cat image
+- **Scroll Kitty Lifecycle Carousel** - Horizontal scrollable cards showing 5 health states:
+  - Healthy (green) - Happy, energetic
+  - Slightly Sick (cyan) - Getting concerned  
+  - Sick (blue) - Tired and needs rest
+  - Extremely Sick (orange) - Very sick from overuse
+  - Dead (red) - Passed away from neglect
+- **Interactive Features** - Page control dots, state-specific colors, rounded square containers, ellipse indicators
+
+#### 6. **Screen Time Integration**
+- **Screen Time Access Screen** - Placeholder for requesting Screen Time API access
+
+#### 7. **Design System**
 - **Colors:** Primary blue (#015AD7), light blue (#BBDBFF), grays, black/white
 - **Typography:** Sofia Pro font family with proper weight variants
-- **Components:** Reusable buttons, progress indicators, option selectors
+- **Components:** Reusable buttons, progress indicators, option selectors, back buttons
 - **Spacing:** Consistent padding and margins throughout
 
-#### 5. **User Data Collection**
+#### 8. **User Data Collection**
 - Hour selection (3hrs or less → 12hrs+)
 - Addiction level (Not at all → Yes)
 - Sleep interference (Never → Almost every night)
@@ -68,35 +88,21 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - Age range (Under 18 → 55+)
 - All data stored in AppFeature state for results calculation
 
-## 🔮 Planned Features (Post-Results Screen)
+## 🔮 Planned Features (Post-Lifecycle Screen)
 
-### 1. **Results Screen** (In Progress)
-- **Personalized Score** - Based on user's onboarding responses
-- **Comparison Data** - Against Gen Z/Millennial averages (8 hours/day)
-- **Cat Reactions** - Different cat emotions based on severity
-- **Visual Breakdown** - Charts showing usage patterns
-- **ResultsFeature** - Reducer created with user data integration
-
-### 2. **Bad News Delivery**
-- **Honest Assessment** - Direct feedback about phone addiction
-- **Gen Z Language** - "You're chronically online" messaging
-- **Visual Impact** - Bold, attention-grabbing design
-- **Cat Personality** - Cat mascot reactions to user's score
-
-### 3. **Solution Recommendations**
-- **Personalized Tips** - Based on specific user patterns
-- **App Blocking** - Integration with Screen Time API
-- **Focus Modes** - Custom focus sessions
+### 1. **Main App Dashboard**
+- **Daily Usage Overview** - Real-time screen time tracking
+- **Cat Mood System** - Scroll Kitty's emotional state based on usage
 - **Progress Tracking** - Daily/weekly usage monitoring
+- **Streaks & Achievements** - Gamified reduction goals
 
-### 4. **Main App Features**
-- **Dashboard** - Daily usage overview
-- **Cat Mood** - Cat's emotional state based on usage
-- **Streaks** - Consecutive days of healthy usage
-- **Challenges** - Gamified reduction goals
-- **Social Features** - Share progress with friends
+### 2. **Screen Time Integration**
+- **Native iOS Screen Time API** - Real usage data collection
+- **App Blocking** - Custom blocking rules and schedules
+- **Focus Modes** - Custom focus sessions with cat rewards
+- **Usage Analytics** - Detailed breakdowns by app category
 
-### 5. **Advanced Features**
+### 3. **Advanced Features**
 - **AI Insights** - Machine learning for usage patterns
 - **Custom Notifications** - Smart reminders
 - **Integration** - Calendar, productivity apps
@@ -125,11 +131,27 @@ ScrollKitty/
 │   │   └── OnboardingView.swift (NavigationStack wrapper)
 │   ├── Results/
 │   │   ├── ResultsLoadingView.swift (contains ResultsLoadingFeature)
-│   │   └── ResultsView.swift (contains ResultsFeature)
+│   │   ├── ResultsView.swift (contains ResultsFeature)
+│   │   └── AddictionScoreView.swift (contains AddictionScoreFeature)
+│   ├── Solution/
+│   │   ├── YearsLostView.swift (contains YearsLostFeature)
+│   │   └── SolutionIntroView.swift (contains SolutionIntroFeature)
+│   ├── Character/
+│   │   └── CharacterIntroView.swift (contains CharacterIntroFeature)
+│   ├── Lifecycle/
+│   │   └── ScrollKittyLifecycleView.swift (contains ScrollKittyLifecycleFeature)
+│   ├── ScreenTime/
+│   │   └── ScreenTimeAccessView.swift (contains ScreenTimeAccessFeature)
 │   └── Components/
 │       ├── PrimaryButton.swift
 │       ├── ProgressIndicator.swift
-│       └── OptionSelector.swift
+│       ├── OptionSelector.swift
+│       ├── BackButton.swift
+│       ├── ScrollKittyCard.swift
+│       └── PageControl.swift
+├── Models/
+│   ├── UserPhoneData.swift
+│   └── ScrollKittyState.swift
 ├── DesignSystem.swift
 ├── ContentView.swift
 └── ScrollKittyApp.swift
@@ -169,12 +191,12 @@ ScrollKitty uses a **friendly confrontation** approach - delivering hard truths 
 
 ## 🚀 Next Steps
 
-1. **Results Screen Implementation** - Show calculated addiction score
-2. **Bad News Delivery** - Honest assessment with cat reactions
-3. **Solution Recommendations** - Personalized tips and strategies
-4. **Main App Dashboard** - Daily usage tracking and cat mood
-5. **Screen Time Integration** - Native iOS Screen Time API
-6. **Gamification** - Streaks, challenges, and achievements
+1. **Screen Time API Integration** - Request and collect real usage data
+2. **Main App Dashboard** - Daily usage tracking and cat mood system
+3. **Gamification Features** - Streaks, challenges, and achievements
+4. **Advanced Analytics** - Detailed usage breakdowns and insights
+5. **Social Features** - Share progress and compete with friends
+6. **AI-Powered Recommendations** - Personalized tips based on usage patterns
 
 ---
 

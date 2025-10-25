@@ -75,7 +75,7 @@ struct ScrollKittyLifecycleView: View {
             DesignSystem.Colors.background
                 .ignoresSafeArea()
             
-            VStack(spacing: 0) {
+            VStack(spacing: 5) {
                 // Back button
                 HStack {
                     BackButton {
@@ -90,17 +90,17 @@ struct ScrollKittyLifecycleView: View {
                 
                 // Horizontal Scrollable Cards
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: cardSpacing) {
+                    HStack(spacing: 0) {
                         ForEach(ScrollKittyState.allStates) { state in
                             ScrollKittyCard(
                                 state: state,
                                 isActive: state.id == store.currentPage
                             )
+                            .containerRelativeFrame(.horizontal)
                             .id(state.id)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 20)
+                    .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.viewAligned)
                 .onScrollTargetVisibilityChange(idType: Int.self) { ids in
@@ -131,27 +131,27 @@ struct ScrollKittyLifecycleView: View {
                     totalPages: totalCards
                 )
                 .padding(.top, 8)
+                .padding(.bottom, 26)
                 
-                // Title
-                Text("Lifecycle of Scroll Kitty")
-                    .font(.custom("Sofia Pro-Bold", size: 35))
-                    .tracking(-2)
-                    .foregroundColor(DesignSystem.Colors.primaryText)
+                VStack {
+                    Text("Lifecycle of Scroll Kitty")
+                        .font(.custom("Sofia Pro-Bold", size: 35))
+                        .tracking(-2)
+                        .foregroundColor(DesignSystem.Colors.primaryText)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                    
+                    VStack(spacing: 0) {
+                        Text("Every scroll, swipe, and sleep break changes")
+                        Text("Scroll Kitty's state. The more you protect Scroll Kitty,")
+                        Text("the healthier Scroll Kitty gets.")
+                    }
+                    .font(.custom("Sofia Pro-Regular", size: 16))
+                    .foregroundColor(DesignSystem.Colors.textGray)
                     .multilineTextAlignment(.center)
+                    .padding(.top, 8)
                     .padding(.horizontal, 16)
-                
-                // Subtitle
-                VStack(spacing: 0) {
-                    Text("Every scroll, swipe, and sleep break changes")
-                    Text("Scroll Kitty's state. The more you protect Scroll Kitty,")
-                    Text("the healthier Scroll Kitty gets.")
                 }
-                .font(.custom("Sofia Pro-Regular", size: 16))
-                .foregroundColor(DesignSystem.Colors.textGray)
-                .multilineTextAlignment(.center)
-                .padding(.top, 8)
-                .padding(.horizontal, 16)
-                
                 Spacer()
                 
                 // Continue Button
