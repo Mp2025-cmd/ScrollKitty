@@ -19,7 +19,6 @@ struct ResultsLoadingFeature {
             "evaluating your screen time chaos...",
             "processing your doomscroll data...",
             "calculating your FOMO levels...",
-            "measuring how chronically online you are...",
             "checking if you're terminally online..."
         ]
     }
@@ -45,10 +44,10 @@ struct ResultsLoadingFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                // Start caption rotation timer (every 2s for 7 cycles)
+                // Start caption rotation timer (every 1s for 10 cycles to match loading duration)
                 let captionEffect: Effect<Action> = .run { send in
-                    for _ in 0..<7 {
-                        try await clock.sleep(for: .seconds(2.0))
+                    for _ in 0..<10 {
+                        try await clock.sleep(for: .seconds(1))
                         await send(Action.captionTimerTick)
                     }
                 }
