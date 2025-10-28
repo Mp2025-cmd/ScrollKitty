@@ -28,6 +28,7 @@ struct ResultsLoadingFeature {
         case captionTimerTick
         case loadingTimerTick
         case loadingComplete
+        case triggerHaptic(Double)
         case delegate(Delegate)
         
         enum Delegate: Equatable {
@@ -44,10 +45,9 @@ struct ResultsLoadingFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                // Start caption rotation timer (every 1s for 10 cycles to match loading duration)
                 let captionEffect: Effect<Action> = .run { send in
                     for _ in 0..<10 {
-                        try await clock.sleep(for: .seconds(1))
+                        try await clock.sleep(for: .seconds(1.2))
                         await send(Action.captionTimerTick)
                     }
                 }
@@ -71,7 +71,32 @@ struct ResultsLoadingFeature {
                 
             case .loadingTimerTick:
                 state.loadingProgress += 0.01
+                let newProgress = state.loadingProgress
+                
+                // Trigger haptic every 5 percentage points
+                if Int(newProgress * 100) % 5 == 0 && newProgress > 0 {
+                    return .send(.triggerHaptic(newProgress))
+                }
+                
                 return .none
+                
+            case .triggerHaptic(let progress):
+                return .run { _ in
+                    let generator = UIImpactFeedbackGenerator()
+                    generator.prepare()
+                    
+                    // Increase haptic intensity as progress increases
+                    let intensity: Double
+                    if progress < 0.33 {
+                        intensity = 0.3
+                    } else if progress < 0.66 {
+                        intensity = 0.6
+                    } else {
+                        intensity = 1.0
+                    }
+                    
+                    generator.impactOccurred(intensity: intensity)
+                }
                 
             case .loadingComplete:
                 return .send(.delegate(.resultsCalculated))
