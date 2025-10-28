@@ -45,10 +45,10 @@ struct ResultsLoadingFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                // Start caption rotation timer (every 1.5s for 7 cycles)
+                // Start caption rotation timer (every 2s for 7 cycles)
                 let captionEffect: Effect<Action> = .run { send in
                     for _ in 0..<7 {
-                        try await clock.sleep(for: .seconds(1.5))
+                        try await clock.sleep(for: .seconds(2.0))
                         await send(Action.captionTimerTick)
                     }
                 }
@@ -98,25 +98,20 @@ struct ResultsLoadingView: View {
             VStack(spacing: 40) {
                 Spacer()
                 
-                // Circular Progress Ring (3 concentric circles)
+                // Circular Progress Ring (single concentric circle)
                 ZStack {
-                    // Outer circle (background)
+                    // Background circle
                     Circle()
                         .stroke(DesignSystem.Colors.progressBarBackground, lineWidth: 8)
                         .frame(width: 201, height: 201)
                     
-                    // Middle circle (partial fill)
+                    // Progress circle (partial fill)
                     Circle()
                         .trim(from: 0, to: store.loadingProgress)
                         .stroke(DesignSystem.Colors.progressBarFill, lineWidth: 8)
                         .frame(width: 201, height: 201)
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 0.1), value: store.loadingProgress)
-                    
-                    // Inner circle (background)
-                    Circle()
-                        .stroke(DesignSystem.Colors.progressBarBackground, lineWidth: 4)
-                        .frame(width: 177, height: 177)
                     
                     // Percentage text
                     Text("\(Int(store.loadingProgress * 100))%")
