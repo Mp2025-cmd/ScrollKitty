@@ -3,13 +3,6 @@ import SwiftUI
 
 @Reducer
 struct IdleCheckFeature {
-    enum IdleCheckOption: String, CaseIterable, Equatable, RawRepresentable {
-        case everyFewMinutes = "Every few minutes"
-        case everyHour = "Every hour"
-        case fewTimesDay = "A few times a day"
-        case rarely = "Rarely"
-    }
-
     @ObservableState
     struct State: Equatable {
         var selectedOption: IdleCheckOption?
@@ -84,7 +77,7 @@ struct IdleCheckView: View {
 
                 // Options
                 OptionSelector(
-                    options: IdleCheckFeature.IdleCheckOption.allCases,
+                    options: IdleCheckOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))

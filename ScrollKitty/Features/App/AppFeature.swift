@@ -22,12 +22,12 @@ struct AppFeature {
         var showScreenTimeAccess = false
         var showCharacterIntro = false
         var showScrollKittyLifecycle = false
-        var userHourSelection: UsageQuestionFeature.HourOption?
-        var userAddictionSelection: AddictionFeature.AddictionOption?
-        var userSleepSelection: SleepFeature.SleepOption?
-        var userWithoutPhoneSelection: WithoutPhoneFeature.WithoutPhoneOption?
-        var userIdleCheckSelection: IdleCheckFeature.IdleCheckOption?
-        var userAgeSelection: AgeFeature.AgeOption?
+        var userHourSelection: HourOption?
+        var userAddictionSelection: AddictionOption?
+        var userSleepSelection: SleepOption?
+        var userWithoutPhoneSelection: WithoutPhoneOption?
+        var userIdleCheckSelection: IdleCheckOption?
+        var userAgeSelection: AgeOption?
     }
 
     enum Action {

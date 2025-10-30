@@ -3,14 +3,6 @@ import SwiftUI
 
 @Reducer
 struct UsageQuestionFeature {
-    enum HourOption: String, CaseIterable, Equatable {
-        case threeOrLess = "3hrs or less"
-        case threeToFive = "3hrs - 5hrs"
-        case sixToEight = "6hrs - 8hrs"
-        case nineToEleven = "9hrs - 11hrs"
-        case twelveOrMore = "12hrs+"
-    }
-
     @ObservableState
     struct State: Equatable {
         var selectedOption: HourOption?
@@ -90,7 +82,7 @@ struct UsageQuestionView: View {
                 
                 // Options
                 OptionSelector(
-                    options: UsageQuestionFeature.HourOption.allCases,
+                    options: HourOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))

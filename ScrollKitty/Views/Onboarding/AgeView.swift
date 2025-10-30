@@ -3,15 +3,6 @@ import SwiftUI
 
 @Reducer
 struct AgeFeature {
-    enum AgeOption: String, CaseIterable, Equatable, RawRepresentable {
-        case under18 = "under 18"
-        case age18to24 = "18 - 24yrs"
-        case age25to34 = "25 - 34yrs"
-        case age35to44 = "35 - 44yrs"
-        case age45to54 = "45 - 54yrs"
-        case age55plus = "55+yrs"
-    }
-
     @ObservableState
     struct State: Equatable {
         var selectedOption: AgeOption?
@@ -86,7 +77,7 @@ struct AgeView: View {
 
                 // Options
                 OptionSelector(
-                    options: AgeFeature.AgeOption.allCases,
+                    options: AgeOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))

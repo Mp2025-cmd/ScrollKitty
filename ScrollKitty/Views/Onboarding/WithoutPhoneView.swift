@@ -3,13 +3,6 @@ import SwiftUI
 
 @Reducer
 struct WithoutPhoneFeature {
-    enum WithoutPhoneOption: String, CaseIterable, Equatable, RawRepresentable {
-        case veryAnxious = "Very anxious"
-        case littleUneasy = "A little uneasy"
-        case mostlyFine = "Mostly fine"
-        case totallyFine = "Totally fine"
-    }
-
     @ObservableState
     struct State: Equatable {
         var selectedOption: WithoutPhoneOption?
@@ -85,7 +78,7 @@ struct WithoutPhoneView: View {
 
                 // Options
                 OptionSelector(
-                    options: WithoutPhoneFeature.WithoutPhoneOption.allCases,
+                    options: WithoutPhoneOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))

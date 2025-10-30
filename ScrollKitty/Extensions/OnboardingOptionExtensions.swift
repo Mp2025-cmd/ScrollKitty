@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - Daily Hours Conversion
-extension UsageQuestionFeature.HourOption {
+extension HourOption {
     var dailyHours: Double {
         switch self {
         case .threeOrLess: return 2.5

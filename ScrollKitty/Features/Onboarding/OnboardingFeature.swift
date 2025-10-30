@@ -7,11 +7,11 @@ struct OnboardingFeature {
         var path = StackState<Path.State>()
 
         // Store selections as user progresses
-        var hourSelection: UsageQuestionFeature.HourOption?
-        var addictionSelection: AddictionFeature.AddictionOption?
-        var sleepSelection: SleepFeature.SleepOption?
-        var withoutPhoneSelection: WithoutPhoneFeature.WithoutPhoneOption?
-        var idleCheckSelection: IdleCheckFeature.IdleCheckOption?
+        var hourSelection: HourOption?
+        var addictionSelection: AddictionOption?
+        var sleepSelection: SleepOption?
+        var withoutPhoneSelection: WithoutPhoneOption?
+        var idleCheckSelection: IdleCheckOption?
     }
     
     enum Action: Equatable {
@@ -21,12 +21,12 @@ struct OnboardingFeature {
         
         enum Delegate: Equatable {
             case onboardingCompleted(
-                hourSelection: UsageQuestionFeature.HourOption,
-                addictionSelection: AddictionFeature.AddictionOption,
-                sleepSelection: SleepFeature.SleepOption,
-                withoutPhoneSelection: WithoutPhoneFeature.WithoutPhoneOption,
-                idleCheckSelection: IdleCheckFeature.IdleCheckOption,
-                ageSelection: AgeFeature.AgeOption
+                hourSelection: HourOption,
+                addictionSelection: AddictionOption,
+                sleepSelection: SleepOption,
+                withoutPhoneSelection: WithoutPhoneOption,
+                idleCheckSelection: IdleCheckOption,
+                ageSelection: AgeOption
             )
             case goBack
         }

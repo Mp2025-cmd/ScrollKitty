@@ -3,14 +3,6 @@ import SwiftUI
 
 @Reducer
 struct AddictionFeature {
-    enum AddictionOption: String, CaseIterable, Equatable, RawRepresentable {
-        case yes = "Yes"
-        case often = "Often"
-        case sometimes = "Sometimes"
-        case rarely = "Rarely"
-        case notAtAll = "Not at all"
-    }
-
     @ObservableState
     struct State: Equatable {
         var selectedOption: AddictionOption?
@@ -86,7 +78,7 @@ struct AddictionView: View {
 
                 // Options
                 OptionSelector(
-                    options: AddictionFeature.AddictionOption.allCases,
+                    options: AddictionOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))

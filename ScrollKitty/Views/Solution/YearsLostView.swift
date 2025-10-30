@@ -25,7 +25,7 @@ struct YearsLostFeature {
     }
 
     // Estimate remaining years of life based on age group
-    private func estimateRemainingYears(age: AgeFeature.AgeOption) -> Double {
+    private func estimateRemainingYears(age: AgeOption) -> Double {
         switch age {
         case .under18: return 70 // Assume avg age 15 → live to 85
         case .age18to24: return 65 // Assume avg age 21 → live to 86

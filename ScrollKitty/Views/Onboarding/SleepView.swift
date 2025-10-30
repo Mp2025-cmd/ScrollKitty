@@ -3,13 +3,6 @@ import SwiftUI
 
 @Reducer
 struct SleepFeature {
-    enum SleepOption: String, CaseIterable, Equatable, RawRepresentable {
-        case almostEveryNight = "Almost every night"
-        case fewTimesWeek = "A few times a week"
-        case rarely = "Rarely"
-        case never = "Never"
-    }
-
     @ObservableState
     struct State: Equatable {
         var selectedOption: SleepOption?
@@ -84,7 +77,7 @@ struct SleepView: View {
 
                 // Options
                 OptionSelector(
-                    options: SleepFeature.SleepOption.allCases,
+                    options: SleepOption.allCases,
                     selectedOption: store.selectedOption,
                     onSelect: { option in
                         store.send(.optionSelected(option))
