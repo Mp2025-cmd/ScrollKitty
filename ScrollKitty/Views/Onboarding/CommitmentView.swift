@@ -68,22 +68,24 @@ struct CommitmentView: View {
                     .scaledToFit()
                     .frame(height: 200)
                     .padding(.horizontal, 40)
-                
+                    .animation(nil, value: store.isCommitted)
+
                 Spacer()
-                
+
                 // Title
                 VStack(spacing: 8) {
                     Text("Ready to take back control?")
                         .font(.custom("Sofia Pro-Bold", size: 24))
                         .tracking(-1)
                         .foregroundColor(DesignSystem.Colors.primaryText)
-                    
+
                     Text("Make a promise to yourself")
                         .font(.custom("Sofia Pro-Regular", size: 16))
                         .foregroundColor(DesignSystem.Colors.textGray)
                 }
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
+                .animation(nil, value: store.isCommitted)
                 
                 // I commit to section
                 VStack(alignment: .leading, spacing: 16) {
@@ -91,7 +93,7 @@ struct CommitmentView: View {
                         .font(.custom("Sofia Pro-Bold", size: 20))
                         .tracking(-1)
                         .foregroundColor(DesignSystem.Colors.primaryText)
-                    
+
                     // Light blue box with commitments
                     VStack(alignment: .leading, spacing: 12) {
                         CommitmentItem(text: "Guarding my focus and attention.")
@@ -106,9 +108,10 @@ struct CommitmentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.top, 24)
-                
+                .animation(nil, value: store.isCommitted)
+
                 Spacer()
-                
+
                 // Commitment Toggle Button
                 CommitmentCheckbox(
                     isSelected: $store.isCommitted
@@ -124,7 +127,7 @@ struct CommitmentView: View {
                         .stroke(DesignSystem.Colors.primaryBlue, lineWidth: 2)
                 )
                 .padding(.horizontal, 38)
-                
+
                 // Congratulations message
                 Text("🎉 Congratulations on taking the first step! 🎉")
                     .font(.custom("Sofia Pro-Regular", size: 12))
@@ -132,6 +135,7 @@ struct CommitmentView: View {
                     .multilineTextAlignment(.center)
                     .padding(.top, 16)
                     .padding(.horizontal, 16)
+                    .animation(nil, value: store.isCommitted)
                 
                 Spacer()
 
@@ -143,9 +147,6 @@ struct CommitmentView: View {
                 .disabled(!store.isCommitted)
                 .animation(.easeInOut(duration: 0.3), value: store.isCommitted)
                 .padding(.bottom, 32)
-            }
-            .transaction { transaction in
-                transaction.animation = nil
             }
         }
     }
@@ -177,9 +178,7 @@ struct CommitmentCheckbox: View {
     
     var body: some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isSelected.toggle()
-            }
+            isSelected.toggle()
         } label: {
             HStack(spacing: 12) {
                 // Checkmark on the left
