@@ -13,6 +13,8 @@ struct AppFeature {
         var screenTimeAccess = ScreenTimeAccessFeature.State()
         var characterIntro = CharacterIntroFeature.State()
         var scrollKittyLifecycle = ScrollKittyLifecycleFeature.State()
+        var commitment = CommitmentFeature.State()
+        var home = HomeFeature.State()
         var isOnboardingComplete = false
         var showResultsLoading = false
         var showResults = false
@@ -22,6 +24,8 @@ struct AppFeature {
         var showScreenTimeAccess = false
         var showCharacterIntro = false
         var showScrollKittyLifecycle = false
+        var showCommitment = false
+        var showHome = false
         var userHourSelection: HourOption?
         var userAddictionSelection: AddictionOption?
         var userSleepSelection: SleepOption?
@@ -40,6 +44,8 @@ struct AppFeature {
         case screenTimeAccess(ScreenTimeAccessFeature.Action)
         case characterIntro(CharacterIntroFeature.Action)
         case scrollKittyLifecycle(ScrollKittyLifecycleFeature.Action)
+        case commitment(CommitmentFeature.Action)
+        case home(HomeFeature.Action)
     }
 
     var body: some Reducer<State, Action> {
@@ -176,7 +182,17 @@ struct AppFeature {
                 
             case .scrollKittyLifecycle(.delegate(.showNextScreen)):
                 state.showScrollKittyLifecycle = false
-                // TODO: Navigate to main app or next feature
+                state.showCommitment = true
+                return .none
+                
+            case .commitment(.delegate(.goBack)):
+                state.showCommitment = false
+                state.showScrollKittyLifecycle = true
+                return .none
+                
+            case .commitment(.delegate(.showNextScreen)):
+                state.showCommitment = false
+                state.showHome = true
                 return .none
                 
             case .onboarding:
@@ -204,6 +220,12 @@ struct AppFeature {
                 return .none
                 
             case .scrollKittyLifecycle:
+                return .none
+            
+            case .commitment:
+                return .none
+                
+            case .home:
                 return .none
             }
         }
@@ -242,6 +264,14 @@ struct AppFeature {
         
         Scope(state: \.scrollKittyLifecycle, action: \.scrollKittyLifecycle) {
             ScrollKittyLifecycleFeature()
+        }
+        
+        Scope(state: \.commitment, action: \.commitment) {
+            CommitmentFeature()
+        }
+        
+        Scope(state: \.home, action: \.home) {
+            HomeFeature()
         }
     }
 }

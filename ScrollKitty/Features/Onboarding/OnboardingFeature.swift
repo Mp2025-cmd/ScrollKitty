@@ -13,7 +13,6 @@ struct OnboardingFeature {
         var withoutPhoneSelection: WithoutPhoneOption?
         var idleCheckSelection: IdleCheckOption?
     }
-    
     enum Action: Equatable {
         case onAppear
         case path(StackAction<Path.State, Path.Action>)

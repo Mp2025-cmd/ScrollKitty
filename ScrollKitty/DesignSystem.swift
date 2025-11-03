@@ -24,6 +24,7 @@ enum DesignSystem {
         // Semantic Colors
         static let background = white
         static let splashBackground = primaryBlue
+        static let dashboardBackground = Color(hex: "#09121b")
         static let buttonBackground = primaryBlue
         static let buttonTextColor = white
         static let primaryText = black

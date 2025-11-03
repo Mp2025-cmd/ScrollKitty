@@ -12,7 +12,13 @@ struct ContentView: View {
     let store: StoreOf<AppFeature>
     
     var body: some View {
-        if store.showScrollKittyLifecycle {
+        if store.showHome {
+            HomeView()
+        } else if store.showCommitment {
+            CommitmentView(
+                store: store.scope(state: \.commitment, action: \.commitment)
+            )
+        } else if store.showScrollKittyLifecycle {
             ScrollKittyLifecycleView(
                 store: store.scope(state: \.scrollKittyLifecycle, action: \.scrollKittyLifecycle)
             )

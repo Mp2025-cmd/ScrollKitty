@@ -23,7 +23,6 @@ struct YearsLostFeature {
             case goBack
         }
     }
-
     // Estimate remaining years of life based on age group
     private func estimateRemainingYears(age: AgeOption) -> Double {
         switch age {
