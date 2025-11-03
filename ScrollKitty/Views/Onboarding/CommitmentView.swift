@@ -119,14 +119,13 @@ struct CommitmentView: View {
                     )
                     .padding(.horizontal, 38)
                     
-                    // Congratulations message (only visible when committed)
-                    if store.isCommitted{
-                        Text("🎉 Congratulations on taking the first step! 🎉")
-                            .font(.custom("Sofia Pro-Regular", size: 12))
-                            .foregroundColor(DesignSystem.Colors.textGray)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
-                    }
+                    // Congratulations message (always in hierarchy, visibility controlled by opacity)
+                    Text("🎉 Congratulations on taking the first step! 🎉")
+                        .font(.custom("Sofia Pro-Regular", size: 12))
+                        .foregroundColor(DesignSystem.Colors.textGray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .opacity(store.isCommitted ? 1 : 0)
                     
                     PrimaryButton(title: "Continue") {
                         store.send(.continueTapped)
