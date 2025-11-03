@@ -49,7 +49,7 @@ struct CommitmentView: View {
             DesignSystem.Colors.background
                 .ignoresSafeArea()
             
-            VStack(spacing: 0) {
+            VStack(spacing: 20) {
                 // Back button
                 HStack {
                     BackButton {
@@ -68,11 +68,7 @@ struct CommitmentView: View {
                     .scaledToFit()
                     .frame(height: 200)
                     .padding(.horizontal, 40)
-                    .animation(nil, value: store.isCommitted)
 
-                Spacer()
-
-                // Title
                 VStack(spacing: 8) {
                     Text("Ready to take back control?")
                         .font(.custom("Sofia Pro-Bold", size: 24))
@@ -85,10 +81,9 @@ struct CommitmentView: View {
                 }
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
-                .animation(nil, value: store.isCommitted)
                 
                 // I commit to section
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 26) {
                     Text("I commit to:")
                         .font(.custom("Sofia Pro-Bold", size: 20))
                         .tracking(-1)
@@ -107,46 +102,39 @@ struct CommitmentView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
-                .padding(.top, 24)
-                .animation(nil, value: store.isCommitted)
-
-                Spacer()
-
-                // Commitment Toggle Button
-                CommitmentCheckbox(
-                    isSelected: $store.isCommitted
-                )
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 50)
-                        .fill(DesignSystem.Colors.lightBlue)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 50)
-                        .stroke(DesignSystem.Colors.primaryBlue, lineWidth: 2)
-                )
-                .padding(.horizontal, 38)
-
-                // Congratulations message
-                Text("🎉 Congratulations on taking the first step! 🎉")
-                    .font(.custom("Sofia Pro-Regular", size: 12))
-                    .foregroundColor(DesignSystem.Colors.textGray)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 16)
-                    .padding(.horizontal, 16)
-                    .animation(nil, value: store.isCommitted)
-                
-                Spacer()
-
-                // Continue Button (always in hierarchy, visibility controlled by opacity)
-                PrimaryButton(title: "Continue") {
-                    store.send(.continueTapped)
+                .padding(.bottom, 10)
+                VStack(alignment:.center,spacing: 30) {
+                    CommitmentCheckbox(
+                        isSelected: $store.isCommitted
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 50)
+                            .fill(DesignSystem.Colors.lightBlue)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 50)
+                            .stroke(DesignSystem.Colors.primaryBlue, lineWidth: 2)
+                    )
+                    .padding(.horizontal, 38)
+                    
+                    // Congratulations message (only visible when committed)
+                    if store.isCommitted{
+                        Text("🎉 Congratulations on taking the first step! 🎉")
+                            .font(.custom("Sofia Pro-Regular", size: 12))
+                            .foregroundColor(DesignSystem.Colors.textGray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    }
+                    
+                    PrimaryButton(title: "Continue") {
+                        store.send(.continueTapped)
+                    }
+                    .opacity(store.isCommitted ? 1 : 0)
+                    .disabled(!store.isCommitted)
+                    .padding(.bottom, 32)
                 }
-                .opacity(store.isCommitted ? 1 : 0)
-                .disabled(!store.isCommitted)
-                .animation(.easeInOut(duration: 0.3), value: store.isCommitted)
-                .padding(.bottom, 32)
             }
         }
     }
@@ -177,71 +165,28 @@ struct CommitmentCheckbox: View {
     @Binding var isSelected: Bool
     
     var body: some View {
-        Button {
-            isSelected.toggle()
-        } label: {
-            HStack(spacing: 12) {
-                // Checkmark on the left
-                CommitmentCheckmark(isSelected: isSelected)
-                
-                Text("I'm ready to commit!")
-                    .font(.custom("Sofia Pro-Regular", size: 16))
-                    .foregroundColor(DesignSystem.Colors.primaryText)
-                
-                Spacer()
-                
-                // Toggle switch on the right
-                CommitmentToggleSwitch(isOn: isSelected)
-            }
-            .contentShape(Rectangle())
-        }
-    }
-}
-
-// MARK: - Commitment Checkmark
-struct CommitmentCheckmark: View {
-    var isSelected: Bool
-
-    var body: some View {
-        ZStack {
+        HStack  {
+            // Checkmark
+           
             if isSelected {
-                ZStack {
-                    Image("Ellipse 3")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-
-                    Image("Layer_1")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 12, height: 12)
-                }
-                .transition(.scale.combined(with: .opacity))
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 18))
             }
-        }
-        .frame(width: 18, height: 18)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
-    }
-}
+            else {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.white)
+            }
 
-// MARK: - Commitment Toggle Switch
-struct CommitmentToggleSwitch: View {
-    var isOn: Bool
-    
-    var body: some View {
-        ZStack {
-            // Background capsule
-            Capsule()
-                .fill(isOn ? Color(hex: "#00c54f") : Color.gray.opacity(0.3))
-                .frame(width: 51, height: 31)
-            
-            // White circle knob
-            Circle()
-                .fill(Color.white)
-                .frame(width: 27, height: 27)
-                .offset(x: isOn ? 10 : -10)
+            Text("I'm ready to commit!")
+                .font(.custom("Sofia Pro-Regular", size: 16))
+                .multilineTextAlignment(.center)
+                .foregroundColor(DesignSystem.Colors.primaryText)
+                 
+            Toggle("", isOn: $isSelected)
+                .labelsHidden()
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOn)
+        
     }
 }
 
