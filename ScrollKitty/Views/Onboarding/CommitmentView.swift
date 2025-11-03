@@ -134,19 +134,18 @@ struct CommitmentView: View {
                     .padding(.horizontal, 16)
                 
                 Spacer()
-                
-                // Continue Button (only visible after commitment)
-                if store.isCommitted {
-                    PrimaryButton(title: "Continue") {
-                        store.send(.continueTapped)
-                    }
-                    .padding(.bottom, 32)
-                    .transition(.opacity)
-                } else {
-                    // Placeholder space to maintain layout
-                    Color.clear
-                        .frame(height: 80)
+
+                // Continue Button (always in hierarchy, visibility controlled by opacity)
+                PrimaryButton(title: "Continue") {
+                    store.send(.continueTapped)
                 }
+                .opacity(store.isCommitted ? 1 : 0)
+                .disabled(!store.isCommitted)
+                .animation(.easeInOut(duration: 0.3), value: store.isCommitted)
+                .padding(.bottom, 32)
+            }
+            .transaction { transaction in
+                transaction.animation = nil
             }
         }
     }
@@ -179,7 +178,9 @@ struct CommitmentCheckbox: View {
     var body: some View {
         Button {
             if !isSelected {
-                isSelected = true
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    isSelected = true
+                }
             }
         } label: {
             HStack(spacing: 12) {
@@ -203,7 +204,7 @@ struct CommitmentCheckbox: View {
 // MARK: - Commitment Checkmark
 struct CommitmentCheckmark: View {
     var isSelected: Bool
-    
+
     var body: some View {
         ZStack {
             if isSelected {
@@ -212,15 +213,17 @@ struct CommitmentCheckmark: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 18, height: 18)
-                    
+
                     Image("Layer_1")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 12, height: 12)
                 }
+                .transition(.scale.combined(with: .opacity))
             }
         }
         .frame(width: 18, height: 18)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
     }
 }
 
