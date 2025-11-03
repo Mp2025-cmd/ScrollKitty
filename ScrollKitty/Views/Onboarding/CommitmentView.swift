@@ -177,10 +177,8 @@ struct CommitmentCheckbox: View {
     
     var body: some View {
         Button {
-            if !isSelected {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isSelected = true
-                }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                isSelected.toggle()
             }
         } label: {
             HStack(spacing: 12) {
