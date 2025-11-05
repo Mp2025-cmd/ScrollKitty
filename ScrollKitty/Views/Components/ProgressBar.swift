@@ -2,8 +2,13 @@ import SwiftUI
 
 struct ProgressBar: View {
     let percentage: Double
-    let filledColor: Color = Color(hex: "#00c54f")
-    let backgroundColor: Color = Color(hex: "#182430")
+    let filledColor: Color
+    let backgroundColor: Color = Color(hex: "#E8E8E8")
+    
+    init(percentage: Double, filledColor: Color = DesignSystem.Colors.progressBarFill) {
+        self.percentage = percentage
+        self.filledColor = filledColor
+    }
     
     var body: some View {
         GeometryReader { geometry in

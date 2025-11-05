@@ -6,34 +6,44 @@ struct TabBar: View {
     var body: some View {
         VStack(spacing: 0) {
             Divider()
-                .background(Color(hex: "#1a252f"))
+                .background(Color(hex: "#E8E8E8"))
             
             HStack(spacing: 0) {
                 // Dashboard Tab
                 VStack(spacing: 8) {
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 24))
+                    Image("TabBar_Dashboard")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(selectedTab == 0 ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
                     
                     Text("Dashboard")
                         .font(.custom("Sofia Pro-Regular", size: 12))
+                        .foregroundColor(selectedTab == 0 ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
                 }
                 .frame(maxWidth: .infinity)
-                .foregroundColor(selectedTab == 0 ? Color(hex: "#bbdbff") : Color(hex: "#696969"))
                 .padding(.vertical, 12)
+                .opacity(selectedTab == 0 ? 1 : 0.5)
                 
                 // Timeline Tab
                 VStack(spacing: 8) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 24))
+                    Image("TabBar_Timeline")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(selectedTab == 1 ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
                     
                     Text("Timeline")
                         .font(.custom("Sofia Pro-Regular", size: 12))
+                        .foregroundColor(selectedTab == 1 ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
                 }
                 .frame(maxWidth: .infinity)
-                .foregroundColor(selectedTab == 1 ? Color(hex: "#bbdbff") : Color(hex: "#696969"))
                 .padding(.vertical, 12)
+                .opacity(selectedTab == 1 ? 1 : 0.5)
             }
-            .background(Color(hex: "#0d141e"))
+            .background(DesignSystem.Colors.background)
         }
     }
 }
