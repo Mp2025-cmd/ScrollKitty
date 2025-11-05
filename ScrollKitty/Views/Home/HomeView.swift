@@ -5,13 +5,11 @@ struct HomeView: View {
     
     var body: some View {
         ZStack {
-            // White background
-            DesignSystem.Colors.background
+             DesignSystem.Colors.background
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Status Bar (Time, Signal, WiFi, Battery)
-                HStack(spacing: 0) {
+                 HStack(spacing: 0) {
                     Text("9:41")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.gray)
@@ -31,8 +29,7 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 
-                // Title
-                Text("Scroll Kitty")
+                 Text("Scroll Kitty")
                     .font(.custom("Sofia Pro-Bold", size: 36))
                     .tracking(-1)
                     .foregroundColor(DesignSystem.Colors.primaryText)
@@ -40,8 +37,7 @@ struct HomeView: View {
                 
                 Spacer()
                 
-                // Cat Image with Shadow
-                ZStack(alignment: .bottom) {
+                 ZStack(alignment: .bottom) {
                     VStack {
                         Image("1_Healthy_Cheerful")
                             .resizable()
@@ -54,20 +50,17 @@ struct HomeView: View {
                 }
                 
                 
-                // Score Section
-                VStack(spacing: 16) {
+                 VStack(spacing: 16) {
                     // Percentage
                     Text("36%")
                         .font(.custom("Sofia Pro-Bold", size: 50))
                         .tracking(-1)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                     
-                    // Progress Bar
-                    ProgressBar(percentage: 36, filledColor: Color(hex: "#00c54f"))
+                     ProgressBar(percentage: 36, filledColor: Color(hex: "#00c54f"))
                         .frame(width: 256)
                     
-                    // Usage Time
-                    Text("1 hour 25 minutes")
+                     Text("1 hour 25 minutes")
                         .font(.custom("Sofia Pro-Semi_Bold", size: 24))
                         .foregroundColor(DesignSystem.Colors.primaryText)
                 }
