@@ -79,12 +79,20 @@ struct SolutionIntroView: View {
                 
                 Spacer()
                 
-                // Character Image
-                Image("1_Healthy_Cheerful")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 237, height: 214)
-                    .padding(.bottom, 40)
+                // Cat Image with Shadow
+                ZStack(alignment: .bottom) {
+                    VStack {
+                        Image("1_Healthy_Cheerful")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 280)
+                    }
+                    
+                    CatShadow(width: 250, height: 5, opacity: 0.65)
+                        .offset(y: -24)
+                }
+                
+                Spacer()
                 
                 // Continue Button
                 PrimaryButton(title: "Continue") {

@@ -108,12 +108,20 @@ struct YearsLostView: View {
                 
                 Spacer()
                 
-                // Character Image
-                Image("3_Tired_Low-Energy")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 262, height: 215)
-                    .padding(.bottom, 40)
+                // Cat Image with Shadow
+                ZStack(alignment: .bottom) {
+                    VStack {
+                        Image("3_Tired_Low-Energy")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 280)
+                    }
+                    
+                    CatShadow(width: 350, height: 5, opacity: 0.65)
+                        .offset(y: -20)
+                }
+                
+                Spacer()
                 
                 // Continue Button
                 PrimaryButton(title: "Continue") {

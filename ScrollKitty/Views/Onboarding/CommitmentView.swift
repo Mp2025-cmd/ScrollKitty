@@ -75,9 +75,9 @@ struct CommitmentView: View {
             DesignSystem.Colors.background
                 .ignoresSafeArea()
             
-            VStack(spacing: 20) {
-                // Back button
-                HStack {
+            VStack(spacing: 13) {
+                Spacer()
+                 HStack {
                     BackButton {
                         store.send(.backTapped)
                     }
@@ -86,14 +86,20 @@ struct CommitmentView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 
-                Spacer()
+                 
                 
-                // Cat Image
-                Image("1_Healthy_Cheerful")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 200)
-                    .padding(.horizontal, 40)
+                // Cat Image with Shadow
+                ZStack(alignment: .bottom) {
+                    VStack {
+                        Image("1_Healthy_Cheerful")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 280)
+                    }
+                    
+                    CatShadow(width: 250, height: 5, opacity: 0.65)
+                        .offset(y: -24)
+                }
 
                 VStack(spacing: 8) {
                     Text("Ready to take back control?")

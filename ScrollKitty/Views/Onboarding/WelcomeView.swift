@@ -44,12 +44,18 @@ struct WelcomeView: View {
             VStack(spacing: 0) {
                 Spacer()
                 
-                // Cat Image
-                Image("1_Healthy_Cheerful")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: DesignSystem.ComponentSize.catImageWidth,
-                           height: DesignSystem.ComponentSize.catImageHeight)
+                // Cat Image with Shadow
+                ZStack(alignment: .bottom) {
+                    VStack {
+                        Image("1_Healthy_Cheerful")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 280)
+                    }
+                    
+                    CatShadow(width: 250, height: 5, opacity: 0.65)
+                        .offset(y: -24)
+                }
 
                 VStack(spacing: 12) {
                     Text("Welcome to Scroll Kitty")
