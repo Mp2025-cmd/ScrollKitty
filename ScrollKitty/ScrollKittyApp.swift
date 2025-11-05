@@ -18,8 +18,6 @@ struct ScrollKittyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(store: store)
-                .statusBar(hidden: true)
-                .prefersHomeIndicatorAutoHidden(true)
         }
     }
 }
