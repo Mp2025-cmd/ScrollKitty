@@ -115,10 +115,11 @@ struct YearsLostView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(height: 280)
+                            
                     }
-                    
-                    CatShadow(width: 350, height: 5, opacity: 0.65)
-                        .offset(y: -20)
+
+                    CatShadow(width: 390, height: 11, opacity: 0.65)
+                        .offset(y: -10)
                 }
                 
                 Spacer()
