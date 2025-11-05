@@ -9,26 +9,6 @@ struct HomeView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                 HStack(spacing: 0) {
-                    Text("9:41")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.gray)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 7) {
-                        Image(systemName: "cellularbars")
-                            .foregroundColor(DesignSystem.Colors.gray)
-                        Image(systemName: "wifi")
-                            .foregroundColor(DesignSystem.Colors.gray)
-                        Image(systemName: "battery.100")
-                            .foregroundColor(DesignSystem.Colors.gray)
-                    }
-                    .font(.system(size: 13, weight: .regular))
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                
                  Text("Scroll Kitty")
                     .font(.custom("Sofia Pro-Bold", size: 36))
                     .tracking(-1)

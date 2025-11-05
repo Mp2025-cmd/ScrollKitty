@@ -60,13 +60,6 @@ struct ContentView: View {
     }
 }
 
-extension ContentView {
-    func setupStatusBarHiding() -> some View {
-        self
-            .preferredColorScheme(nil)
-    }
-}
-
 #Preview {
     ContentView(
         store: Store(
