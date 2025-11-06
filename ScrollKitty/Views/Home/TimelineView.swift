@@ -131,9 +131,12 @@ struct TimelineItemView: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Timeline icon (bell)
-            Image(systemName: "bell.fill")
-                .font(.system(size: 14))
+            // Timeline icon (cat dashboard icon)
+            Image("TabBar_Dashboard")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
                 .foregroundColor(iconColor)
                 .frame(width: 27, height: 27)
                 .background(Color.white)
@@ -181,7 +184,7 @@ struct TimelineItemView: View {
             Spacer()
         }
         .padding(.leading, 27)
-        .padding(.bottom: 15)
+        .padding(.bottom, 15)
     }
 }
 
