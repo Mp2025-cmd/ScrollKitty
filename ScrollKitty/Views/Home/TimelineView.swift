@@ -20,44 +20,48 @@ struct TimelineView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 24)
                 
-                // Timeline Content
+                // Timeline Content - Chat style
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 16) {
                         // Sample timeline items
                         TimelineItemView(
                             catState: .healthy,
-                            timestamp: "Today, 2:45 PM",
+                            timestamp: "2:45 PM",
                             appName: "Instagram",
                             timeSpent: "45 minutes",
-                            catMessage: "You spent a lot of time on Instagram today. Maybe it's time for a break?"
+                            catMessage: "You spent 45 minutes on Instagram today. Maybe it's time for a break? 🌸",
+                            date: "Today"
                         )
                         
                         TimelineItemView(
                             catState: .concerned,
-                            timestamp: "Today, 12:30 PM",
+                            timestamp: "12:30 PM",
                             appName: "TikTok",
                             timeSpent: "1 hour 20 minutes",
-                            catMessage: "That's quite a bit of scrolling! Your eyes might need rest."
+                            catMessage: "That's quite a bit of scrolling on TikTok! Your eyes might need rest. 👀",
+                            date: "Today"
                         )
                         
                         TimelineItemView(
                             catState: .tired,
-                            timestamp: "Yesterday, 9:15 PM",
+                            timestamp: "9:15 PM",
                             appName: "Twitter",
                             timeSpent: "2 hours",
-                            catMessage: "You've been online for a long time. Time to rest?"
+                            catMessage: "You've been on Twitter for 2 hours... Time to rest? 😴",
+                            date: "Yesterday"
                         )
                         
                         TimelineItemView(
                             catState: .healthy,
-                            timestamp: "Yesterday, 3:00 PM",
+                            timestamp: "3:00 PM",
                             appName: "LinkedIn",
                             timeSpent: "30 minutes",
-                            catMessage: "Good balance today! Keep it up! 😸"
+                            catMessage: "Good balance with LinkedIn today! Keep it up! 😸",
+                            date: "Yesterday"
                         )
                     }
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 100) // Space for tab bar
                 }
             }
         }
@@ -71,76 +75,127 @@ struct TimelineItemView: View {
     let appName: String
     let timeSpent: String
     let catMessage: String
+    let date: String
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Cat Image and Message
-            HStack(spacing: 12) {
-                // Cat Image
+        VStack(alignment: .leading, spacing: 8) {
+            // Date header if needed
+            if shouldShowDateHeader() {
+                Text(date)
+                    .font(.custom("Sofia Pro-Medium", size: 14))
+                    .foregroundColor(DesignSystem.Colors.secondaryText)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 8)
+            }
+            
+            // Chat bubble style
+            HStack(alignment: .bottom, spacing: 8) {
+                // Cat Avatar
                 Image(catState.imageName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 60, height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
                 
-                // Message Bubble
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(catMessage)
-                        .font(.custom("Sofia Pro-Regular", size: 14))
-                        .foregroundColor(DesignSystem.Colors.primaryText)
-                        .lineLimit(2)
+                // Message bubble
+                VStack(alignment: .leading, spacing: 0) {
+                    // Bubble content
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(catMessage)
+                            .font(.custom("Sofia Pro-Regular", size: 15))
+                            .foregroundColor(DesignSystem.Colors.primaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        // App usage info
+                        HStack(spacing: 4) {
+                            Image(systemName: "app.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(DesignSystem.Colors.secondaryText)
+                            
+                            Text("\(appName) • \(timeSpent)")
+                                .font(.custom("Sofia Pro-Regular", size: 12))
+                                .foregroundColor(DesignSystem.Colors.secondaryText)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(chatBubbleBackground)
+                    .clipShape(ChatBubbleShape())
                     
+                    // Timestamp
                     Text(timestamp)
-                        .font(.custom("Sofia Pro-Regular", size: 12))
+                        .font(.custom("Sofia Pro-Regular", size: 11))
                         .foregroundColor(DesignSystem.Colors.secondaryText)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 4)
                 }
                 
                 Spacer()
             }
-            
-            // App Info Card
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appName)
-                        .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                        .foregroundColor(DesignSystem.Colors.primaryText)
-                    
-                    Text(timeSpent)
-                        .font(.custom("Sofia Pro-Regular", size: 14))
-                        .foregroundColor(DesignSystem.Colors.secondaryText)
-                }
-                
-                Spacer()
-                
-                // Time Badge
-                VStack(spacing: 4) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(catState.color)
-                    
-                    Text(formatTimeSpent(timeSpent))
-                        .font(.custom("Sofia Pro-Semi_Bold", size: 12))
-                        .foregroundColor(catState.color)
-                }
-            }
-            .padding(12)
-            .background(Color(hex: "#F5F5F5"))
-            .cornerRadius(12)
         }
-        .padding(12)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
     
-    private func formatTimeSpent(_ timeSpent: String) -> String {
-        // Extract just the duration number
-        if timeSpent.contains("hour") {
-            return "1h+"
-        } else if timeSpent.contains("minute") {
-            return "<1h"
-        }
-        return timeSpent
+    private var chatBubbleBackground: some View {
+        catState.color.opacity(0.1)
+    }
+    
+    private func shouldShowDateHeader() -> Bool {
+        // In real app, would check if this is first message of the day
+        return true
+    }
+}
+
+// Chat bubble shape
+struct ChatBubbleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let radius: CGFloat = 16
+        let tailSize: CGFloat = 8
+        
+        var path = Path()
+        
+        // Start from top left (with radius)
+        path.move(to: CGPoint(x: radius, y: 0))
+        
+        // Top edge
+        path.addLine(to: CGPoint(x: rect.width - radius, y: 0))
+        
+        // Top right corner
+        path.addArc(center: CGPoint(x: rect.width - radius, y: radius),
+                    radius: radius,
+                    startAngle: Angle(degrees: -90),
+                    endAngle: Angle(degrees: 0),
+                    clockwise: false)
+        
+        // Right edge
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height - radius))
+        
+        // Bottom right corner
+        path.addArc(center: CGPoint(x: rect.width - radius, y: rect.height - radius),
+                    radius: radius,
+                    startAngle: Angle(degrees: 0),
+                    endAngle: Angle(degrees: 90),
+                    clockwise: false)
+        
+        // Bottom edge (with tail)
+        path.addLine(to: CGPoint(x: tailSize + radius, y: rect.height))
+        
+        // Tail
+        path.addLine(to: CGPoint(x: tailSize, y: rect.height))
+        path.addQuadCurve(to: CGPoint(x: 0, y: rect.height - tailSize),
+                          control: CGPoint(x: 0, y: rect.height))
+        
+        // Left edge
+        path.addLine(to: CGPoint(x: 0, y: radius))
+        
+        // Top left corner
+        path.addArc(center: CGPoint(x: radius, y: radius),
+                    radius: radius,
+                    startAngle: Angle(degrees: 180),
+                    endAngle: Angle(degrees: 270),
+                    clockwise: false)
+        
+        path.closeSubpath()
+        return path
     }
 }
 
