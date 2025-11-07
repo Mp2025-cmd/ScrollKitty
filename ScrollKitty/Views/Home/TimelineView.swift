@@ -24,7 +24,7 @@ struct TimelineView: View {
                     ZStack(alignment: .topLeading) {
                         // Vertical timeline line
                         Rectangle()
-                            .fill(Color(hex: "#BBDBFF"))
+                            .fill(DesignSystem.Colors.timelineLine)
                             .frame(width: 3)
                             .padding(.leading, 39)
                             .padding(.top, 28)
@@ -32,21 +32,22 @@ struct TimelineView: View {
                         // Timeline items
                         VStack(spacing: 0) {
                             // Date header
-                            HStack(spacing: 4) {
+                            HStack(spacing: 8) {
                                 Circle()
-                                    .fill(Color(hex: "#0191FF"))
-                                    .frame(width: 9, height: 9)
+                                    .fill(DesignSystem.Colors.timelineIndicator)
+                                    .frame(width: 10, height: 10)
                                 
                                 Text("Jan 1")
-                                    .font(.custom("Sofia Pro-Medium", size: 12))
-                                    .foregroundColor(.black)
-                                    .padding(.horizontal)
+                                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                                    .foregroundColor(DesignSystem.Colors.primaryText)
+                                
                                 Text("• Monday")
-                                    .font(.custom("Sofia Pro-Medium", size: 12))
-                                    .foregroundColor(Color(hex: "#696969"))
+                                    .font(.custom("Sofia Pro-Regular", size: 16))
+                                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+                                Spacer()
                             }
-                            .padding(.leading, 33)
-                            .padding(.bottom, 30)
+                            .padding(.leading, 35)
+                            .padding(.bottom, 20)
                             
                             // Timeline items
                             TimelineItemView(
@@ -83,7 +84,7 @@ struct TimelineView: View {
     private func createInstagramMessage() -> AttributedString {
         var text = AttributedString("Yikes! You have spent\n")
         var highlight = AttributedString("2 hours and 14 minutes")
-        highlight.foregroundColor = Color(hex: "#01C9D7")
+        highlight.foregroundColor = DesignSystem.Colors.highlightCyan
         text.append(highlight)
         text.append(AttributedString(" on\nInstagram today. 😔"))
         return text
@@ -92,7 +93,7 @@ struct TimelineView: View {
     private func createTikTokMessage() -> AttributedString {
         var text = AttributedString("Oh no! I'm getting sick.\nYou've been on TikTok for\nover ")
         var highlight = AttributedString("3 hours")
-        highlight.foregroundColor = Color(hex: "#FD4E0F")
+        highlight.foregroundColor = DesignSystem.Colors.highlightOrange
         text.append(highlight)
         text.append(AttributedString("."))
         return text
@@ -101,7 +102,7 @@ struct TimelineView: View {
     private func createInstagramToastMessage() -> AttributedString {
         var text = AttributedString("My paws are toast. I sure\nhope the ")
         var highlight = AttributedString("4 hours ")
-        highlight.foregroundColor = Color(hex: "#F30000")
+        highlight.foregroundColor = DesignSystem.Colors.highlightRed
         text.append(highlight)
         text.append(AttributedString("spent on\nInstagram was worth it."))
         return text
@@ -124,11 +125,11 @@ struct TimelineItemView: View {
                 .frame(width: 18, height: 18)
                 .foregroundColor(catState.iconColor)
                 .frame(width: 27, height: 27)
-                .background(Color.white)
+                .background(DesignSystem.Colors.white)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
-                        .stroke(Color(hex: "#BBDBFF"), lineWidth: 2)
+                        .stroke(DesignSystem.Colors.timelineLine, lineWidth: 2)
                 )
                 .padding(.trailing, 6)
             
@@ -141,14 +142,14 @@ struct TimelineItemView: View {
                     // Left side - Text content
                     VStack(alignment: .leading, spacing: 13) {
                         Text(time)
-                            .font(.custom("Sofia Pro-Medium", size: 12))
+                            .font(DesignSystem.Typography.timelineTime())
                             .foregroundColor(catState.timeColor)
                         
                         Text(message)
-                            .font(.custom("Sofia Pro-Semi_Bold", size: 14))
-                            .foregroundColor(.white)
-                            .tracking(-0.3)
-                            .lineSpacing(4)
+                            .font(DesignSystem.Typography.timelineMessage())
+                            .foregroundColor(DesignSystem.Colors.white)
+                            .tracking(DesignSystem.Typography.timelineMessageTracking)
+                            .lineSpacing(DesignSystem.Typography.timelineMessageLineSpacing)
                     }
                     .padding(.leading, 13)
                     .padding(.top, 11)
