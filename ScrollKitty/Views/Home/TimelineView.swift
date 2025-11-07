@@ -52,37 +52,25 @@ struct TimelineView: View {
                             TimelineItemView(
                                 time: "11:00 AM",
                                 message: AttributedString("Scrolling away on\nScroll Kitty I see. Don't\nforget about me! 🐱"),
-                                catImage: "1_Healthy_Cheerful",
-                                backgroundColor: Color(hex: "#015AD7"),
-                                timeColor: Color(hex: "#BBDBFF"),
-                                iconColor: Color(hex: "#BBDBFF")
+                                catState: .healthy
                             )
                             
                             TimelineItemView(
                                 time: "3:30 PM",
                                 message: createInstagramMessage(),
-                                catImage: "1_Healthy_Cheerful",
-                                backgroundColor: Color(hex: "#015AD7"),
-                                timeColor: Color(hex: "#BBDBFF"),
-                                iconColor: Color(hex: "#BBDBFF")
+                                catState: .healthy
                             )
                             
                             TimelineItemView(
                                 time: "3:30 PM",
                                 message: createTikTokMessage(),
-                                catImage: "3_Tired_Low-Energy",
-                                backgroundColor: Color(hex: "#003B8E"),
-                                timeColor: Color(hex: "#BBDBFF"),
-                                iconColor: Color(hex: "#BBDBFF")
+                                catState: .tired
                             )
                             
                             TimelineItemView(
                                 time: "3:30 PM",
                                 message: createInstagramToastMessage(),
-                                catImage: "4_Extremely_Sick",
-                                backgroundColor: Color(hex: "#00183B"),
-                                timeColor: Color(hex: "#BBDBFF"),
-                                iconColor: Color(hex: "#BBDBFF")
+                                catState: .sick
                             )
                         }
                     }
@@ -124,10 +112,7 @@ struct TimelineView: View {
 struct TimelineItemView: View {
     let time: String
     let message: AttributedString
-    let catImage: String
-    let backgroundColor: Color
-    let timeColor: Color
-    let iconColor: Color
+    let catState: CatState
     
     var body: some View {
         HStack(spacing: 0) {
@@ -137,7 +122,7 @@ struct TimelineItemView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 18, height: 18)
-                .foregroundColor(iconColor)
+                .foregroundColor(catState.iconColor)
                 .frame(width: 27, height: 27)
                 .background(Color.white)
                 .clipShape(Circle())
@@ -149,7 +134,7 @@ struct TimelineItemView: View {
             
             // Card
             ZStack(alignment: .topLeading) {
-                backgroundColor
+                catState.backgroundColor
                     .clipShape(RoundedRectangle(cornerRadius: 21))
                 
                 HStack(spacing: 0) {
@@ -157,7 +142,7 @@ struct TimelineItemView: View {
                     VStack(alignment: .leading, spacing: 13) {
                         Text(time)
                             .font(.custom("Sofia Pro-Medium", size: 12))
-                            .foregroundColor(timeColor)
+                            .foregroundColor(catState.timeColor)
                         
                         Text(message)
                             .font(.custom("Sofia Pro-Semi_Bold", size: 14))
@@ -172,7 +157,7 @@ struct TimelineItemView: View {
                     Spacer()
                     
                     // Right side - Cat image
-                    Image(catImage)
+                    catState.image
                         .resizable()
                         .scaledToFit()
                         .frame(width: 133, height: 120)

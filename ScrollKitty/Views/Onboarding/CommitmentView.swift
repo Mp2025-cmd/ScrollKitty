@@ -91,7 +91,7 @@ struct CommitmentView: View {
                 // Cat Image with Shadow
                 ZStack(alignment: .bottom) {
                     VStack {
-                        Image("1_Healthy_Cheerful")
+                        CatState.healthy.image
                             .resizable()
                             .scaledToFit()
                             .frame(height: 280)

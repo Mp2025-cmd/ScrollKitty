@@ -1,19 +1,58 @@
 import SwiftUI
 import ComposableArchitecture
 
+// MARK: - Domain
+@Reducer
+struct HomeFeature {
+    @ObservableState
+    struct State: Equatable {
+        var selectedTab: HomeTab = .dashboard
+    }
+    
+    enum Action: BindableAction {
+        case binding(BindingAction<State>)
+        case onAppear
+        case tabSelected(HomeTab)
+    }
+    
+    var body: some Reducer<State, Action> {
+        BindingReducer()
+        
+        Reduce { state, action in
+            switch action {
+            case .onAppear:
+                return .none
+                
+            case let .tabSelected(tab):
+                state.selectedTab = tab
+                return .none
+                
+            case .binding:
+                return .none
+            }
+        }
+    }
+}
+
+enum HomeTab: Int, Equatable, Sendable {
+    case dashboard = 0
+    case timeline = 1
+}
+
+// MARK: - View
 struct HomeView: View {
-    let store: StoreOf<HomeFeature>
+    @Bindable var store: StoreOf<HomeFeature>
     
     var body: some View {
         ZStack {
             DesignSystem.Colors.background
                 .ignoresSafeArea()
             
-            if store.selectedTab == 0 {
-                // Dashboard View
+            // Content based on selected tab
+            switch store.selectedTab {
+            case .dashboard:
                 dashboardContent
-            } else {
-                // Timeline View
+            case .timeline:
                 TimelineView()
             }
             
@@ -21,14 +60,58 @@ struct HomeView: View {
                 Spacer()
                 
                 // Tab Bar
-                TabBar(
-                    selectedTab: Binding(
-                        get: { store.selectedTab },
-                        set: { store.send(.tabSelected($0)) }
-                    )
+                HStack(spacing: 0) {
+                    // Dashboard Tab
+                    Button {
+                        store.send(.tabSelected(.dashboard))
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image("TabBar_Dashboard")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                                .foregroundColor(store.selectedTab == .dashboard ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+                            
+                            Text("Dashboard")
+                                .font(.custom("Sofia Pro-Regular", size: 12))
+                                .foregroundColor(store.selectedTab == .dashboard ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .opacity(store.selectedTab == .dashboard ? 1 : 0.5)
+                    }
+                    
+                    // Timeline Tab
+                    Button {
+                        store.send(.tabSelected(.timeline))
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image("TabBar_Timeline")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                                .foregroundColor(store.selectedTab == .timeline ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+                            
+                            Text("Timeline")
+                                .font(.custom("Sofia Pro-Regular", size: 12))
+                                .foregroundColor(store.selectedTab == .timeline ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .opacity(store.selectedTab == .timeline ? 1 : 0.5)
+                    }
+                }
+                .background(DesignSystem.Colors.background)
+                .overlay(
+                    Divider()
+                        .background(Color(hex: "#E8E8E8")),
+                    alignment: .top
                 )
             }
         }
+        .onAppear { store.send(.onAppear) }
     }
     
     @ViewBuilder
@@ -44,7 +127,7 @@ struct HomeView: View {
             
             ZStack(alignment: .bottom) {
                 VStack {
-                    Image("1_Healthy_Cheerful")
+                    CatState.healthy.image
                         .resizable()
                         .scaledToFit()
                         .frame(height: 280)

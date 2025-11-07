@@ -111,7 +111,7 @@ struct YearsLostView: View {
                 // Cat Image with Shadow
                 ZStack(alignment: .bottom) {
                     VStack {
-                        Image("3_Tired_Low-Energy")
+                        CatState.tired.image
                             .resizable()
                             .scaledToFit()
                             .frame(height: 280)

@@ -14,7 +14,7 @@ struct ScrollKittyCard: View {
                     .frame(width: 201, height: 201)
                 
                 // Character image
-                Image(state.imageName)
+                state.catState.image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: 180, maxHeight: 180)
@@ -25,13 +25,13 @@ struct ScrollKittyCard: View {
             HStack(spacing: 8) {
                 Image("Ellipse 11")
                     .frame(width: 18, height: 18)
-                    .background(state.color)
+                    .background(state.catState.color)
                     .clipShape(Circle())
                 
-                Text(state.title)
+                Text(state.catState.shortName)
                     .font(.custom("Sofia Pro-Bold", size: 20))
                     .tracking(-1)
-                    .foregroundColor(state.color)
+                    .foregroundColor(state.catState.color)
                     .multilineTextAlignment(.center)
             }
         }
