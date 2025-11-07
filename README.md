@@ -86,18 +86,34 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Screen Time Access Screen** - Placeholder for requesting Screen Time API access
 
 #### 8. **Home/Dashboard Screen**
-- **Status Bar** - Time, cellular, wifi, and battery indicators
 - **Scroll Kitty Title** - Centered app name
-- **Cat Display** - Shows current Scroll Kitty health state (1_Healthy_Cheerful)
+- **Cat Display** - Shows current Scroll Kitty health state with shadow
 - **Usage Stats** - 36% score with progress bar and "1 hour 25 minutes" display
-- **Tab Bar Navigation** - Dashboard (active) and Timeline tabs with custom icons
-- **Dark Theme** - Navy background (#09121b) matching dashboard aesthetic
-- **Custom Components**:
-  - `ProgressBar.swift` - Percentage-based progress indicator (green fill)
-  - `TabBar.swift` - Bottom navigation with active/inactive states
-  - `HomeView.swift` - Main dashboard layout (currently stateless)
+- **TCA-Compliant TabBar** - Dashboard and Timeline tabs with proper state management
+  - `HomeFeature` reducer co-located in `HomeView.swift`
+  - `BindableAction` with `BindingReducer` for tab selection
+  - `HomeTab` enum (dashboard/timeline) for type safety
+  - Explicit `tabSelected` actions
 
-#### 9. **Design System**
+#### 9. **Timeline View**
+- **Vertical Timeline** - Blue line (#BBDBFF) with cat dashboard icons
+- **Chat-Style Cards** - Messages from Scroll Kitty about app usage
+- **Cat State Integration** - Uses `CatState` enum for images and colors
+- **Color-Coded Backgrounds** - Progressively darker blues as cat gets sicker
+- **Date Headers** - "Jan 1 • Monday" format with blue dots
+- **AttributedString Messages** - Colored highlights for time amounts (cyan, orange, red)
+- **Cat Images** - Positioned on right side of cards (133x120)
+- **Timestamps** - Light blue (#BBDBFF) time labels
+
+#### 10. **CatState Enum**
+- **Centralized Cat Management** - Single source of truth for all cat states
+- **5 Health States**: healthy, concerned, tired, sick, dead
+- **Properties**: images, colors, display names, health levels
+- **Helper Methods**: `from(screenTimeHours:)`, `from(percentage:)`
+- **Nested HealthLevel Enum** - Descriptions for each state
+- **Timeline Integration** - Background colors, time colors, icon colors
+
+#### 11. **Design System**
 - **Colors:** Primary blue (#015AD7), light blue (#BBDBFF), grays, black/white
 - **Typography:** Sofia Pro font family with proper weight variants
 - **Components:** Reusable buttons, progress indicators, option selectors, back buttons
@@ -144,31 +160,27 @@ ScrollKitty/
 │       └── OnboardingFeature.swift (Navigation coordinator)
 ├── Views/
 │   ├── Onboarding/
-│   │   ├── SplashView.swift (contains SplashFeature)
-│   │   ├── WelcomeView.swift (contains WelcomeFeature)
-│   │   ├── UsageQuestionView.swift (contains UsageQuestionFeature)
-│   │   ├── AddictionView.swift (contains AddictionFeature)
-│   │   ├── SleepView.swift (contains SleepFeature)
-│   │   ├── WithoutPhoneView.swift (contains WithoutPhoneFeature)
-│   │   ├── IdleCheckView.swift (contains IdleCheckFeature)
-│   │   ├── AgeView.swift (contains AgeFeature)
+│   │   ├── SplashView.swift
+│   │   ├── WelcomeView.swift
+│   │   ├── UsageQuestionView.swift
+│   │   ├── AddictionView.swift
+│   │   ├── SleepView.swift
+│   │   ├── WithoutPhoneView.swift
+│   │   ├── IdleCheckView.swift
+│   │   ├── AgeView.swift
 │   │   ├── CommitmentView.swift (contains CommitmentFeature)
-│   │   └── OnboardingView.swift (NavigationStack wrapper)
-│   ├── Results/
-│   │   ├── ResultsLoadingView.swift (contains ResultsLoadingFeature)
-│   │   ├── ResultsView.swift (contains ResultsFeature)
-│   │   └── AddictionScoreView.swift (contains AddictionScoreFeature)
-│   ├── Solution/
-│   │   ├── YearsLostView.swift (contains YearsLostFeature)
-│   │   └── SolutionIntroView.swift (contains SolutionIntroFeature)
-│   ├── Character/
-│   │   └── CharacterIntroView.swift (contains CharacterIntroFeature)
-│   ├── Lifecycle/
-│   │   └── ScrollKittyLifecycleView.swift (contains ScrollKittyLifecycleFeature)
-│   ├── ScreenTime/
-│   │   └── ScreenTimeAccessView.swift (contains ScreenTimeAccessFeature)
+│   │   ├── OnboardingView.swift (contains OnboardingFeature)
+│   │   ├── ResultsLoadingView.swift
+│   │   ├── ResultsView.swift
+│   │   ├── AddictionScoreView.swift
+│   │   ├── YearsLostView.swift
+│   │   ├── SolutionIntroView.swift
+│   │   ├── CharacterIntroView.swift
+│   │   ├── ScrollKittyLifecycleView.swift
+│   │   └── ScreenTimeAccessView.swift
 │   ├── Home/
-│   │   └── HomeView.swift (main dashboard - stateless)
+│   │   ├── HomeView.swift (contains HomeFeature + HomeTab enum)
+│   │   └── TimelineView.swift
 │   └── Components/
 │       ├── PrimaryButton.swift
 │       ├── ProgressIndicator.swift
@@ -177,19 +189,19 @@ ScrollKitty/
 │       ├── ScrollKittyCard.swift
 │       ├── PageControl.swift
 │       ├── ProgressBar.swift
-│       └── TabBar.swift
+│       ├── TabBar.swift
+│       └── CatShadow.swift
 ├── Models/
 │   ├── UserPhoneData.swift
-│   └── ScrollKittyState.swift
+│   ├── ScrollKittyState.swift
+│   └── CatState.swift (enum with 5 states + HealthLevel)
 ├── Enums/
 │   └── OnboardingOptions.swift (all multiple-choice enums)
 ├── Features/
 │   ├── App/
 │   │   └── AppFeature.swift (root navigation coordinator)
-│   ├── Onboarding/
-│   │   └── OnboardingFeature.swift (onboarding flow coordinator)
-│   └── Home/
-│       └── HomeFeature.swift (dashboard coordinator - stateless)
+│   └── Onboarding/
+│       └── OnboardingFeature.swift (onboarding flow coordinator - co-located in Views/Onboarding/)
 ├── Assets.xcassets/
 │   ├── Cat Images/ (1_Healthy_Cheerful through 5_Tombstone_Dead)
 │   ├── Ellipse 3.imageset/ (commitment checkmark background)
@@ -199,20 +211,22 @@ ScrollKitty/
 └── ScrollKittyApp.swift
 ```
 
-**Note:** Most features are embedded directly in their view files (following the SplashView pattern) to eliminate duplicate declarations and keep related code together. Only coordinator features (AppFeature, OnboardingFeature, HomeFeature) exist as standalone files.
+**Note:** Features are co-located with their views where appropriate. `HomeFeature` is embedded in `HomeView.swift`, while `AppFeature` and `OnboardingFeature` remain as standalone coordinator files.
 
 ### Key TCA Patterns
-- **Feature + View in single files** - Each view file contains its `@Reducer` struct
-- **Coordinator pattern** - Separate coordinator features (AppFeature, OnboardingFeature, HomeFeature) manage navigation
+- **Feature + View co-location** - `HomeFeature` embedded in `HomeView.swift` for simple features
+- **Coordinator pattern** - Separate coordinator features (AppFeature, OnboardingFeature) manage navigation
 - **Delegate pattern** - Child features communicate with parents via `.delegate(Delegate)` actions
+- **TabBar navigation** - `BindableAction` with `BindingReducer` for tab selection (HomeView)
+- **Type-safe tabs** - Enum-based tab selection (`HomeTab`) instead of Int
 - **Stack-based navigation** - `StackState<Path.State>` and `StackAction` for navigation flows
 - **Path enum reducers** - `@Reducer(state: .equatable, action: .equatable)` for navigation destinations
 - **Dependency injection** - `@Dependency(\.continuousClock)` for timer effects
 - **Observable state** - `@ObservableState` for SwiftUI integration
-- **Bindable state** - `BindableAction` with `@Bindable` for two-way bindings (e.g., CommitmentView)
+- **Bindable state** - `BindableAction` with `@Bindable` for two-way bindings (CommitmentView, HomeView)
 - **Effect.run** - Explicit `Effect<Action>` type annotations for async work
 - **Cancellable effects** - Using `CancelID` for cancellable timers and tasks
-- **Haptic feedback** - TCA-compliant haptic feedback using `.run` effects (ResultsLoadingView)
+- **Haptic feedback** - TCA-compliant haptic feedback using `.run` effects
 
 ## 📊 Data & Statistics
 
