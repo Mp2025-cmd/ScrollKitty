@@ -5,7 +5,7 @@ import SwiftUI
 struct HomeFeature {
     @ObservableState
     struct State: Equatable {
-        // Stateless for now - can add state as needed
+        var selectedTab: Int = 0
     }
     
     enum Action: Equatable {
@@ -13,10 +13,10 @@ struct HomeFeature {
     }
     
     var body: some Reducer<State, Action> {
-        Reduce { _, action in
+        Reduce { state, action in
             switch action {
-            case .tabSelected:
-                // Handle tab selection - can navigate to other screens later
+            case let .tabSelected(tab):
+                state.selectedTab = tab
                 return .none
             }
         }

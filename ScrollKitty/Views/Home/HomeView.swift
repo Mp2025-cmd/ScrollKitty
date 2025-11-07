@@ -1,14 +1,15 @@
 import SwiftUI
+import ComposableArchitecture
 
 struct HomeView: View {
-    @State private var selectedTab: Int = 0
+    let store: StoreOf<HomeFeature>
     
     var body: some View {
         ZStack {
             DesignSystem.Colors.background
                 .ignoresSafeArea()
             
-            if selectedTab == 0 {
+            if store.selectedTab == 0 {
                 // Dashboard View
                 dashboardContent
             } else {
@@ -20,7 +21,12 @@ struct HomeView: View {
                 Spacer()
                 
                 // Tab Bar
-                TabBar(selectedTab: $selectedTab)
+                TabBar(
+                    selectedTab: Binding(
+                        get: { store.selectedTab },
+                        set: { store.send(.tabSelected($0)) }
+                    )
+                )
             }
         }
     }
@@ -70,5 +76,10 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView(
+        store: Store(
+            initialState: HomeFeature.State(),
+            reducer: { HomeFeature() }
+        )
+    )
 }

@@ -13,7 +13,9 @@ struct ContentView: View {
     
     var body: some View {
         if store.showHome {
-            HomeView()
+            HomeView(
+                store: store.scope(state: \.home, action: \.home)
+            )
         } else if store.showCommitment {
             CommitmentView(
                 store: store.scope(state: \.commitment, action: \.commitment)

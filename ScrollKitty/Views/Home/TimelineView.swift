@@ -40,7 +40,7 @@ struct TimelineView: View {
                                 Text("Jan 1")
                                     .font(.custom("Sofia Pro-Medium", size: 12))
                                     .foregroundColor(.black)
-                                
+                                    .padding(.horizontal)
                                 Text("• Monday")
                                     .font(.custom("Sofia Pro-Medium", size: 12))
                                     .foregroundColor(Color(hex: "#696969"))
