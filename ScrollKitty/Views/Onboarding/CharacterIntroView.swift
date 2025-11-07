@@ -77,7 +77,7 @@ struct CharacterIntroView: View {
                 
                 // Title
                 Text("Meet Scroll Kitty")
-                    .font(.custom("Sofia Pro-Bold", size: 35))
+                    .font(DesignSystem.Typography.largeTitle())
                     .tracking(-2)
                     .foregroundColor(DesignSystem.Colors.primaryText)
                     .multilineTextAlignment(.center)
@@ -88,7 +88,7 @@ struct CharacterIntroView: View {
                     Text("Scroll Kitty is your friendly cat friend that loves")
                     Text("when you spend less time on your phone.")
                 }
-                .font(.custom("Sofia Pro-Medium", size: 16))
+                .font(DesignSystem.Typography.subtitle())
                 .foregroundColor(DesignSystem.Colors.secondaryText)
                 .multilineTextAlignment(.center)
                 .lineSpacing(0)

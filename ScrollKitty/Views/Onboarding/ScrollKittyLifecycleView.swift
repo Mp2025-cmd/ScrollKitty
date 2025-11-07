@@ -135,7 +135,7 @@ struct ScrollKittyLifecycleView: View {
                 
                 VStack {
                     Text("Lifecycle of Scroll Kitty")
-                        .font(.custom("Sofia Pro-Bold", size: 35))
+                        .font(DesignSystem.Typography.largeTitle())
                         .tracking(-2)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                         .multilineTextAlignment(.center)
@@ -146,7 +146,7 @@ struct ScrollKittyLifecycleView: View {
                         Text("Scroll Kitty's state. The more you protect Scroll Kitty,")
                         Text("the healthier Scroll Kitty gets.")
                     }
-                    .font(.custom("Sofia Pro-Regular", size: 16))
+                    .font(DesignSystem.Typography.body())
                     .foregroundColor(DesignSystem.Colors.textGray)
                     .multilineTextAlignment(.center)
                     .padding(.top, 8)

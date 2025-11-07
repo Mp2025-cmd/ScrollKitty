@@ -46,13 +46,13 @@ struct ResultsView: View {
                 // Main Title
                 VStack(spacing: 0) {
                     Text("Some not-so-good news.")
-                        .font(.custom("Sofia Pro-Bold", size: 30))
+                        .font(DesignSystem.Typography.title30())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                         .multilineTextAlignment(.center)
                     
                     Text("And some great news...")
-                        .font(.custom("Sofia Pro-Bold", size: 30))
+                        .font(DesignSystem.Typography.title30())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                         .multilineTextAlignment(.center)

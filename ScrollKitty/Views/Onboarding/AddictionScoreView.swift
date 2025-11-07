@@ -108,27 +108,27 @@ struct AnimatedBarGraph: View {
             VStack(spacing: 8) {
                 ZStack(alignment: .bottom) {
                     // Background bar
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
                         .fill(Color.gray.opacity(0.2))
-                        .frame(width: 67, height: 295)
+                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: DesignSystem.ComponentSize.barGraphHeight)
 
                     // Animated user bar
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(red: 0.99, green: 0.31, blue: 0.06)) // #fd4e0f
-                        .frame(width: 67, height: userBarHeight)
+                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
+                        .fill(DesignSystem.Colors.highlightOrange)
+                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: userBarHeight)
                         .animation(.easeOut(duration: 2.0), value: userBarHeight)
 
                     // Percentage text
                     Text("\(Int(userPercentage))%")
-                        .font(.custom("Sofia Pro-Bold", size: 25))
+                        .font(DesignSystem.Typography.percentage25())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
-                        .foregroundColor(.white)
+                        .foregroundColor(DesignSystem.Colors.white)
                         .opacity(userBarHeight > 50 ? 1 : 0)
                         .animation(.easeInOut(duration: 0.5).delay(1.5), value: userBarHeight)
                 }
 
                 Text("Your Usage")
-                    .font(.custom("Sofia Pro-Medium", size: 16))
+                    .font(DesignSystem.Typography.subtitle())
                     .foregroundColor(DesignSystem.Colors.primaryText)
             }
 
@@ -136,19 +136,19 @@ struct AnimatedBarGraph: View {
             VStack(spacing: 8) {
                 ZStack(alignment: .bottom) {
                     // Background bar
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
                         .fill(Color.gray.opacity(0.2))
-                        .frame(width: 67, height: 295)
+                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: DesignSystem.ComponentSize.barGraphHeight)
 
                     // Animated recommended bar
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(red: 0.73, green: 0.86, blue: 1.0)) // #bbdbff
-                        .frame(width: 67, height: recommendedBarHeight)
+                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
+                        .fill(DesignSystem.Colors.lightBlue)
+                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: recommendedBarHeight)
                         .animation(.easeOut(duration: 1.5).delay(0.5), value: recommendedBarHeight)
 
                     // Percentage text
                     Text("\(Int(recommendedPercentage))%")
-                        .font(.custom("Sofia Pro-Bold", size: 25))
+                        .font(DesignSystem.Typography.percentage25())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                         .opacity(recommendedBarHeight > 30 ? 1 : 0)
@@ -156,18 +156,18 @@ struct AnimatedBarGraph: View {
                 }
 
                 Text("Recommended")
-                    .font(.custom("Sofia Pro-Medium", size: 16))
+                    .font(DesignSystem.Typography.subtitle())
                     .foregroundColor(DesignSystem.Colors.primaryText)
             }
         }
         .onAppear {
             // Start animations
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                userBarHeight = CGFloat(userPercentage / 100 * 295)
+                userBarHeight = CGFloat(userPercentage / 100 * DesignSystem.ComponentSize.barGraphHeight)
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                recommendedBarHeight = CGFloat(recommendedPercentage / 100 * 295)
+                recommendedBarHeight = CGFloat(recommendedPercentage / 100 * DesignSystem.ComponentSize.barGraphHeight)
             }
 
             // Trigger animation completion after all animations finish
@@ -202,17 +202,17 @@ struct AddictionScoreView: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         Text("Analysis Complete")
-                            .font(.custom("Sofia Pro-Bold", size: 30))
+                            .font(DesignSystem.Typography.title30())
                             .tracking(DesignSystem.Typography.titleLetterSpacing)
                             .foregroundColor(DesignSystem.Colors.primaryText)
                         
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(DesignSystem.Colors.primaryBlue)
-                            .font(.system(size: 24))
+                            .font(DesignSystem.Typography.icon24())
                     }
                     
                     Text("Here are your results...")
-                        .font(.custom("Sofia Pro-Medium", size: 16))
+                        .font(DesignSystem.Typography.subtitle())
                         .foregroundColor(DesignSystem.Colors.textGray)
                 }
                 .padding(.top, 16)
@@ -222,7 +222,7 @@ struct AddictionScoreView: View {
                     Text("Your daily usage is way above")
                     Text("recommended levels")
                 }
-                .font(.custom("Sofia Pro-Medium", size: 24))
+                .font(DesignSystem.Typography.title24())
                 .foregroundColor(DesignSystem.Colors.primaryText)
                 .multilineTextAlignment(.center)
                 .padding(.top, 40)
@@ -240,8 +240,8 @@ struct AddictionScoreView: View {
 
                 // Sarcastic Warning Message
                 Text("You're above average — but not in a good way.")
-                    .font(.custom("Sofia Pro-Medium", size: 16))
-                    .foregroundColor(Color(red: 0.99, green: 0.31, blue: 0.06)) // #fd4e0f
+                    .font(DesignSystem.Typography.subtitle())
+                    .foregroundColor(DesignSystem.Colors.highlightOrange)
                     .multilineTextAlignment(.center)
                     .padding(.top, 24)
                     .padding(.horizontal, 16)
@@ -259,7 +259,7 @@ struct AddictionScoreView: View {
                 
                 // Disclaimer
                 Text("*This result is an indication only and not a medical diagnosis.")
-                    .font(.custom("Sofia Pro-Regular", size: 12))
+                    .font(DesignSystem.Typography.body12())
                     .foregroundColor(DesignSystem.Colors.textGray)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)

@@ -93,13 +93,13 @@ struct YearsLostView: View {
                 VStack(spacing: 0) {
                     Text("At this pace, you'll spend")
                     Text("\(Int(store.yearsLost)) years")
-                        .foregroundColor(.red)
-                        .font(.custom("Sofia Pro-Bold", size: 40))
+                        .foregroundColor(DesignSystem.Colors.red)
+                        .font(DesignSystem.Typography.title40())
                     Text("of your life looking at a screen.")
                     Text("That's decades you")
                     Text("could be living.")
                 }
-                .font(.custom("Sofia Pro-Bold", size: 30))
+                .font(DesignSystem.Typography.title30())
                 .tracking(DesignSystem.Typography.titleLetterSpacing)
                 .foregroundColor(DesignSystem.Colors.primaryText)
                 .multilineTextAlignment(.center)

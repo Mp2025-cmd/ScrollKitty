@@ -65,13 +65,13 @@ struct ScreenTimeAccessView: View {
                 // Placeholder content - will be implemented later
                 VStack(spacing: 24) {
                     Text("Allow access to Screen Time")
-                        .font(.custom("Sofia Pro-Bold", size: 30))
+                        .font(DesignSystem.Typography.title30())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                         .multilineTextAlignment(.center)
                     
                     Text("This screen will be implemented later")
-                        .font(.custom("Sofia Pro-Medium", size: 16))
+                        .font(DesignSystem.Typography.subtitle())
                         .foregroundColor(DesignSystem.Colors.secondaryText)
                         .multilineTextAlignment(.center)
                 }

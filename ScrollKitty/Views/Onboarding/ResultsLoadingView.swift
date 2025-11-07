@@ -127,20 +127,20 @@ struct ResultsLoadingView: View {
                 ZStack {
                     // Background circle
                     Circle()
-                        .stroke(DesignSystem.Colors.progressBarBackground, lineWidth: 8)
-                        .frame(width: 201, height: 201)
+                        .stroke(DesignSystem.Colors.progressBarBackground, lineWidth: DesignSystem.ComponentSize.progressCircleStrokeWidth)
+                        .frame(width: DesignSystem.ComponentSize.progressCircleSize, height: DesignSystem.ComponentSize.progressCircleSize)
                     
                     // Progress circle (partial fill)
                     Circle()
                         .trim(from: 0, to: store.loadingProgress)
-                        .stroke(DesignSystem.Colors.progressBarFill, lineWidth: 8)
-                        .frame(width: 201, height: 201)
+                        .stroke(DesignSystem.Colors.progressBarFill, lineWidth: DesignSystem.ComponentSize.progressCircleStrokeWidth)
+                        .frame(width: DesignSystem.ComponentSize.progressCircleSize, height: DesignSystem.ComponentSize.progressCircleSize)
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 0.1), value: store.loadingProgress)
                     
                     // Percentage text
                     Text("\(Int(store.loadingProgress * 100))%")
-                        .font(.custom("Sofia Pro-Bold", size: 65))
+                        .font(DesignSystem.Typography.percentage65())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                 }
@@ -148,12 +148,12 @@ struct ResultsLoadingView: View {
                 // Dynamic Caption
                 VStack(spacing: 8) {
                     Text("Analyzing...")
-                        .font(.custom("Sofia Pro-Bold", size: 35))
+                        .font(DesignSystem.Typography.largeTitle())
                         .tracking(DesignSystem.Typography.titleLetterSpacing)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                     
                     Text(store.captions[store.currentCaptionIndex])
-                        .font(.custom("Sofia Pro-Medium", size: 16))
+                        .font(DesignSystem.Typography.subtitle())
                         .foregroundColor(DesignSystem.Colors.secondaryText)
                         .multilineTextAlignment(.center)
                         .animation(.easeInOut(duration: 0.5), value: store.currentCaptionIndex)

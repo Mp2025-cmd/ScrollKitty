@@ -70,7 +70,7 @@ struct SolutionIntroView: View {
                     Text("can help you")
                     Text("get your time back!")
                 }
-                .font(.custom("Sofia Pro-Bold", size: 30))
+                .font(DesignSystem.Typography.title30())
                 .tracking(DesignSystem.Typography.titleLetterSpacing)
                 .foregroundColor(DesignSystem.Colors.primaryText)
                 .multilineTextAlignment(.center)

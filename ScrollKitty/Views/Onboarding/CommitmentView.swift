@@ -103,12 +103,12 @@ struct CommitmentView: View {
 
                 VStack(spacing: 8) {
                     Text("Ready to take back control?")
-                        .font(.custom("Sofia Pro-Bold", size: 24))
+                        .font(DesignSystem.Typography.title24())
                         .tracking(-1)
                         .foregroundColor(DesignSystem.Colors.primaryText)
 
                     Text("Make a promise to yourself")
-                        .font(.custom("Sofia Pro-Regular", size: 16))
+                        .font(DesignSystem.Typography.body())
                         .foregroundColor(DesignSystem.Colors.textGray)
                 }
                 .multilineTextAlignment(.center)
@@ -117,7 +117,7 @@ struct CommitmentView: View {
                 // I commit to section
                 VStack(alignment: .leading, spacing: 26) {
                     Text("I commit to:")
-                        .font(.custom("Sofia Pro-Bold", size: 20))
+                        .font(DesignSystem.Typography.title20())
                         .tracking(-1)
                         .foregroundColor(DesignSystem.Colors.primaryText)
                         .padding(.leading)
@@ -130,8 +130,8 @@ struct CommitmentView: View {
                         CommitmentItem(text: "Protecting Scroll Kitty as I protect my mind.")
                     }
                     .padding(20)
-                    .background(Color(hex: "#bbdbff"))
-                    .cornerRadius(30)
+                    .background(DesignSystem.Colors.lightBlue)
+                    .cornerRadius(DesignSystem.BorderRadius.commitmentBox)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
@@ -143,18 +143,18 @@ struct CommitmentView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
                     .background(
-                        RoundedRectangle(cornerRadius: 50)
+                        RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.button)
                             .fill(DesignSystem.Colors.lightBlue)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 50)
-                            .stroke(DesignSystem.Colors.primaryBlue, lineWidth: 2)
+                        RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.button)
+                            .stroke(DesignSystem.Colors.primaryBlue, lineWidth: DesignSystem.BorderWidth.selection)
                     )
                     .padding(.horizontal, 38)
                     
                     // Congratulations message (always in hierarchy, visibility controlled by opacity)
                     Text("🎉 Congratulations on taking the first step! 🎉")
-                        .font(.custom("Sofia Pro-Regular", size: 18))
+                        .font(DesignSystem.Typography.body18())
                         .foregroundColor(DesignSystem.Colors.textGray)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
@@ -198,11 +198,11 @@ struct CommitmentItem: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Text("•")
-                .font(.custom("Sofia Pro-Regular", size: 16))
+                .font(DesignSystem.Typography.body())
                 .foregroundColor(DesignSystem.Colors.primaryText)
             
             Text(text)
-                .font(.custom("Sofia Pro-Regular", size: 16))
+                .font(DesignSystem.Typography.body())
                 .foregroundColor(DesignSystem.Colors.primaryText)
                 .lineLimit(nil)
             
@@ -221,16 +221,16 @@ struct CommitmentCheckbox: View {
            
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.system(size: 18))
+                    .foregroundColor(DesignSystem.Colors.green)
+                    .font(DesignSystem.Typography.icon18())
             }
             else {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.white)
+                    .foregroundColor(DesignSystem.Colors.white)
             }
 
             Text("I'm ready to commit!")
-                .font(.custom("Sofia Pro-Regular", size: 16))
+                .font(DesignSystem.Typography.body())
                 .multilineTextAlignment(.center)
                 .foregroundColor(DesignSystem.Colors.primaryText)
                  
