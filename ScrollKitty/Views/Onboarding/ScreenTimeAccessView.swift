@@ -9,6 +9,7 @@ struct ScreenTimeAccessFeature {
     struct State: Equatable {
         var isRequestingAccess = false
         var accessGranted = false
+        @Presents var alert: AlertState<Action.Alert>?
     }
     
     enum Action: Equatable {
@@ -16,9 +17,16 @@ struct ScreenTimeAccessFeature {
         case requestAccessTapped
         case accessGranted
         case accessDenied
-        case continueTapped
+        case dontAllowTapped
+        case alert(PresentationAction<Alert>)
+        case openSettingsTapped
         case backTapped
         case delegate(Delegate)
+        
+        enum Alert: Equatable {
+            case tryAgain
+            case openSettings
+        }
         
         enum Delegate: Equatable {
             case showNextScreen
@@ -46,15 +54,67 @@ struct ScreenTimeAccessFeature {
             case .accessGranted:
                 state.isRequestingAccess = false
                 state.accessGranted = true
-                return .none
+                // Auto-proceed to next screen when granted
+                return .send(.delegate(.showNextScreen))
                 
             case .accessDenied:
                 state.isRequestingAccess = false
                 state.accessGranted = false
+                state.alert = AlertState {
+                    TextState("Screen Time Access Required")
+                } actions: {
+                    ButtonState(action: .tryAgain) {
+                        TextState("Try Again")
+                    }
+                    ButtonState(action: .openSettings) {
+                        TextState("Open Settings")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("Cancel")
+                    }
+                } message: {
+                    TextState("Scroll Kitty needs Screen Time access to track your usage and keep your cat healthy. Without this permission, the app cannot function properly.")
+                }
                 return .none
                 
-            case .continueTapped:
-                return .send(.delegate(.showNextScreen))
+            case .dontAllowTapped:
+                state.alert = AlertState {
+                    TextState("Screen Time Access Required")
+                } actions: {
+                    ButtonState(action: .tryAgain) {
+                        TextState("Try Again")
+                    }
+                    ButtonState(action: .openSettings) {
+                        TextState("Open Settings")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("Cancel")
+                    }
+                } message: {
+                    TextState("Scroll Kitty needs Screen Time access to track your usage and keep your cat healthy. Without this permission, the app cannot function properly.")
+                }
+                return .none
+                
+            case .alert(.presented(.tryAgain)):
+                state.alert = nil
+                return .send(.requestAccessTapped)
+                
+            case .alert(.presented(.openSettings)):
+                return .run { _ in
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        await UIApplication.shared.open(url)
+                    }
+                }
+                
+            case .alert:
+                return .none
+                
+            case .openSettingsTapped:
+                return .run { _ in
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        await UIApplication.shared.open(url)
+                    }
+                }
                 
             case .backTapped:
                 return .send(.delegate(.goBack))
@@ -63,12 +123,13 @@ struct ScreenTimeAccessFeature {
                 return .none
             }
         }
+        .ifLet(\.$alert, action: \.alert)
     }
 }
 
 // MARK: - View
 struct ScreenTimeAccessView: View {
-    let store: StoreOf<ScreenTimeAccessFeature>
+    @Bindable var store: StoreOf<ScreenTimeAccessFeature>
     
     var body: some View {
         ZStack {
@@ -92,7 +153,7 @@ struct ScreenTimeAccessView: View {
                 .padding(.bottom, 32)
                 
                 // Title
-                Text("Allow access to\nScreen Time")
+                Text("Connect ScrollKitty to\nScreen Time")
                     .font(DesignSystem.Typography.title30())
                     .tracking(DesignSystem.Typography.titleLetterSpacing)
                     .foregroundColor(.black)
@@ -101,26 +162,11 @@ struct ScreenTimeAccessView: View {
                 
                 // Description
                 VStack(spacing: 16) {
-                    Text("Providing \"Scroll Kitty\" access to Screen Time allows it to use you activity data, restrict content and limit the usage of apps and websites")
+                    Text("Your data is completely private and never leaves your device.")
                         .font(DesignSystem.Typography.body())
                         .foregroundColor(Color(red: 0.41, green: 0.41, blue: 0.41))
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
-                    
-                    Text("You can control which apps access your own in Screen Time Options in Settings.")
-                        .font(DesignSystem.Typography.body())
-                        .foregroundColor(Color(red: 0.41, green: 0.41, blue: 0.41))
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(4)
-                    
-                    Button(action: {
-                        // TODO: Open learn more link
-                    }) {
-                        Text("learn more...")
-                            .font(DesignSystem.Typography.body())
-                            .foregroundColor(Color(red: 0.0, green: 0.57, blue: 1.0))
-                    }
-                    .padding(.top, 4)
                 }
                 .padding(.horizontal, 34)
                 
@@ -148,7 +194,7 @@ struct ScreenTimeAccessView: View {
                     
                     // Don't Allow button
                     Button(action: {
-                        store.send(.continueTapped)
+                        store.send(.dontAllowTapped)
                     }) {
                         Text("Don't Allow")
                             .font(.system(size: 17, weight: .medium))
@@ -159,6 +205,7 @@ struct ScreenTimeAccessView: View {
                 .padding(.bottom, 32)
             }
         }
+        .alert($store.scope(state: \.alert, action: \.alert))
         .onAppear {
             store.send(.onAppear)
         }
