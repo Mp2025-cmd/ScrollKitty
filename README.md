@@ -12,10 +12,11 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 
 - **Framework:** SwiftUI + The Composable Architecture (TCA)
 - **Navigation:** Enum-based destination pattern with type-safe state machine
-- **State Management:** TCA reducers with `@ObservableState`
+- **State Management:** TCA reducers with `@ObservableState` and dependency injection
 - **Design System:** Centralized design tokens in `DesignSystem.swift`
 - **Font:** Sofia Pro (Bold, Medium, Regular variants)
 - **Screen Time API:** DeviceActivity, FamilyControls, ManagedSettings frameworks
+- **Data Persistence:** App Group UserDefaults for main app ↔ extension communication
 
 ## 📱 Current Implementation
 
@@ -90,20 +91,44 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Toggle Button** - iOS-style toggle switch (gray → green) with smooth spring animation
 - **Continue Button** - Only appears after user commits (taps "I'm ready to commit!")
 
-#### 7. **Screen Time Integration**
-- **Screen Time Access Screen** - Placeholder for requesting Screen Time API access
+#### 8. **Screen Time Integration & App Configuration**
+- **Screen Time Access Screen** - Face ID permission request with Apple-style UI
+- **App Selection Screen** - FamilyActivityPicker for selecting apps/categories to track
+- **Daily Limit Screen** - User selects limit (3-8 hours) with OptionSelector pattern
+- **Permission Denial Handling** - Alert with "Open Settings" when denied (blocks progress)
+- **Data Persistence** - Saves selections to App Group UserDefaults for extension access
+- **Flow Order** - Follows Apple guidelines: educate → permission → configure
 
-#### 8. **Home/Dashboard Screen**
+#### 9. **Cat Health System (Core Game Loop)**
+- **UserSettingsManager** - TCA dependency for App Group persistence
+  - Saves/loads selected apps (FamilyActivitySelection)
+  - Saves/loads daily limit (minutes)
+  - Reads `todayTotal` from App Group (shared with extension)
+- **CatHealthManager** - TCA dependency for health calculations
+  - Formula: `health = 100 - (usedMinutes / limitMinutes * 100)`
+  - Returns cat stage based on health thresholds
+  - Midnight reset logic with date checking
+- **Real-Time Dashboard**
+  - Loads cat health on appear
+  - Displays real screen time from UserDefaults
+  - Dynamic cat image (healthy → dead based on usage)
+  - Color-coded progress bar (green → cyan → blue → orange → red)
+  - 30-second polling for live updates
+  - Cancellable background effects
+
+#### 10. **Home/Dashboard Screen**
 - **Scroll Kitty Title** - Centered app name
-- **Cat Display** - Shows current Scroll Kitty health state with shadow
-- **Usage Stats** - 36% score with progress bar and "1 hour 25 minutes" display
-- **TCA-Compliant TabBar** - Dashboard and Timeline tabs with proper state management
+- **Cat Display** - Real-time health state with dynamic image
+- **Health Percentage** - Live calculation based on usage vs limit
+- **Color-Coded Progress Bar** - Visual feedback on health status
+- **Screen Time Display** - Formatted time (e.g., "1h 25m") from real data
+- **Background Polling** - Updates every 30 seconds while active
+- **TCA-Compliant TabBar** - Dashboard and Timeline tabs
   - `HomeFeature` reducer co-located in `HomeView.swift`
   - `BindableAction` with `BindingReducer` for tab selection
-  - `HomeTab` enum (dashboard/timeline) for type safety
-  - Explicit `tabSelected` actions
+  - Dependency injection for health and settings managers
 
-#### 9. **Timeline View**
+#### 11. **Timeline View**
 - **Vertical Timeline** - Blue line (#BBDBFF) with cat dashboard icons
 - **Chat-Style Cards** - Messages from Scroll Kitty about app usage
 - **Cat State Integration** - Uses `CatState` enum for images and colors
@@ -113,7 +138,7 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Cat Images** - Positioned on right side of cards (133x120)
 - **Timestamps** - Light blue (#BBDBFF) time labels
 
-#### 10. **CatState Enum**
+#### 12. **CatState Enum**
 - **Centralized Cat Management** - Single source of truth for all cat states
 - **5 Health States**: healthy, concerned, tired, sick, dead
 - **Properties**: images, colors, display names, health levels
@@ -121,13 +146,13 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Nested HealthLevel Enum** - Descriptions for each state
 - **Timeline Integration** - Background colors, time colors, icon colors
 
-#### 11. **Design System**
+#### 13. **Design System**
 - **Colors:** Primary blue (#015AD7), light blue (#BBDBFF), grays, black/white
 - **Typography:** Sofia Pro font family with proper weight variants
 - **Components:** Reusable buttons, progress indicators, option selectors, back buttons
 - **Spacing:** Consistent padding and margins throughout
 
-#### 10. **User Data Collection**
+#### 14. **User Data Collection**
 - Hour selection (3hrs or less → 12hrs+)
 - Addiction level (Not at all → Yes)
 - Sleep interference (Never → Almost every night)
@@ -203,6 +228,10 @@ ScrollKitty/
 │   ├── UserPhoneData.swift
 │   ├── ScrollKittyState.swift
 │   └── CatState.swift (enum with 5 states + HealthLevel)
+├── Services/
+│   ├── ScreenTimeManager.swift (TCA dependency for DeviceActivity)
+│   ├── UserSettingsManager.swift (TCA dependency for App Group persistence)
+│   └── CatHealthManager.swift (TCA dependency for health calculations)
 ├── Enums/
 │   └── OnboardingOptions.swift (all multiple-choice enums)
 ├── Features/
@@ -222,19 +251,23 @@ ScrollKitty/
 **Note:** Features are co-located with their views where appropriate. `HomeFeature` is embedded in `HomeView.swift`, while `AppFeature` and `OnboardingFeature` remain as standalone coordinator files.
 
 ### Key TCA Patterns
+- **Enum-based navigation** - `Destination` enum for type-safe, single-source-of-truth navigation (AppFeature)
+- **Stack-based navigation** - `StackState<Path.State>` for multi-step flows (OnboardingFeature)
 - **Feature + View co-location** - `HomeFeature` embedded in `HomeView.swift` for simple features
-- **Coordinator pattern** - Separate coordinator features (AppFeature, OnboardingFeature) manage navigation
+- **Coordinator pattern** - AppFeature manages 13 destinations with enum state machine
 - **Delegate pattern** - Child features communicate with parents via `.delegate(Delegate)` actions
-- **TabBar navigation** - `BindableAction` with `BindingReducer` for tab selection (HomeView)
-- **Type-safe tabs** - Enum-based tab selection (`HomeTab`) instead of Int
-- **Stack-based navigation** - `StackState<Path.State>` and `StackAction` for navigation flows
-- **Path enum reducers** - `@Reducer(state: .equatable, action: .equatable)` for navigation destinations
-- **Dependency injection** - `@Dependency(\.continuousClock)` for timer effects
+- **Dependency injection** - Custom TCA dependencies for screen time, health, and settings
+  - `@Dependency(\.screenTimeManager)` - DeviceActivity integration
+  - `@Dependency(\.userSettings)` - App Group persistence
+  - `@Dependency(\.catHealth)` - Health calculation engine
+- **App Group sharing** - UserDefaults suite for main app ↔ extension communication
+- **TabBar navigation** - `BindableAction` with `BindingReducer` for tab selection
 - **Observable state** - `@ObservableState` for SwiftUI integration
-- **Bindable state** - `BindableAction` with `@Bindable` for two-way bindings (CommitmentView, HomeView)
-- **Effect.run** - Explicit `Effect<Action>` type annotations for async work
-- **Cancellable effects** - Using `CancelID` for cancellable timers and tasks
-- **Haptic feedback** - TCA-compliant haptic feedback using `.run` effects
+- **Bindable state** - `BindableAction` with `@Bindable` for two-way bindings
+- **Effect.run** - Async/await effects with proper error handling
+- **Cancellable effects** - Background polling with `CancelID` enum
+- **Timer effects** - `continuousClock.timer()` for 30-second health updates
+- **Effect composition** - `.merge()` for parallel effects (load + start polling)
 
 ## 📊 Data & Statistics
 
