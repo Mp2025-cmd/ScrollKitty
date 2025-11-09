@@ -257,12 +257,21 @@ ScrollKitty uses a **friendly confrontation** approach - delivering hard truths 
 
 ## 🚀 Next Steps
 
-1. **Screen Time API Integration** - Request and collect real usage data
-2. **Main App Dashboard** - Daily usage tracking and cat mood system
-3. **Gamification Features** - Streaks, challenges, and achievements
-4. **Advanced Analytics** - Detailed usage breakdowns and insights
-5. **Social Features** - Share progress and compete with friends
-6. **AI-Powered Recommendations** - Personalized tips based on usage patterns
+### **Immediate Priorities (To Complete Core Loop):**
+
+1. **UserSettingsManager** - Persist selected apps + daily limit to App Group UserDefaults
+2. **DeviceActivityMonitor Extension** - Background monitoring to collect real screen time data
+3. **CatHealthManager** - Calculate cat health from screen time (100% → 0% drain logic)
+4. **HomeView Integration** - Display real data, update cat image based on health
+5. **Background Refresh** - Poll UserDefaults when app is active for real-time updates
+
+### **Post-MVP Features:**
+
+6. **Timeline Messaging** - Threshold-triggered messages when cat health drops
+7. **AI-Generated Messages** - Sarcastic cat commentary (on-device or template-based)
+8. **Midnight Reset** - Cat revives daily, usage resets
+9. **Focus Sessions** - Timer-based app blocking with cat rewards
+10. **Advanced Analytics** - Weekly/monthly usage trends and insights
 
 ---
 
