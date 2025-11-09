@@ -5,6 +5,10 @@ import FamilyControls
 struct AppFeature {
     @ObservableState
     struct State: Equatable {
+        // Navigation
+        var destination: Destination = .onboarding
+        
+        // Feature States
         var onboarding = OnboardingFeature.State()
         var resultsLoading = ResultsLoadingFeature.State()
         var results = ResultsFeature.State()
@@ -18,19 +22,8 @@ struct AppFeature {
         var scrollKittyLifecycle = ScrollKittyLifecycleFeature.State()
         var commitment = CommitmentFeature.State()
         var home = HomeFeature.State()
-        var isOnboardingComplete = false
-        var showResultsLoading = false
-        var showResults = false
-        var showAddictionScore = false
-        var showYearsLost = false
-        var showAppSelection = false
-        var showDailyLimit = false
-        var showSolutionIntro = false
-        var showScreenTimeAccess = false
-        var showCharacterIntro = false
-        var showScrollKittyLifecycle = false
-        var showCommitment = false
-        var showHome = false
+        
+        // User Selections
         var userHourSelection: HourOption?
         var userAddictionSelection: AddictionOption?
         var userSleepSelection: SleepOption?
@@ -39,6 +32,22 @@ struct AppFeature {
         var userAgeSelection: AgeOption?
         var selectedApps: FamilyActivitySelection?
         var selectedLimit: DailyLimitOption?
+    }
+    
+    enum Destination: Equatable {
+        case onboarding
+        case resultsLoading
+        case results
+        case addictionScore
+        case yearsLost
+        case solutionIntro
+        case screenTimeAccess
+        case appSelection
+        case dailyLimit
+        case characterIntro
+        case scrollKittyLifecycle
+        case commitment
+        case home
     }
 
     enum Action {
@@ -72,8 +81,7 @@ struct AppFeature {
                 let idleCheckSelection,
                 let ageSelection
             ))):
-                state.isOnboardingComplete = true
-                state.showResultsLoading = true
+                state.destination = .resultsLoading
                 state.userHourSelection = hourSelection
                 state.userAddictionSelection = addictionSelection
                 state.userSleepSelection = sleepSelection
@@ -83,13 +91,11 @@ struct AppFeature {
                 return .none
 
             case .resultsLoading(.delegate(.resultsCalculated)):
-                state.showResultsLoading = false
-                state.showResults = true
+                state.destination = .results
                 return .none
 
             case .results(.delegate(.showAddictionScore)):
-                state.showResults = false
-                state.showAddictionScore = true
+                state.destination = .addictionScore
                 
                 // Calculate user data and send to addiction score
                 guard let hourSelection = state.userHourSelection,
@@ -113,13 +119,11 @@ struct AppFeature {
                 return .send(.addictionScore(.calculateScore(userData)))
 
             case .addictionScore(.delegate(.goBack)):
-                state.showAddictionScore = false
-                state.showResults = true
+                state.destination = .results
                 return .none
                 
             case .addictionScore(.delegate(.showNextScreen)):
-                state.showAddictionScore = false
-                state.showYearsLost = true
+                state.destination = .yearsLost
 
                 // Pass userData and userScore to Years Lost screen
                 guard let hourSelection = state.userHourSelection,
@@ -145,85 +149,69 @@ struct AppFeature {
                 return .send(.yearsLost(.calculateYearsLost(userData, userScore: userScore)))
                 
             case .yearsLost(.delegate(.goBack)):
-                state.showYearsLost = false
-                state.showAddictionScore = true
-                return .none
-                
-            case .solutionIntro(.delegate(.goBack)):
-                state.showSolutionIntro = false
-                state.showDailyLimit = true
-                return .none
-                
-            case .screenTimeAccess(.delegate(.goBack)):
-                state.showScreenTimeAccess = false
-                state.showSolutionIntro = true
-                return .none
-                
-            case .characterIntro(.delegate(.goBack)):
-                state.showCharacterIntro = false
-                state.showScreenTimeAccess = true
+                state.destination = .addictionScore
                 return .none
                 
             case .yearsLost(.delegate(.showNextScreen)):
-                state.showYearsLost = false
-                state.showAppSelection = true
+                state.destination = .solutionIntro
+                return .none
+                
+            case .solutionIntro(.delegate(.showNextScreen)):
+                state.destination = .screenTimeAccess
+                return .none
+                
+            case .solutionIntro(.delegate(.goBack)):
+                state.destination = .yearsLost
+                return .none
+                
+            case .screenTimeAccess(.delegate(.showNextScreen)):
+                state.destination = .appSelection
+                return .none
+                
+            case .screenTimeAccess(.delegate(.goBack)):
+                state.destination = .solutionIntro
                 return .none
                 
             case .appSelection(.delegate(.completeWithSelection(let selection))):
                 state.selectedApps = selection
-                state.showAppSelection = false
-                state.showDailyLimit = true
+                state.destination = .dailyLimit
+                return .none
+                
+            case .appSelection(.delegate(.goBack)):
+                state.destination = .screenTimeAccess
                 return .none
                 
             case .dailyLimit(.delegate(.completeWithSelection(let selection))):
                 state.selectedLimit = selection
-                state.showDailyLimit = false
-                state.showSolutionIntro = true
-                return .none
-                
-            case .appSelection(.delegate(.goBack)):
-                state.showAppSelection = false
-                state.showYearsLost = true
+                state.destination = .characterIntro
                 return .none
                 
             case .dailyLimit(.delegate(.goBack)):
-                state.showDailyLimit = false
-                state.showAppSelection = true
-                return .none
-                
-            case .solutionIntro(.delegate(.showNextScreen)):
-                state.showSolutionIntro = false
-                state.showScreenTimeAccess = true
-                return .none
-                
-            case .screenTimeAccess(.delegate(.showNextScreen)):
-                state.showScreenTimeAccess = false
-                state.showCharacterIntro = true
+                state.destination = .appSelection
                 return .none
                 
             case .characterIntro(.delegate(.showNextScreen)):
-                state.showCharacterIntro = false
-                state.showScrollKittyLifecycle = true
+                state.destination = .scrollKittyLifecycle
+                return .none
+                
+            case .characterIntro(.delegate(.goBack)):
+                state.destination = .dailyLimit
                 return .none
                 
             case .scrollKittyLifecycle(.delegate(.goBack)):
-                state.showScrollKittyLifecycle = false
-                state.showCharacterIntro = true
+                state.destination = .characterIntro
                 return .none
                 
             case .scrollKittyLifecycle(.delegate(.showNextScreen)):
-                state.showScrollKittyLifecycle = false
-                state.showCommitment = true
+                state.destination = .commitment
                 return .none
                 
             case .commitment(.delegate(.goBack)):
-                state.showCommitment = false
-                state.showScrollKittyLifecycle = true
+                state.destination = .scrollKittyLifecycle
                 return .none
                 
             case .commitment(.delegate(.showNextScreen)):
-                state.showCommitment = false
-                state.showHome = true
+                state.destination = .home
                 return .none
                 
             case .onboarding:

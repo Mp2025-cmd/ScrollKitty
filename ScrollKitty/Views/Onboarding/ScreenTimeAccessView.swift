@@ -24,7 +24,6 @@ struct ScreenTimeAccessFeature {
         case delegate(Delegate)
         
         enum Alert: Equatable {
-            case tryAgain
             case openSettings
         }
         
@@ -63,9 +62,6 @@ struct ScreenTimeAccessFeature {
                 state.alert = AlertState {
                     TextState("Screen Time Access Required")
                 } actions: {
-                    ButtonState(action: .tryAgain) {
-                        TextState("Try Again")
-                    }
                     ButtonState(action: .openSettings) {
                         TextState("Open Settings")
                     }
@@ -73,7 +69,7 @@ struct ScreenTimeAccessFeature {
                         TextState("Cancel")
                     }
                 } message: {
-                    TextState("Scroll Kitty needs Screen Time access to track your usage and keep your cat healthy. Without this permission, the app cannot function properly.")
+                    TextState("Scroll Kitty needs Screen Time access to track your usage and keep your cat healthy. Please enable it in Settings to continue.")
                 }
                 return .none
                 
@@ -81,9 +77,6 @@ struct ScreenTimeAccessFeature {
                 state.alert = AlertState {
                     TextState("Screen Time Access Required")
                 } actions: {
-                    ButtonState(action: .tryAgain) {
-                        TextState("Try Again")
-                    }
                     ButtonState(action: .openSettings) {
                         TextState("Open Settings")
                     }
@@ -91,13 +84,9 @@ struct ScreenTimeAccessFeature {
                         TextState("Cancel")
                     }
                 } message: {
-                    TextState("Scroll Kitty needs Screen Time access to track your usage and keep your cat healthy. Without this permission, the app cannot function properly.")
+                    TextState("Scroll Kitty needs Screen Time access to track your usage and keep your cat healthy. Please enable it in Settings to continue.")
                 }
                 return .none
-                
-            case .alert(.presented(.tryAgain)):
-                state.alert = nil
-                return .send(.requestAccessTapped)
                 
             case .alert(.presented(.openSettings)):
                 return .run { _ in

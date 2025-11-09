@@ -12,59 +12,58 @@ struct ContentView: View {
     let store: StoreOf<AppFeature>
     
     var body: some View {
-        if store.showHome {
-            HomeView(
-                store: store.scope(state: \.home, action: \.home)
+        switch store.destination {
+        case .onboarding:
+            OnboardingView(
+                store: store.scope(state: \.onboarding, action: \.onboarding)
             )
-        } else if store.showCommitment {
-            CommitmentView(
-                store: store.scope(state: \.commitment, action: \.commitment)
-            )
-        } else if store.showScrollKittyLifecycle {
-            ScrollKittyLifecycleView(
-                store: store.scope(state: \.scrollKittyLifecycle, action: \.scrollKittyLifecycle)
-            )
-        } else if store.showCharacterIntro {
-            CharacterIntroView(
-                store: store.scope(state: \.characterIntro, action: \.characterIntro)
-            )
-        } else if store.showScreenTimeAccess {
-            ScreenTimeAccessView(
-                store: store.scope(state: \.screenTimeAccess, action: \.screenTimeAccess)
-            )
-        } else if store.showSolutionIntro {
-            SolutionIntroView(
-                store: store.scope(state: \.solutionIntro, action: \.solutionIntro)
-            )
-        } else if store.showDailyLimit {
-            DailyLimitView(
-                store: store.scope(state: \.dailyLimit, action: \.dailyLimit)
-            )
-        } else if store.showAppSelection {
-            AppSelectionView(
-                store: store.scope(state: \.appSelection, action: \.appSelection)
-            )
-        } else if store.showYearsLost {
-            YearsLostView(
-                store: store.scope(state: \.yearsLost, action: \.yearsLost)
-            )
-        } else if store.showAddictionScore {
-            AddictionScoreView(
-                store: store.scope(state: \.addictionScore, action: \.addictionScore)
-            )
-        } else if store.showResults {
-            ResultsView(
-                store: store.scope(state: \.results, action: \.results)
-            )
-        } else if store.showResultsLoading {
+        case .resultsLoading:
             ResultsLoadingView(
                 store: store.scope(state: \.resultsLoading, action: \.resultsLoading)
             )
-        } else if store.isOnboardingComplete {
-            Text("Main App - Coming Soon")
-        } else {
-            OnboardingView(
-                store: store.scope(state: \.onboarding, action: \.onboarding)
+        case .results:
+            ResultsView(
+                store: store.scope(state: \.results, action: \.results)
+            )
+        case .addictionScore:
+            AddictionScoreView(
+                store: store.scope(state: \.addictionScore, action: \.addictionScore)
+            )
+        case .yearsLost:
+            YearsLostView(
+                store: store.scope(state: \.yearsLost, action: \.yearsLost)
+            )
+        case .solutionIntro:
+            SolutionIntroView(
+                store: store.scope(state: \.solutionIntro, action: \.solutionIntro)
+            )
+        case .screenTimeAccess:
+            ScreenTimeAccessView(
+                store: store.scope(state: \.screenTimeAccess, action: \.screenTimeAccess)
+            )
+        case .appSelection:
+            AppSelectionView(
+                store: store.scope(state: \.appSelection, action: \.appSelection)
+            )
+        case .dailyLimit:
+            DailyLimitView(
+                store: store.scope(state: \.dailyLimit, action: \.dailyLimit)
+            )
+        case .characterIntro:
+            CharacterIntroView(
+                store: store.scope(state: \.characterIntro, action: \.characterIntro)
+            )
+        case .scrollKittyLifecycle:
+            ScrollKittyLifecycleView(
+                store: store.scope(state: \.scrollKittyLifecycle, action: \.scrollKittyLifecycle)
+            )
+        case .commitment:
+            CommitmentView(
+                store: store.scope(state: \.commitment, action: \.commitment)
+            )
+        case .home:
+            HomeView(
+                store: store.scope(state: \.home, action: \.home)
             )
         }
     }
