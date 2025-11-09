@@ -7,13 +7,29 @@ struct HomeFeature {
     @ObservableState
     struct State: Equatable {
         var selectedTab: HomeTab = .dashboard
+        var catHealth: CatHealthData?
+        var isLoading = false
     }
     
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case onAppear
+        case onDisappear
+        case loadCatHealth
+        case catHealthLoaded(CatHealthData)
         case tabSelected(HomeTab)
+        case checkMidnightReset
+        case performReset
+        case startPolling
+        case stopPolling
+        case pollingTick
     }
+    
+    @Dependency(\.userSettings) var userSettings
+    @Dependency(\.catHealth) var catHealth
+    @Dependency(\.continuousClock) var clock
+    
+    enum CancelID { case polling }
     
     var body: some Reducer<State, Action> {
         BindingReducer()
@@ -21,7 +37,56 @@ struct HomeFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
+                return .merge(
+                    .send(.checkMidnightReset),
+                    .send(.startPolling)
+                )
+                
+            case .onDisappear:
+                return .send(.stopPolling)
+                
+            case .checkMidnightReset:
+                return .run { send in
+                    if await catHealth.shouldResetForNewDay() {
+                        await send(.performReset)
+                    } else {
+                        await send(.loadCatHealth)
+                    }
+                }
+                
+            case .performReset:
+                return .run { send in
+                    await catHealth.performMidnightReset()
+                    await send(.loadCatHealth)
+                }
+                
+            case .loadCatHealth:
+                state.isLoading = true
+                return .run { send in
+                    let totalSeconds = await userSettings.getTodayTotal()
+                    let dailyLimit = await userSettings.loadDailyLimit() ?? 240
+                    let healthData = await catHealth.calculateHealth(totalSeconds, dailyLimit)
+                    await send(.catHealthLoaded(healthData))
+                }
+                
+            case .catHealthLoaded(let healthData):
+                state.isLoading = false
+                state.catHealth = healthData
                 return .none
+                
+            case .startPolling:
+                return .run { send in
+                    for await _ in clock.timer(interval: .seconds(30)) {
+                        await send(.pollingTick)
+                    }
+                }
+                .cancellable(id: CancelID.polling)
+                
+            case .stopPolling:
+                return .cancel(id: CancelID.polling)
+                
+            case .pollingTick:
+                return .send(.loadCatHealth)
                 
             case let .tabSelected(tab):
                 state.selectedTab = tab
@@ -112,6 +177,7 @@ struct HomeView: View {
             }
         }
         .onAppear { store.send(.onAppear) }
+        .onDisappear { store.send(.onDisappear) }
     }
     
     @ViewBuilder
@@ -125,9 +191,10 @@ struct HomeView: View {
             
             Spacer()
             
+            // Cat Image based on real health
             ZStack(alignment: .bottom) {
                 VStack {
-                    CatState.healthy.image
+                    (store.catHealth?.catStage ?? .healthy).image
                         .resizable()
                         .scaledToFit()
                         .frame(height: 280)
@@ -138,22 +205,37 @@ struct HomeView: View {
             }
             
             VStack(spacing: 16) {
-                // Percentage
-                Text("36%")
+                // Health Percentage (real data)
+                Text("\(Int(store.catHealth?.healthPercentage ?? 100))%")
                     .font(.custom("Sofia Pro-Bold", size: 50))
                     .tracking(-1)
                     .foregroundColor(DesignSystem.Colors.primaryText)
                 
-                ProgressBar(percentage: 36, filledColor: Color(hex: "#00c54f"))
-                    .frame(width: 256)
+                // Progress bar with dynamic color based on health
+                ProgressBar(
+                    percentage: store.catHealth?.healthPercentage ?? 100,
+                    filledColor: healthBarColor(for: store.catHealth?.healthPercentage ?? 100)
+                )
+                .frame(width: 256)
                 
-                Text("1 hour 25 minutes")
+                // Screen time display (real data)
+                Text(store.catHealth?.formattedTime ?? "0m")
                     .font(.custom("Sofia Pro-Semi_Bold", size: 24))
                     .foregroundColor(DesignSystem.Colors.primaryText)
             }
             .frame(maxWidth: .infinity)
             
             Spacer()
+        }
+    }
+    
+    private func healthBarColor(for health: Double) -> Color {
+        switch health {
+        case 80...100: return Color(hex: "#00c54f") // Green
+        case 60..<80: return Color(hex: "#01C9D7")  // Cyan
+        case 40..<60: return Color(hex: "#0191FF")  // Blue
+        case 20..<40: return Color(hex: "#FD4E0F")  // Orange
+        default: return Color(hex: "#F30000")       // Red
         }
     }
 }

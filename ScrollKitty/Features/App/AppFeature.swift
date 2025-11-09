@@ -65,6 +65,8 @@ struct AppFeature {
         case commitment(CommitmentFeature.Action)
         case home(HomeFeature.Action)
     }
+    
+    @Dependency(\.userSettings) var userSettings
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -175,7 +177,9 @@ struct AppFeature {
             case .appSelection(.delegate(.completeWithSelection(let selection))):
                 state.selectedApps = selection
                 state.destination = .dailyLimit
-                return .none
+                return .run { _ in
+                    await userSettings.saveSelectedApps(selection)
+                }
                 
             case .appSelection(.delegate(.goBack)):
                 state.destination = .screenTimeAccess
@@ -184,7 +188,9 @@ struct AppFeature {
             case .dailyLimit(.delegate(.completeWithSelection(let selection))):
                 state.selectedLimit = selection
                 state.destination = .characterIntro
-                return .none
+                return .run { _ in
+                    await userSettings.saveDailyLimit(selection.minutes)
+                }
                 
             case .dailyLimit(.delegate(.goBack)):
                 state.destination = .appSelection
