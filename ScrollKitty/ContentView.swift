@@ -36,6 +36,14 @@ struct ContentView: View {
             SolutionIntroView(
                 store: store.scope(state: \.solutionIntro, action: \.solutionIntro)
             )
+        } else if store.showDailyLimit {
+            DailyLimitView(
+                store: store.scope(state: \.dailyLimit, action: \.dailyLimit)
+            )
+        } else if store.showAppSelection {
+            AppSelectionView(
+                store: store.scope(state: \.appSelection, action: \.appSelection)
+            )
         } else if store.showYearsLost {
             YearsLostView(
                 store: store.scope(state: \.yearsLost, action: \.yearsLost)

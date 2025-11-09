@@ -92,8 +92,7 @@ struct UsageQuestionView: View {
                 
                 Spacer()
                 
-                // Next Button
-                PrimaryButton(title: "Next") {
+                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
                 }
                 

@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import FamilyControls
 
 @Reducer
 struct OnboardingFeature {
@@ -12,6 +13,7 @@ struct OnboardingFeature {
         var sleepSelection: SleepOption?
         var withoutPhoneSelection: WithoutPhoneOption?
         var idleCheckSelection: IdleCheckOption?
+        var ageSelection: AgeOption?
     }
     enum Action: Equatable {
         case onAppear
@@ -84,7 +86,7 @@ struct OnboardingFeature {
                 return .none
 
             case .path(.element(id: _, action: .age(.delegate(.completeWithSelection(let ageSelection))))):
-                // All selections collected, send completion
+                
                 guard let hourSelection = state.hourSelection,
                       let addictionSelection = state.addictionSelection,
                       let sleepSelection = state.sleepSelection,

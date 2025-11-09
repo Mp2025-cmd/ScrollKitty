@@ -1,6 +1,7 @@
 import Foundation
 import DeviceActivity
 import FamilyControls
+import ManagedSettings
 import ComposableArchitecture
 
 // MARK: - Data Models
@@ -76,6 +77,8 @@ struct ScreenTimeManager: Sendable {
     var getScreenTimeForDate: @Sendable (Date) async throws -> DailyScreenTimeData?
     var getScreenTimeRange: @Sendable (Date, Date) async throws -> [DailyScreenTimeData]
     var checkAuthorization: @Sendable () async -> Bool
+    var startMonitoring: @Sendable () async throws -> Void
+    var stopMonitoring: @Sendable () async -> Void
 }
 
 // MARK: - Dependency Conformance
@@ -131,6 +134,12 @@ extension ScreenTimeManager: DependencyKey {
             } catch {
                 return false
             }
+        },
+        startMonitoring: {
+            try await startDeviceActivityMonitoring()
+        },
+        stopMonitoring: {
+            await stopDeviceActivityMonitoring()
         }
     )
     
@@ -150,7 +159,9 @@ extension ScreenTimeManager: DependencyKey {
         },
         getScreenTimeForDate: { _ in nil },
         getScreenTimeRange: { _, _ in [] },
-        checkAuthorization: { true }
+        checkAuthorization: { true },
+        startMonitoring: {},
+        stopMonitoring: {}
     )
     
     static let previewValue = testValue
@@ -165,26 +176,63 @@ extension DependencyValues {
     }
 }
 
+// MARK: - DeviceActivity Monitoring
+
+private func startDeviceActivityMonitoring() async throws {
+    let center = DeviceActivityCenter()
+    let activityName = DeviceActivityName("dailyActivity")
+    
+    // Schedule monitoring for the entire day (midnight to midnight)
+    let schedule = DeviceActivitySchedule(
+        intervalStart: DateComponents(hour: 0, minute: 0),
+        intervalEnd: DateComponents(hour: 23, minute: 59),
+        repeats: true
+    )
+    
+    try center.startMonitoring(activityName, during: schedule)
+}
+
+private func stopDeviceActivityMonitoring() async {
+    let center = DeviceActivityCenter()
+    let activityName = DeviceActivityName("dailyActivity")
+    
+    center.stopMonitoring([activityName])
+}
+
 // MARK: - Private Parsing Helper
 
 private func parseScreenTimeReport(for interval: DateInterval, date: Date) -> DailyScreenTimeData? {
-    // TODO: Implement actual DeviceActivity report parsing
-    // This requires using DeviceActivityMonitor extension to monitor and collect data
-    // For now, return placeholder structure
+    // IMPORTANT: DeviceActivity doesn't provide direct API to fetch screen time
+    // You need to use one of these approaches:
+    //
+    // Option 1: DeviceActivityReport (iOS 15+)
+    //   - Create a DeviceActivityReport SwiftUI view
+    //   - Apple provides the report UI, you can't access raw data directly
+    //
+    // Option 2: Use UserDefaults to store data from extension
+    //   - DeviceActivityMonitor extension collects data
+    //   - Store in shared UserDefaults (App Group)
+    //   - Read from main app
+    //
+    // Option 3: Use native Screen Time settings
+    //   - Read from device settings (limited access)
+    //
+    // For now, we'll use a placeholder and rely on mock data for testing
     
-    // Note: DeviceActivity API requires a DeviceActivityMonitor extension
-    // which runs in the background and collects usage data
+    // Check if we have cached data (would come from extension)
+    let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
     
-    let totalScreenTime: TimeInterval = 0
-    let appUsages: [AppUsage] = []
-    let pickups: Int = 0
-    let notifications: Int = 0
+    if let savedData = defaults?.data(forKey: "screenTimeData_\(date.timeIntervalSince1970)"),
+       let decoded = try? JSONDecoder().decode(DailyScreenTimeData.self, from: savedData) {
+        return decoded
+    }
     
+    // Return empty data if no cached data available
     return DailyScreenTimeData(
         date: date,
-        totalScreenTime: totalScreenTime,
-        appUsages: appUsages,
-        pickups: pickups,
-        notifications: notifications
+        totalScreenTime: 0,
+        appUsages: [],
+        pickups: 0,
+        notifications: 0
     )
 }

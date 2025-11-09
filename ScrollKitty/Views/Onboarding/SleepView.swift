@@ -73,7 +73,7 @@ struct SleepView: View {
                     .largeTitleStyle()
                     .padding(.top, 40)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 50)
 
                 // Options
                 OptionSelector(

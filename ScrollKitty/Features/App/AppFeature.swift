@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import FamilyControls
 
 @Reducer
 struct AppFeature {
@@ -9,6 +10,8 @@ struct AppFeature {
         var results = ResultsFeature.State()
         var addictionScore = AddictionScoreFeature.State()
         var yearsLost = YearsLostFeature.State()
+        var appSelection = AppSelectionFeature.State()
+        var dailyLimit = DailyLimitFeature.State()
         var solutionIntro = SolutionIntroFeature.State()
         var screenTimeAccess = ScreenTimeAccessFeature.State()
         var characterIntro = CharacterIntroFeature.State()
@@ -20,6 +23,8 @@ struct AppFeature {
         var showResults = false
         var showAddictionScore = false
         var showYearsLost = false
+        var showAppSelection = false
+        var showDailyLimit = false
         var showSolutionIntro = false
         var showScreenTimeAccess = false
         var showCharacterIntro = false
@@ -32,6 +37,8 @@ struct AppFeature {
         var userWithoutPhoneSelection: WithoutPhoneOption?
         var userIdleCheckSelection: IdleCheckOption?
         var userAgeSelection: AgeOption?
+        var selectedApps: FamilyActivitySelection?
+        var selectedLimit: DailyLimitOption?
     }
 
     enum Action {
@@ -40,6 +47,8 @@ struct AppFeature {
         case results(ResultsFeature.Action)
         case addictionScore(AddictionScoreFeature.Action)
         case yearsLost(YearsLostFeature.Action)
+        case appSelection(AppSelectionFeature.Action)
+        case dailyLimit(DailyLimitFeature.Action)
         case solutionIntro(SolutionIntroFeature.Action)
         case screenTimeAccess(ScreenTimeAccessFeature.Action)
         case characterIntro(CharacterIntroFeature.Action)
@@ -142,7 +151,7 @@ struct AppFeature {
                 
             case .solutionIntro(.delegate(.goBack)):
                 state.showSolutionIntro = false
-                state.showYearsLost = true
+                state.showDailyLimit = true
                 return .none
                 
             case .screenTimeAccess(.delegate(.goBack)):
@@ -157,7 +166,29 @@ struct AppFeature {
                 
             case .yearsLost(.delegate(.showNextScreen)):
                 state.showYearsLost = false
+                state.showAppSelection = true
+                return .none
+                
+            case .appSelection(.delegate(.completeWithSelection(let selection))):
+                state.selectedApps = selection
+                state.showAppSelection = false
+                state.showDailyLimit = true
+                return .none
+                
+            case .dailyLimit(.delegate(.completeWithSelection(let selection))):
+                state.selectedLimit = selection
+                state.showDailyLimit = false
                 state.showSolutionIntro = true
+                return .none
+                
+            case .appSelection(.delegate(.goBack)):
+                state.showAppSelection = false
+                state.showYearsLost = true
+                return .none
+                
+            case .dailyLimit(.delegate(.goBack)):
+                state.showDailyLimit = false
+                state.showAppSelection = true
                 return .none
                 
             case .solutionIntro(.delegate(.showNextScreen)):
@@ -210,6 +241,12 @@ struct AppFeature {
             case .yearsLost:
                 return .none
                 
+            case .appSelection:
+                return .none
+                
+            case .dailyLimit:
+                return .none
+                
             case .solutionIntro:
                 return .none
                 
@@ -248,6 +285,14 @@ struct AppFeature {
         
         Scope(state: \.yearsLost, action: \.yearsLost) {
             YearsLostFeature()
+        }
+        
+        Scope(state: \.appSelection, action: \.appSelection) {
+            AppSelectionFeature()
+        }
+        
+        Scope(state: \.dailyLimit, action: \.dailyLimit) {
+            DailyLimitFeature()
         }
         
         Scope(state: \.solutionIntro, action: \.solutionIntro) {

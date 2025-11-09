@@ -1,21 +1,39 @@
 import ComposableArchitecture
 import SwiftUI
 
+enum DailyLimitOption: String, Equatable, CaseIterable {
+    case threeHours = "3 hours"
+    case fourHours = "4 hours"
+    case fiveHours = "5 hours"
+    case sixHours = "6 hours"
+    case eightHours = "8 hours"
+
+    var minutes: Int {
+        switch self {
+        case .threeHours: return 180
+        case .fourHours: return 240
+        case .fiveHours: return 300
+        case .sixHours: return 360
+        case .eightHours: return 480
+        }
+    }
+}
+
 @Reducer
-struct IdleCheckFeature {
+struct DailyLimitFeature {
     @ObservableState
     struct State: Equatable {
-        var selectedOption: IdleCheckOption?
+        var selectedLimit: DailyLimitOption?
     }
 
     enum Action: Equatable {
-        case optionSelected(IdleCheckOption)
+        case limitSelected(DailyLimitOption)
         case nextTapped
         case backTapped
         case delegate(Delegate)
 
         enum Delegate: Equatable {
-            case completeWithSelection(IdleCheckOption)
+            case completeWithSelection(DailyLimitOption)
             case goBack
         }
     }
@@ -23,13 +41,13 @@ struct IdleCheckFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .optionSelected(let option):
-                state.selectedOption = option
+            case .limitSelected(let option):
+                state.selectedLimit = option
                 return .none
 
             case .nextTapped:
-                if let selectedOption = state.selectedOption {
-                    return .send(.delegate(.completeWithSelection(selectedOption)))
+                if let selectedLimit = state.selectedLimit {
+                    return .send(.delegate(.completeWithSelection(selectedLimit)))
                 }
                 return .none
 
@@ -45,8 +63,8 @@ struct IdleCheckFeature {
 
 // MARK: - View
 
-struct IdleCheckView: View {
-    let store: StoreOf<IdleCheckFeature>
+struct DailyLimitView: View {
+    let store: StoreOf<DailyLimitFeature>
 
     var body: some View {
         ZStack {
@@ -63,24 +81,20 @@ struct IdleCheckView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                
-                // Progress indicator
-                ProgressIndicator(currentStep: 5, totalSteps: 6)
-                    .padding(.top, 16)
 
                 // Title
-                Text("How often do you check\nyour phone when idle?")
+                Text("Set your daily limit")
                     .largeTitleStyle()
                     .padding(.top, 40)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 50)
+                    .padding(.bottom, 40)
 
                 // Options
                 OptionSelector(
-                    options: IdleCheckOption.allCases,
-                    selectedOption: store.selectedOption,
+                    options: DailyLimitOption.allCases,
+                    selectedOption: store.selectedLimit,
                     onSelect: { option in
-                        store.send(.optionSelected(option))
+                        store.send(.limitSelected(option))
                     }
                 )
                 .padding(.horizontal, 25)
@@ -97,10 +111,11 @@ struct IdleCheckView: View {
 }
 
 #Preview {
-    IdleCheckView(
+    DailyLimitView(
         store: Store(
-            initialState: IdleCheckFeature.State(),
-            reducer: { IdleCheckFeature() }
+            initialState: DailyLimitFeature.State(),
+            reducer: { DailyLimitFeature() }
         )
     )
 }
+
