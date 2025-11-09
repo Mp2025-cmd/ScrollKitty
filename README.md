@@ -11,10 +11,11 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 ## 🏗️ Architecture
 
 - **Framework:** SwiftUI + The Composable Architecture (TCA)
-- **Navigation:** Stack-based navigation with `NavigationStack`
+- **Navigation:** Enum-based destination pattern with type-safe state machine
 - **State Management:** TCA reducers with `@ObservableState`
 - **Design System:** Centralized design tokens in `DesignSystem.swift`
 - **Font:** Sofia Pro (Bold, Medium, Regular variants)
+- **Screen Time API:** DeviceActivity, FamilyControls, ManagedSettings frameworks
 
 ## 📱 Current Implementation
 
@@ -31,11 +32,11 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Age Selection** - User age range (Under 18 → 55+)
 
 #### 2. **Navigation System**
-- EmptyView root pattern in NavigationStack to prevent back button flickering
-- Stack-based navigation with TCA's `StackState` and `StackAction`
-- Progress indicator (1/5 to 5/5) centered at top of each screen
-- Back button functionality on all question screens (not on splash/welcome)
-- `.onAppear` trigger to start navigation flow
+- **Enum-based destination pattern** - Type-safe state machine (single source of truth)
+- **OnboardingFeature** - Stack-based navigation with `StackState` for 7-step flow
+- **AppFeature** - Enum destination for post-onboarding screens (12 destinations)
+- **Back button support** - Full backward navigation throughout app
+- **Type safety** - Impossible to show multiple screens or invalid states
 
 #### 3. **Results Loading Screen**
 - **Circular Progress Ring** - 3 concentric circles with percentage counter
@@ -60,7 +61,14 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Years Lost Screen** - Shows "17 years" of life lost to screens (red emphasis)
 - **Solution Intro Screen** - Introduces Scroll Kitty as the solution
 
-#### 5. **Character Introduction & Lifecycle**
+#### 5. **Screen Time Integration**
+- **Permission Request Screen** - System-style UI requesting Screen Time access with Face ID
+- **App Selection Screen** - FamilyActivityPicker for selecting apps/categories to track
+- **Daily Limit Screen** - Set daily limit (3-8 hours) with clean pill-button UI
+- **Permission Handling** - Graceful denial handling with "Open Settings" option
+- **Flow Order** - Follows Apple guidelines: educate → request → configure
+
+#### 6. **Character Introduction & Lifecycle**
 - **Character Intro Screen** - Introduces "Scroll Kitty" mascot with cheerful cat image
 - **Scroll Kitty Lifecycle Carousel** - Horizontal scrollable cards showing 5 health states:
   - Healthy (green) - Happy, energetic
@@ -70,7 +78,7 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
   - Dead (red) - Passed away from neglect
 - **Interactive Features** - Page control dots, state-specific colors, rounded square containers, ellipse indicators
 
-#### 6. **Commitment Screen**
+#### 7. **Commitment Screen**
 - **Ready to Take Back Control** - Final onboarding step with commitment pledge
 - **Interactive Checkbox** - Custom checkbox with checkmark icon and toggle switch
 - **Four Commitments** - Light blue box with bullet points:
