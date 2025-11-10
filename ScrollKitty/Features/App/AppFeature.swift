@@ -67,6 +67,7 @@ struct AppFeature {
     }
     
     @Dependency(\.userSettings) var userSettings
+    @Dependency(\.screenTimeManager) var screenTimeManager
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -218,7 +219,16 @@ struct AppFeature {
                 
             case .commitment(.delegate(.showNextScreen)):
                 state.destination = .home
-                return .none
+                // Start DeviceActivity monitoring (00:00-23:59 daily)
+                return .run { _ in
+                    print("[AppFeature] Starting DeviceActivity monitoring...")
+                    do {
+                        try await screenTimeManager.startMonitoring()
+                        print("[AppFeature] ✅ Monitoring started successfully")
+                    } catch {
+                        print("[AppFeature] ❌ Monitoring failed: \(error)")
+                    }
+                }
                 
             case .onboarding:
                 return .none
@@ -314,4 +324,14 @@ struct AppFeature {
         }
     }
 }
- 
+
+// MARK: - Swift 6 Sendable Conformance
+
+extension FamilyActivitySelection: @unchecked @retroactive Sendable {}
+extension Set: @unchecked @retroactive Sendable where Element == ApplicationToken {}
+extension Set: @unchecked @retroactive Sendable where Element == CategoryToken {}
+extension Set: @unchecked @retroactive Sendable where Element == WebDomainToken {}
+extension ApplicationToken: @unchecked @retroactive Sendable {}
+extension CategoryToken: @unchecked @retroactive Sendable {}
+extension WebDomainToken: @unchecked @retroactive Sendable {}
+

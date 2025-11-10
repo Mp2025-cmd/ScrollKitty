@@ -83,8 +83,8 @@ struct ResultsLoadingFeature {
                 
             case .triggerHaptic(let progress):
                 return .run { _ in
-                    let generator = UIImpactFeedbackGenerator()
-                    generator.prepare()
+                    let generator = await UIImpactFeedbackGenerator()
+                    await generator.prepare()
                     
                     // Increase haptic intensity as progress increases
                     let intensity: Double
@@ -96,7 +96,7 @@ struct ResultsLoadingFeature {
                         intensity = 1.0
                     }
                     
-                    generator.impactOccurred(intensity: intensity)
+                    await generator.impactOccurred(intensity: intensity)
                 }
                 
             case .loadingComplete:

@@ -70,6 +70,12 @@ struct DailyScreenTimeData: Equatable, Codable {
     }
 }
 
+// MARK: - Errors
+
+enum DeviceActivityError: Error {
+    case invalidSelection
+}
+
 // MARK: - ScreenTimeManager (TCA Compliant)
 
 struct ScreenTimeManager: Sendable {
@@ -180,23 +186,68 @@ extension DependencyValues {
 
 private func startDeviceActivityMonitoring() async throws {
     let center = DeviceActivityCenter()
-    let activityName = DeviceActivityName("dailyActivity")
-    
-    // Schedule monitoring for the entire day (midnight to midnight)
-    let schedule = DeviceActivitySchedule(
-        intervalStart: DateComponents(hour: 0, minute: 0),
-        intervalEnd: DateComponents(hour: 23, minute: 59),
-        repeats: true
-    )
-    
-    try center.startMonitoring(activityName, during: schedule)
+
+    // Load selected apps from App Group
+    let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+    guard let data = defaults?.data(forKey: "selectedApps"),
+          let selection = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data) as? FamilyActivitySelection else {
+        print("[ScreenTime] ❌ Failed to load selected apps from UserDefaults")
+        throw DeviceActivityError.invalidSelection
+    }
+
+    print("[ScreenTime] Loaded selection - Apps: \(selection.applicationTokens.count), Categories: \(selection.categoryTokens.count)")
+
+    // Stop any existing monitoring first
+    await stopDeviceActivityMonitoring()
+
+    // Create 12 schedules (2-hour blocks throughout the day)
+    // iOS limit: ~20 monitoring activities max
+    for hour in stride(from: 0, through: 22, by: 2) {
+        let activityName = DeviceActivityName("schedule_\(hour)_\(hour+2)")
+
+        // Create events at 5-minute intervals (5, 10, 15... up to 115 minutes)
+        var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
+
+        for minutes in stride(from: 5, through: 115, by: 5) {
+            let eventName = DeviceActivityEvent.Name("threshold_\(hour)_\(minutes)")
+            let event = DeviceActivityEvent(
+                applications: selection.applicationTokens,
+                categories: selection.categoryTokens,
+                threshold: DateComponents(minute: minutes)
+            )
+            events[eventName] = event
+        }
+
+        // Create 2-hour schedule block
+        let endHour = hour == 22 ? 23 : hour + 1
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: hour, minute: 0),
+            intervalEnd: DateComponents(hour: endHour, minute: 59, second: 59),
+            repeats: true
+        )
+
+        do {
+            try center.startMonitoring(activityName, during: schedule, events: events)
+            print("[ScreenTime] Started monitoring block \(hour):00-\(hour+2):00 with \(events.count) thresholds")
+        } catch {
+            print("[ScreenTime] Failed to start monitoring block \(hour):00-\(hour+2):00: \(error)")
+        }
+    }
+
+    print("[ScreenTime] ✅ Multi-threshold monitoring started (12 schedules × 23 events = 276 thresholds)")
 }
 
 private func stopDeviceActivityMonitoring() async {
     let center = DeviceActivityCenter()
-    let activityName = DeviceActivityName("dailyActivity")
-    
-    center.stopMonitoring([activityName])
+
+    // Stop all 12 schedules
+    var activities: [DeviceActivityName] = []
+    for hour in stride(from: 0, through: 22, by: 2) {
+        activities.append(DeviceActivityName("schedule_\(hour)_\(hour+2)"))
+    }
+
+    center.stopMonitoring(activities)
+    print("[ScreenTime] Stopped monitoring \(activities.count) schedules")
 }
 
 // MARK: - Private Parsing Helper

@@ -29,47 +29,59 @@ struct HomeFeature {
     @Dependency(\.catHealth) var catHealth
     @Dependency(\.continuousClock) var clock
     
-    enum CancelID { case polling }
+    nonisolated struct CancelID: Hashable, Sendable {
+        static let polling = Self()
+    }
     
     var body: some Reducer<State, Action> {
         BindingReducer()
-        
+
         Reduce { state, action in
             switch action {
             case .onAppear:
+                print("[HomeFeature] onAppear")
                 return .merge(
                     .send(.checkMidnightReset),
                     .send(.startPolling)
                 )
-                
+
             case .onDisappear:
+                print("[HomeFeature] onDisappear")
                 return .send(.stopPolling)
-                
+
             case .checkMidnightReset:
+                print("[HomeFeature] checkMidnightReset")
                 return .run { send in
                     if await catHealth.shouldResetForNewDay() {
+                        print("[HomeFeature] Should reset - sending performReset")
                         await send(.performReset)
                     } else {
+                        print("[HomeFeature] No reset needed - loading health")
                         await send(.loadCatHealth)
                     }
                 }
-                
+
             case .performReset:
+                print("[HomeFeature] performReset")
                 return .run { send in
                     await catHealth.performMidnightReset()
                     await send(.loadCatHealth)
                 }
-                
+
             case .loadCatHealth:
+                print("[HomeFeature] loadCatHealth")
                 state.isLoading = true
                 return .run { send in
                     let totalSeconds = await userSettings.getTodayTotal()
                     let dailyLimit = await userSettings.loadDailyLimit() ?? 240
+                    print("[HomeFeature] Total: \(totalSeconds)s, Limit: \(dailyLimit)m")
                     let healthData = await catHealth.calculateHealth(totalSeconds, dailyLimit)
+                    print("[HomeFeature] Health: \(healthData.healthPercentage)%, Stage: \(healthData.catStage)")
                     await send(.catHealthLoaded(healthData))
                 }
-                
+
             case .catHealthLoaded(let healthData):
+                print("[HomeFeature] catHealthLoaded - Health: \(healthData.healthPercentage)%")
                 state.isLoading = false
                 state.catHealth = healthData
                 return .none
@@ -96,6 +108,7 @@ struct HomeFeature {
                 return .none
             }
         }
+        ._printChanges()
     }
 }
 
@@ -200,7 +213,7 @@ struct HomeView: View {
                         .frame(height: 280)
                 }
                 
-                CatShadow(width: 250, height: 5, opacity: 0.65)
+                CatShadow(width: 250, height: 8, opacity: 0.65)
                     .offset(y: -24)
             }
             
