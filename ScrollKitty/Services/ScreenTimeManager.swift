@@ -191,8 +191,8 @@ private func startDeviceActivityMonitoring() async throws {
     let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
     guard let data = defaults?.data(forKey: "selectedApps"),
           let selection = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data) as? FamilyActivitySelection else {
-        print("[ScreenTime] ❌ Failed to load selected apps from UserDefaults")
-        throw DeviceActivityError.invalidSelection
+        print("[ScreenTime] ⚠️ No apps selected yet - skipping monitoring")
+        return  // Skip monitoring if no apps selected
     }
 
     print("[ScreenTime] Loaded selection - Apps: \(selection.applicationTokens.count), Categories: \(selection.categoryTokens.count)")

@@ -178,8 +178,16 @@ struct AppFeature {
             case .appSelection(.delegate(.completeWithSelection(let selection))):
                 state.selectedApps = selection
                 state.destination = .dailyLimit
-                return .run { _ in
+                // Save apps and start monitoring
+                return .run { [screenTimeManager = self.screenTimeManager] _ in
                     await userSettings.saveSelectedApps(selection)
+                    print("[AppFeature] Apps saved - starting monitoring...")
+                    do {
+                        try await screenTimeManager.startMonitoring()
+                        print("[AppFeature] ✅ Monitoring started after app selection")
+                    } catch {
+                        print("[AppFeature] ⚠️ Monitoring setup failed: \(error)")
+                    }
                 }
                 
             case .appSelection(.delegate(.goBack)):
@@ -219,14 +227,20 @@ struct AppFeature {
                 
             case .commitment(.delegate(.showNextScreen)):
                 state.destination = .home
-                // Start DeviceActivity monitoring (00:00-23:59 daily)
-                return .run { _ in
-                    print("[AppFeature] Starting DeviceActivity monitoring...")
-                    do {
-                        try await screenTimeManager.startMonitoring()
-                        print("[AppFeature] ✅ Monitoring started successfully")
-                    } catch {
-                        print("[AppFeature] ❌ Monitoring failed: \(error)")
+                // Start DeviceActivity monitoring only if apps selected
+                return .run { [screenTimeManager = self.screenTimeManager] _ in
+                    print("[AppFeature] Checking for app selection before monitoring...")
+                    let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                    if defaults?.data(forKey: "selectedApps") != nil {
+                        print("[AppFeature] Apps selected - starting monitoring...")
+                        do {
+                            try await screenTimeManager.startMonitoring()
+                            print("[AppFeature] ✅ Monitoring started successfully")
+                        } catch {
+                            print("[AppFeature] ❌ Monitoring failed: \(error)")
+                        }
+                    } else {
+                        print("[AppFeature] ⚠️ No apps selected - monitoring will start after app selection")
                     }
                 }
                 
@@ -328,10 +342,4 @@ struct AppFeature {
 // MARK: - Swift 6 Sendable Conformance
 
 extension FamilyActivitySelection: @unchecked @retroactive Sendable {}
-extension Set: @unchecked @retroactive Sendable where Element == ApplicationToken {}
-extension Set: @unchecked @retroactive Sendable where Element == CategoryToken {}
-extension Set: @unchecked @retroactive Sendable where Element == WebDomainToken {}
-extension ApplicationToken: @unchecked @retroactive Sendable {}
-extension CategoryToken: @unchecked @retroactive Sendable {}
-extension WebDomainToken: @unchecked @retroactive Sendable {}
 
