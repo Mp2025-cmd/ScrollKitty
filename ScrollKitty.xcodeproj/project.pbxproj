@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		15FACC134D9A43F984620D07 /* ScrollKittyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41062A36B0734099914261D0 /* ScrollKittyReport.swift */; };
+		5A0AB70813094A13A5BFA85E /* DailyUsageReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D62B3B0C7D374A6DBBDDD2F0 /* DailyUsageReport.swift */; };
+		F0C189FC6A714E2FB6E8AA25 /* DailyUsageReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B531B8CFF46A43C0BCA47C3A /* DailyUsageReportView.swift */; };
+		966740AB9D6F46139AC5B84E /* ScrollKittyReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 4D41377C0E664ECE8AFF94DE /* ScrollKittyReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D04FBCEF2EA8FCE200D6E6D6 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */; };
-		D0DD34812EC1718700B80810 /* ScrollKittyMonitor.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = D0DD34752EC1718700B80810 /* ScrollKittyMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,23 +29,23 @@
 			remoteGlobalIDString = D02C2BFE2EA5D4E10021841C;
 			remoteInfo = ScrollKitty;
 		};
-		D0DD347F2EC1718700B80810 /* PBXContainerItemProxy */ = {
+		D215E03859AB47038E5A66BD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D02C2BF72EA5D4E00021841C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = D0DD34742EC1718700B80810;
-			remoteInfo = ScrollKittyMonitor;
+			remoteGlobalIDString = C01D17DC525E4AFDB82A9FB3;
+			remoteInfo = ScrollKittyReport;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		D0DD34822EC1718700B80810 /* Embed ExtensionKit Extensions */ = {
+		6C73AE29486748F1A19BA3E1 /* Embed ExtensionKit Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
 			files = (
-				D0DD34812EC1718700B80810 /* ScrollKittyMonitor.appex in Embed ExtensionKit Extensions */,
+				966740AB9D6F46139AC5B84E /* ScrollKittyReport.appex in Embed ExtensionKit Extensions */,
 			);
 			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,10 +53,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		41062A36B0734099914261D0 /* ScrollKittyReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollKittyReport.swift; sourceTree = "<group>"; };
+		4D41377C0E664ECE8AFF94DE /* ScrollKittyReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = ScrollKittyReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A28A8D6F452448978C7DD364 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B531B8CFF46A43C0BCA47C3A /* DailyUsageReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyUsageReportView.swift; sourceTree = "<group>"; };
+		C59498F865144214932C6263 /* ScrollKittyReport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ScrollKittyReport.entitlements; sourceTree = "<group>"; };
 		D02C2BFF2EA5D4E10021841C /* ScrollKitty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrollKitty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02C2C0C2EA5D4E30021841C /* ScrollKittyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0DD34752EC1718700B80810 /* ScrollKittyMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = ScrollKittyMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D62B3B0C7D374A6DBBDDD2F0 /* DailyUsageReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyUsageReport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -63,13 +71,6 @@
 				Info.plist,
 			);
 			target = D02C2BFE2EA5D4E10021841C /* ScrollKitty */;
-		};
-		D0DD34862EC1718700B80810 /* Exceptions for "ScrollKittyMonitor" folder in "ScrollKittyMonitor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = D0DD34742EC1718700B80810 /* ScrollKittyMonitor */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -92,17 +93,16 @@
 			path = ScrollKittyUITests;
 			sourceTree = "<group>";
 		};
-		D0DD34762EC1718700B80810 /* ScrollKittyMonitor */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				D0DD34862EC1718700B80810 /* Exceptions for "ScrollKittyMonitor" folder in "ScrollKittyMonitor" target */,
-			);
-			path = ScrollKittyMonitor;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		4564559480C74E8693265C9B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D02C2BFC2EA5D4E10021841C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -125,13 +125,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D0DD34722EC1718700B80810 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -141,7 +134,7 @@
 				D02C2C012EA5D4E10021841C /* ScrollKitty */,
 				D02C2C0F2EA5D4E30021841C /* ScrollKittyTests */,
 				D02C2C192EA5D4E30021841C /* ScrollKittyUITests */,
-				D0DD34762EC1718700B80810 /* ScrollKittyMonitor */,
+				E5685F64D9824DB7858ADC04 /* ScrollKittyReport */,
 				D02C2C002EA5D4E10021841C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -152,14 +145,43 @@
 				D02C2BFF2EA5D4E10021841C /* ScrollKitty.app */,
 				D02C2C0C2EA5D4E30021841C /* ScrollKittyTests.xctest */,
 				D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */,
-				D0DD34752EC1718700B80810 /* ScrollKittyMonitor.appex */,
+				4D41377C0E664ECE8AFF94DE /* ScrollKittyReport.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E5685F64D9824DB7858ADC04 /* ScrollKittyReport */ = {
+			isa = PBXGroup;
+			children = (
+				41062A36B0734099914261D0 /* ScrollKittyReport.swift */,
+				D62B3B0C7D374A6DBBDDD2F0 /* DailyUsageReport.swift */,
+				B531B8CFF46A43C0BCA47C3A /* DailyUsageReportView.swift */,
+				A28A8D6F452448978C7DD364 /* Info.plist */,
+				C59498F865144214932C6263 /* ScrollKittyReport.entitlements */,
+			);
+			path = ScrollKittyReport;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		C01D17DC525E4AFDB82A9FB3 /* ScrollKittyReport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2157217D9203437BB3B8988B /* Build configuration list for PBXNativeTarget "ScrollKittyReport" */;
+			buildPhases = (
+				1BE6C7DE90EF457ABDF2A4E7 /* Sources */,
+				4564559480C74E8693265C9B /* Frameworks */,
+				11957FC3729C4A07B3F5231F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ScrollKittyReport;
+			productName = ScrollKittyReport;
+			productReference = 4D41377C0E664ECE8AFF94DE /* ScrollKittyReport.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
 		D02C2BFE2EA5D4E10021841C /* ScrollKitty */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D02C2C202EA5D4E30021841C /* Build configuration list for PBXNativeTarget "ScrollKitty" */;
@@ -167,12 +189,12 @@
 				D02C2BFB2EA5D4E10021841C /* Sources */,
 				D02C2BFC2EA5D4E10021841C /* Frameworks */,
 				D02C2BFD2EA5D4E10021841C /* Resources */,
-				D0DD34822EC1718700B80810 /* Embed ExtensionKit Extensions */,
+				6C73AE29486748F1A19BA3E1 /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				D0DD34802EC1718700B80810 /* PBXTargetDependency */,
+				1C7D11BF323E48C19E2DBCB6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D02C2C012EA5D4E10021841C /* ScrollKitty */,
@@ -231,28 +253,6 @@
 			productReference = D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		D0DD34742EC1718700B80810 /* ScrollKittyMonitor */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D0DD34852EC1718700B80810 /* Build configuration list for PBXNativeTarget "ScrollKittyMonitor" */;
-			buildPhases = (
-				D0DD34712EC1718700B80810 /* Sources */,
-				D0DD34722EC1718700B80810 /* Frameworks */,
-				D0DD34732EC1718700B80810 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				D0DD34762EC1718700B80810 /* ScrollKittyMonitor */,
-			);
-			name = ScrollKittyMonitor;
-			packageProductDependencies = (
-			);
-			productName = ScrollKittyMonitor;
-			productReference = D0DD34752EC1718700B80810 /* ScrollKittyMonitor.appex */;
-			productType = "com.apple.product-type.extensionkit-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -263,6 +263,9 @@
 				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
+					C01D17DC525E4AFDB82A9FB3 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 					D02C2BFE2EA5D4E10021841C = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -273,9 +276,6 @@
 					D02C2C152EA5D4E30021841C = {
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = D02C2BFE2EA5D4E10021841C;
-					};
-					D0DD34742EC1718700B80810 = {
-						CreatedOnToolsVersion = 26.1;
 					};
 				};
 			};
@@ -297,14 +297,21 @@
 			projectRoot = "";
 			targets = (
 				D02C2BFE2EA5D4E10021841C /* ScrollKitty */,
+				C01D17DC525E4AFDB82A9FB3 /* ScrollKittyReport */,
 				D02C2C0B2EA5D4E30021841C /* ScrollKittyTests */,
 				D02C2C152EA5D4E30021841C /* ScrollKittyUITests */,
-				D0DD34742EC1718700B80810 /* ScrollKittyMonitor */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		11957FC3729C4A07B3F5231F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D02C2BFD2EA5D4E10021841C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -326,16 +333,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D0DD34732EC1718700B80810 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1BE6C7DE90EF457ABDF2A4E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15FACC134D9A43F984620D07 /* ScrollKittyReport.swift in Sources */,
+				5A0AB70813094A13A5BFA85E /* DailyUsageReport.swift in Sources */,
+				F0C189FC6A714E2FB6E8AA25 /* DailyUsageReportView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D02C2BFB2EA5D4E10021841C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -357,16 +367,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D0DD34712EC1718700B80810 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		1C7D11BF323E48C19E2DBCB6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C01D17DC525E4AFDB82A9FB3 /* ScrollKittyReport */;
+			targetProxy = D215E03859AB47038E5A66BD /* PBXContainerItemProxy */;
+		};
 		D02C2C0E2EA5D4E30021841C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D02C2BFE2EA5D4E10021841C /* ScrollKitty */;
@@ -376,11 +384,6 @@
 			isa = PBXTargetDependency;
 			target = D02C2BFE2EA5D4E10021841C /* ScrollKitty */;
 			targetProxy = D02C2C172EA5D4E30021841C /* PBXContainerItemProxy */;
-		};
-		D0DD34802EC1718700B80810 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = D0DD34742EC1718700B80810 /* ScrollKittyMonitor */;
-			targetProxy = D0DD347F2EC1718700B80810 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -701,72 +704,78 @@
 			};
 			name = Release;
 		};
-		D0DD34832EC1718700B80810 /* Debug */ = {
+		B0C3140296A84A8FBD1F89AA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ScrollKittyMonitor/ScrollKittyMonitor.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyReport/ScrollKittyReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BQG3LP4P64;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ScrollKittyMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyMonitor;
+				INFOPLIST_FILE = ScrollKittyReport/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyReport;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyMonitor;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
-		D0DD34842EC1718700B80810 /* Release */ = {
+		8F54260D50B04697B94DC184 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ScrollKittyMonitor/ScrollKittyMonitorRelease.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyReport/ScrollKittyReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BQG3LP4P64;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ScrollKittyMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyMonitor;
+				INFOPLIST_FILE = ScrollKittyReport/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyReport;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyMonitor;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2157217D9203437BB3B8988B /* Build configuration list for PBXNativeTarget "ScrollKittyReport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0C3140296A84A8FBD1F89AA /* Debug */,
+				8F54260D50B04697B94DC184 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D02C2BFA2EA5D4E00021841C /* Build configuration list for PBXProject "ScrollKitty" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -799,15 +808,6 @@
 			buildConfigurations = (
 				D02C2C272EA5D4E30021841C /* Debug */,
 				D02C2C282EA5D4E30021841C /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D0DD34852EC1718700B80810 /* Build configuration list for PBXNativeTarget "ScrollKittyMonitor" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D0DD34832EC1718700B80810 /* Debug */,
-				D0DD34842EC1718700B80810 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

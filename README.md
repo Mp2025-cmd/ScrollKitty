@@ -288,6 +288,143 @@ ScrollKitty uses a **friendly confrontation** approach - delivering hard truths 
 - **Support** - Constructive solutions, not just criticism
 - **Personality** - Cat mascot that reacts to user behavior
 
+## ⚠️ CURRENT BLOCKER: DeviceActivityReport Extension Not Firing
+
+### Implementation Summary
+We implemented a `DeviceActivityReportExtension` to track screen time for selected apps only (no websites). The extension should process Apple's `DeviceActivityResults`, sum usage for selected apps, and write to App Group UserDefaults for the main app to read.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│ HomeView (Main App)                                 │
+│ ├─ Hidden DeviceActivityReport view                │
+│ └─ Reads: selectedTotalSecondsToday from UserDefaults│
+└─────────────────────────────────────────────────────┘
+                     ↓ triggers
+┌─────────────────────────────────────────────────────┐
+│ ScrollKittyReport Extension (ExtensionKit)          │
+│ ├─ makeConfiguration() receives DeviceActivityData │
+│ ├─ Filters only selected app tokens                │
+│ ├─ Sums totalActivityDuration                      │
+│ └─ Writes: selectedTotalSecondsToday, lastActivityUpdate│
+└─────────────────────────────────────────────────────┘
+                     ↓ shares via
+┌─────────────────────────────────────────────────────┐
+│ App Group: group.com.scrollkitty.app                │
+│ Keys: selectedApps, selectedTotalSecondsToday       │
+└─────────────────────────────────────────────────────┘
+```
+
+### Files Created
+
+**ScrollKittyReport Extension:**
+- `ScrollKittyReport.swift` - Entry point with `@main` attribute
+- `DailyUsageReport.swift` - DeviceActivityReportScene implementation
+  - Reads selected apps from App Group UserDefaults
+  - Iterates `DeviceActivityResults<DeviceActivityData>`
+  - Filters apps by token match
+  - Returns `UsageData(totalSeconds: Double)`
+- `DailyUsageReportView.swift` - Writes to UserDefaults on appear/change
+- `Info.plist` - Uses `EXAppExtensionAttributes` with `com.apple.deviceactivityui.report-extension`
+- `ScrollKittyReport.entitlements` - Family Controls + App Groups
+
+**Configuration:**
+- Product type: `com.apple.product-type.extensionkit-extension`
+- File wrapper: `wrapper.extensionkit-extension`
+- Embed: `Embed ExtensionKit Extensions` with `dstSubfolderSpec = 16`
+- Target dependencies: Added to main ScrollKitty app
+
+### Main App Integration
+
+**HomeView.swift:**
+- Added `DeviceActivityReport(.daily, filter: filter)` hidden view
+- Filter: Daily segment, selected apps/categories only, NO webDomains
+- Updated health calculation to read from `selectedTotalSecondsToday`
+- Health formula: `100 - min(1, used/limit) × 100`
+
+**UserSettingsManager.swift:**
+- Changed from `NSKeyedArchiver` to `JSONEncoder` for FamilyActivitySelection
+- Consistent encoding across main app and extension
+
+**Entitlements:**
+- Added App Groups to both main app and extension
+- Shared container: `group.com.scrollkitty.app`
+
+### What's NOT Working
+
+**Extension never fires:**
+```
+Expected logs (MISSING):
+[ScrollKittyReport] makeConfiguration called
+[ScrollKittyReport] Tracking X selected apps
+[ScrollKittyReport] ✅ Wrote Xs to UserDefaults
+
+Actual logs:
+[AppFeature] ⚠️ No apps selected - monitoring will start after app selection
+[HomeFeature] Read 0.0s (0m) from selectedTotalSecondsToday (apps only)
+```
+
+**Symptoms:**
+1. Extension logs never appear in console
+2. `selectedTotalSecondsToday` always reads `0.0`
+3. Hidden DeviceActivityReport view renders (confirmed in code)
+4. Apps ARE selected during onboarding (verified logs before encoding fix)
+5. App Groups capability enabled on both targets
+
+### What We've Tried
+
+1. ✅ **Correct product type** - ExtensionKit extension (matches ScreenBreak)
+2. ✅ **Info.plist** - Uses `EXAppExtensionAttributes` (not NSExtension)
+3. ✅ **@main attribute** - ScrollKittyReport struct marked as entry point
+4. ✅ **App Groups** - Added to both main app and extension entitlements
+5. ✅ **Encoding consistency** - Changed to JSONEncoder/Decoder everywhere
+6. ✅ **Hidden report** - DeviceActivityReport embedded in HomeView with filter
+7. ✅ **Daily filter** - Uses `.daily(during:)` segment
+8. ✅ **Apps only** - `webDomains: []` to exclude Safari/Chrome
+9. ✅ **Embed phase** - Correct ExtensionKit embedding with dstSubfolderSpec 16
+10. ✅ **Clean reinstall** - Deleted app, cleaned build, fresh install
+
+### Encoding Issue (RESOLVED)
+
+**Problem:** UserSettingsManager saved with `NSKeyedArchiver` but extension/HomeView read with `JSONDecoder`
+
+**Solution:** Changed UserSettingsManager to use `JSONEncoder`/`JSONDecoder` consistently
+
+**Status:** Fixed in UserSettingsManager.swift:22-38, but extension still doesn't fire
+
+### Current Hypothesis
+
+**Possible causes:**
+1. Extension needs real app usage (not just selection) to trigger for the first time
+2. Daily filter requires 24 hours before first invocation
+3. Missing runtime permission or capability in Xcode project settings
+4. DeviceActivityReport view isn't actually triggering extension despite rendering
+5. App Group permissions issue on physical device (despite showing in capabilities)
+
+### Reference Implementation
+
+**ScreenBreak (working):**
+- Product type: `com.apple.product-type.extensionkit-extension` ✅ Same
+- Info.plist: `EXAppExtensionAttributes` ✅ Same
+- Entitlements: Family Controls only (NO App Groups) ❌ Different
+- Extension writes: NO - only displays in-place ❌ Different
+
+**Key difference:** ScreenBreak doesn't write to UserDefaults from extension. They only display data in DeviceActivityReport view itself.
+
+### Questions for Reviewer
+
+1. Is writing to App Group UserDefaults from DeviceActivityReportExtension actually blocked? (Apple DTS said it's sandboxed)
+2. Should we use DeviceActivityMonitor with interval events instead?
+3. Does the hidden DeviceActivityReport actually trigger makeConfiguration(), or does it need to be visible?
+4. Is there a way to force the extension to fire for testing?
+5. Are there any Xcode project settings we're missing (beyond capabilities)?
+
+### Debug Logs Location
+
+**Extension logs:** Should appear in Xcode console with `[ScrollKittyReport]` prefix
+**Main app logs:** `[HomeFeature]`, `[UserSettings]`, `[AppFeature]`
+
 ## 🚀 Next Steps
 
 ### **Immediate Priorities (To Complete Core Loop):**

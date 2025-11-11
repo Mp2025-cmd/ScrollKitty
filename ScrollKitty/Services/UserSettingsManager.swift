@@ -18,21 +18,23 @@ extension UserSettingsManager: DependencyKey {
     static let liveValue: UserSettingsManager = {
         nonisolated(unsafe) let saveApps: @Sendable (FamilyActivitySelection) async -> Void = { selection in
             let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            // Use NSKeyedArchiver for FamilyActivitySelection
-            if let encoded = try? NSKeyedArchiver.archivedData(withRootObject: selection, requiringSecureCoding: false) {
+            // Use JSONEncoder for FamilyActivitySelection (Codable)
+            if let encoded = try? JSONEncoder().encode(selection) {
                 defaults?.set(encoded, forKey: "selectedApps")
-                print("[UserSettings] Saved \(selection.applicationTokens.count) apps, \(selection.categoryTokens.count) categories")
+                print("[UserSettings] ✅ Saved \(selection.applicationTokens.count) apps, \(selection.categoryTokens.count) categories")
+            } else {
+                print("[UserSettings] ❌ Failed to encode selection")
             }
         }
 
         nonisolated(unsafe) let loadApps: @Sendable () async -> FamilyActivitySelection? = {
             let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
             guard let data = defaults?.data(forKey: "selectedApps"),
-                  let decoded = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data) as? FamilyActivitySelection else {
+                  let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
                 print("[UserSettings] No saved app selection found")
                 return nil
             }
-            print("[UserSettings] Loaded \(decoded.applicationTokens.count) apps, \(decoded.categoryTokens.count) categories")
+            print("[UserSettings] ✅ Loaded \(decoded.applicationTokens.count) apps, \(decoded.categoryTokens.count) categories")
             return decoded
         }
         

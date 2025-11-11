@@ -77,10 +77,12 @@ extension CatHealthManager: DependencyKey {
             return !Calendar.current.isDateInToday(lastReset)
         },
         performMidnightReset: {
+            // Note: Daily filter handles reset automatically, but clearing for consistency
             let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            defaults?.set(0, forKey: "todayTotal")
-            
+            defaults?.set(0, forKey: "selectedTotalSecondsToday")
+
             UserDefaults.standard.set(Date(), forKey: "lastResetDate")
+            print("[CatHealthManager] Manual midnight reset performed (daily filter handles automatically)")
         }
     )
     

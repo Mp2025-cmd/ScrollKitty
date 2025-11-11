@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import FamilyControls
+import Foundation
 
 @Reducer
 struct AppFeature {

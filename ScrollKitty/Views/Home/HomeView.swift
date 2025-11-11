@@ -1,5 +1,12 @@
 import SwiftUI
 import ComposableArchitecture
+import DeviceActivity
+import FamilyControls
+
+// MARK: - DeviceActivityReport Context
+extension DeviceActivityReport.Context {
+    static let daily = Self("Daily")
+}
 
 // MARK: - Domain
 @Reducer
@@ -72,11 +79,23 @@ struct HomeFeature {
                 print("[HomeFeature] loadCatHealth")
                 state.isLoading = true
                 return .run { send in
-                    let totalSeconds = await userSettings.getTodayTotal()
+                    // Read from App Group UserDefaults (written by extension)
+                    let shared = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                    let totalSeconds = shared?.double(forKey: "selectedTotalSecondsToday") ?? 0
                     let dailyLimit = await userSettings.loadDailyLimit() ?? 240
-                    print("[HomeFeature] Total: \(totalSeconds)s, Limit: \(dailyLimit)m")
+
+                    print("[HomeFeature] Read \(totalSeconds)s (\(Int(totalSeconds/60))m) from selectedTotalSecondsToday (apps only)")
+                    print("[HomeFeature] Daily limit: \(dailyLimit)m")
+
+                    // Calculate health with new formula: 100 - min(1, used/limit) × 100
+                    let dailyLimitSeconds = Double(dailyLimit * 60)  // Convert minutes to seconds
+                    let usageRatio = min(1.0, totalSeconds / dailyLimitSeconds)
+                    let healthPercentage = 100 - (usageRatio * 100)
+
+                    print("[HomeFeature] Usage ratio: \(usageRatio), Health: \(healthPercentage)%")
+
                     let healthData = await catHealth.calculateHealth(totalSeconds, dailyLimit)
-                    print("[HomeFeature] Health: \(healthData.healthPercentage)%, Stage: \(healthData.catStage)")
+                    print("[HomeFeature] Cat stage: \(healthData.catStage)")
                     await send(.catHealthLoaded(healthData))
                 }
 
@@ -188,9 +207,39 @@ struct HomeView: View {
                     alignment: .top
                 )
             }
+
+            // Hidden DeviceActivityReport for tracking (apps only, no websites)
+            hiddenDeviceActivityReport
         }
         .onAppear { store.send(.onAppear) }
         .onDisappear { store.send(.onDisappear) }
+    }
+
+    @ViewBuilder
+    private var hiddenDeviceActivityReport: some View {
+        // Read selected apps from UserDefaults
+        if let shared = UserDefaults(suiteName: "group.com.scrollkitty.app"),
+           let selectedAppsData = shared.data(forKey: "selectedApps"),
+           let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: selectedAppsData) {
+
+            // Create filter for daily usage (apps only, NO websites)
+            let filter = DeviceActivityFilter(
+                segment: .daily(
+                    during: Calendar.current.dateInterval(of: .day, for: Date())!
+                ),
+                users: .all,
+                devices: .all,  // Track on all devices (iPhone/iPad)
+                applications: selection.applicationTokens,  // Apps only
+                categories: selection.categoryTokens,        // Categories only
+                webDomains: []  // EXPLICITLY EMPTY - no website tracking
+            )
+
+            // Hidden report that triggers extension
+            DeviceActivityReport(.daily, filter: filter)
+                .frame(width: 1, height: 1)
+                .opacity(0)
+                .allowsHitTesting(false)
+        }
     }
     
     @ViewBuilder
