@@ -9,9 +9,16 @@
 /* Begin PBXBuildFile section */
 		15FACC134D9A43F984620D07 /* ScrollKittyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41062A36B0734099914261D0 /* ScrollKittyReport.swift */; };
 		5A0AB70813094A13A5BFA85E /* DailyUsageReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D62B3B0C7D374A6DBBDDD2F0 /* DailyUsageReport.swift */; };
-		F0C189FC6A714E2FB6E8AA25 /* DailyUsageReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B531B8CFF46A43C0BCA47C3A /* DailyUsageReportView.swift */; };
 		966740AB9D6F46139AC5B84E /* ScrollKittyReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 4D41377C0E664ECE8AFF94DE /* ScrollKittyReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D047E1C22ED15E560058C39E /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D047E1C12ED15E560058C39E /* DeviceActivity.framework */; };
+		D047E1CA2ED15E560058C39E /* ScrollKittyMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D047E1BF2ED15E550058C39E /* ScrollKittyMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D047E1D62ED17EE40058C39E /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D047E1D52ED17EE40058C39E /* ManagedSettings.framework */; };
+		D047E1D82ED17EE40058C39E /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D047E1D72ED17EE40058C39E /* ManagedSettingsUI.framework */; };
+		D047E1E02ED17EE40058C39E /* ScrollKittyShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D047E1D42ED17EE40058C39E /* ScrollKittyShield.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D047E1EA2ED17F090058C39E /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D047E1D52ED17EE40058C39E /* ManagedSettings.framework */; };
+		D047E1F22ED17F090058C39E /* ScrollKittyAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D047E1E92ED17F090058C39E /* ScrollKittyAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D04FBCEF2EA8FCE200D6E6D6 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D02C2C2A2EA5D71E0021841C /* ComposableArchitecture */; };
+		F0C189FC6A714E2FB6E8AA25 /* DailyUsageReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B531B8CFF46A43C0BCA47C3A /* DailyUsageReportView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,6 +35,27 @@
 			proxyType = 1;
 			remoteGlobalIDString = D02C2BFE2EA5D4E10021841C;
 			remoteInfo = ScrollKitty;
+		};
+		D047E1C82ED15E560058C39E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D02C2BF72EA5D4E00021841C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D047E1BE2ED15E550058C39E;
+			remoteInfo = ScrollKittyMonitor;
+		};
+		D047E1DE2ED17EE40058C39E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D02C2BF72EA5D4E00021841C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D047E1D32ED17EE40058C39E;
+			remoteInfo = ScrollKittyShield;
+		};
+		D047E1F02ED17F090058C39E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D02C2BF72EA5D4E00021841C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D047E1E82ED17F090058C39E;
+			remoteInfo = ScrollKittyAction;
 		};
 		D215E03859AB47038E5A66BD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -50,6 +78,19 @@
 			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D047E1CB2ED15E560058C39E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D047E1F22ED17F090058C39E /* ScrollKittyAction.appex in Embed Foundation Extensions */,
+				D047E1E02ED17EE40058C39E /* ScrollKittyShield.appex in Embed Foundation Extensions */,
+				D047E1CA2ED15E560058C39E /* ScrollKittyMonitor.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -61,10 +102,37 @@
 		D02C2BFF2EA5D4E10021841C /* ScrollKitty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrollKitty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02C2C0C2EA5D4E30021841C /* ScrollKittyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScrollKittyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D047E1BF2ED15E550058C39E /* ScrollKittyMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScrollKittyMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D047E1C12ED15E560058C39E /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		D047E1D42ED17EE40058C39E /* ScrollKittyShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScrollKittyShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D047E1D52ED17EE40058C39E /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		D047E1D72ED17EE40058C39E /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = Library/Frameworks/ManagedSettingsUI.framework; sourceTree = DEVELOPER_DIR; };
+		D047E1E92ED17F090058C39E /* ScrollKittyAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScrollKittyAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D62B3B0C7D374A6DBBDDD2F0 /* DailyUsageReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyUsageReport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D047E1CF2ED15E560058C39E /* Exceptions for "ScrollKittyMonitor" folder in "ScrollKittyMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D047E1BE2ED15E550058C39E /* ScrollKittyMonitor */;
+		};
+		D047E1E42ED17EE40058C39E /* Exceptions for "ScrollKittyShield" folder in "ScrollKittyShield" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D047E1D32ED17EE40058C39E /* ScrollKittyShield */;
+		};
+		D047E1F62ED17F090058C39E /* Exceptions for "ScrollKittyAction" folder in "ScrollKittyAction" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D047E1E82ED17F090058C39E /* ScrollKittyAction */;
+		};
 		D084A4862EBEF95A004E369C /* Exceptions for "ScrollKitty" folder in "ScrollKitty" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -91,6 +159,30 @@
 		D02C2C192EA5D4E30021841C /* ScrollKittyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ScrollKittyUITests;
+			sourceTree = "<group>";
+		};
+		D047E1C32ED15E560058C39E /* ScrollKittyMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D047E1CF2ED15E560058C39E /* Exceptions for "ScrollKittyMonitor" folder in "ScrollKittyMonitor" target */,
+			);
+			path = ScrollKittyMonitor;
+			sourceTree = "<group>";
+		};
+		D047E1D92ED17EE40058C39E /* ScrollKittyShield */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D047E1E42ED17EE40058C39E /* Exceptions for "ScrollKittyShield" folder in "ScrollKittyShield" target */,
+			);
+			path = ScrollKittyShield;
+			sourceTree = "<group>";
+		};
+		D047E1EB2ED17F090058C39E /* ScrollKittyAction */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D047E1F62ED17F090058C39E /* Exceptions for "ScrollKittyAction" folder in "ScrollKittyAction" target */,
+			);
+			path = ScrollKittyAction;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -125,6 +217,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D047E1BC2ED15E550058C39E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D047E1C22ED15E560058C39E /* DeviceActivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1D12ED17EE40058C39E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D047E1D62ED17EE40058C39E /* ManagedSettings.framework in Frameworks */,
+				D047E1D82ED17EE40058C39E /* ManagedSettingsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1E62ED17F090058C39E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D047E1EA2ED17F090058C39E /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -135,6 +252,10 @@
 				D02C2C0F2EA5D4E30021841C /* ScrollKittyTests */,
 				D02C2C192EA5D4E30021841C /* ScrollKittyUITests */,
 				E5685F64D9824DB7858ADC04 /* ScrollKittyReport */,
+				D047E1C32ED15E560058C39E /* ScrollKittyMonitor */,
+				D047E1D92ED17EE40058C39E /* ScrollKittyShield */,
+				D047E1EB2ED17F090058C39E /* ScrollKittyAction */,
+				D047E1C02ED15E560058C39E /* Frameworks */,
 				D02C2C002EA5D4E10021841C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -146,8 +267,21 @@
 				D02C2C0C2EA5D4E30021841C /* ScrollKittyTests.xctest */,
 				D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */,
 				4D41377C0E664ECE8AFF94DE /* ScrollKittyReport.appex */,
+				D047E1BF2ED15E550058C39E /* ScrollKittyMonitor.appex */,
+				D047E1D42ED17EE40058C39E /* ScrollKittyShield.appex */,
+				D047E1E92ED17F090058C39E /* ScrollKittyAction.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D047E1C02ED15E560058C39E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D047E1C12ED15E560058C39E /* DeviceActivity.framework */,
+				D047E1D52ED17EE40058C39E /* ManagedSettings.framework */,
+				D047E1D72ED17EE40058C39E /* ManagedSettingsUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		E5685F64D9824DB7858ADC04 /* ScrollKittyReport */ = {
@@ -190,11 +324,15 @@
 				D02C2BFC2EA5D4E10021841C /* Frameworks */,
 				D02C2BFD2EA5D4E10021841C /* Resources */,
 				6C73AE29486748F1A19BA3E1 /* Embed ExtensionKit Extensions */,
+				D047E1CB2ED15E560058C39E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				1C7D11BF323E48C19E2DBCB6 /* PBXTargetDependency */,
+				D047E1C92ED15E560058C39E /* PBXTargetDependency */,
+				D047E1DF2ED17EE40058C39E /* PBXTargetDependency */,
+				D047E1F12ED17F090058C39E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D02C2C012EA5D4E10021841C /* ScrollKitty */,
@@ -253,6 +391,72 @@
 			productReference = D02C2C162EA5D4E30021841C /* ScrollKittyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		D047E1BE2ED15E550058C39E /* ScrollKittyMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D047E1CE2ED15E560058C39E /* Build configuration list for PBXNativeTarget "ScrollKittyMonitor" */;
+			buildPhases = (
+				D047E1BB2ED15E550058C39E /* Sources */,
+				D047E1BC2ED15E550058C39E /* Frameworks */,
+				D047E1BD2ED15E550058C39E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D047E1C32ED15E560058C39E /* ScrollKittyMonitor */,
+			);
+			name = ScrollKittyMonitor;
+			packageProductDependencies = (
+			);
+			productName = ScrollKittyMonitor;
+			productReference = D047E1BF2ED15E550058C39E /* ScrollKittyMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		D047E1D32ED17EE40058C39E /* ScrollKittyShield */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D047E1E12ED17EE40058C39E /* Build configuration list for PBXNativeTarget "ScrollKittyShield" */;
+			buildPhases = (
+				D047E1D02ED17EE40058C39E /* Sources */,
+				D047E1D12ED17EE40058C39E /* Frameworks */,
+				D047E1D22ED17EE40058C39E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D047E1D92ED17EE40058C39E /* ScrollKittyShield */,
+			);
+			name = ScrollKittyShield;
+			packageProductDependencies = (
+			);
+			productName = ScrollKittyShield;
+			productReference = D047E1D42ED17EE40058C39E /* ScrollKittyShield.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		D047E1E82ED17F090058C39E /* ScrollKittyAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D047E1F32ED17F090058C39E /* Build configuration list for PBXNativeTarget "ScrollKittyAction" */;
+			buildPhases = (
+				D047E1E52ED17F090058C39E /* Sources */,
+				D047E1E62ED17F090058C39E /* Frameworks */,
+				D047E1E72ED17F090058C39E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D047E1EB2ED17F090058C39E /* ScrollKittyAction */,
+			);
+			name = ScrollKittyAction;
+			packageProductDependencies = (
+			);
+			productName = ScrollKittyAction;
+			productReference = D047E1E92ED17F090058C39E /* ScrollKittyAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -277,6 +481,15 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = D02C2BFE2EA5D4E10021841C;
 					};
+					D047E1BE2ED15E550058C39E = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					D047E1D32ED17EE40058C39E = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					D047E1E82ED17F090058C39E = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 				};
 			};
 			buildConfigurationList = D02C2BFA2EA5D4E00021841C /* Build configuration list for PBXProject "ScrollKitty" */;
@@ -300,6 +513,9 @@
 				C01D17DC525E4AFDB82A9FB3 /* ScrollKittyReport */,
 				D02C2C0B2EA5D4E30021841C /* ScrollKittyTests */,
 				D02C2C152EA5D4E30021841C /* ScrollKittyUITests */,
+				D047E1BE2ED15E550058C39E /* ScrollKittyMonitor */,
+				D047E1D32ED17EE40058C39E /* ScrollKittyShield */,
+				D047E1E82ED17F090058C39E /* ScrollKittyAction */,
 			);
 		};
 /* End PBXProject section */
@@ -327,6 +543,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D02C2C142EA5D4E30021841C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1BD2ED15E550058C39E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1D22ED17EE40058C39E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1E72ED17F090058C39E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -367,6 +604,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D047E1BB2ED15E550058C39E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1D02ED17EE40058C39E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D047E1E52ED17F090058C39E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -385,9 +643,84 @@
 			target = D02C2BFE2EA5D4E10021841C /* ScrollKitty */;
 			targetProxy = D02C2C172EA5D4E30021841C /* PBXContainerItemProxy */;
 		};
+		D047E1C92ED15E560058C39E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D047E1BE2ED15E550058C39E /* ScrollKittyMonitor */;
+			targetProxy = D047E1C82ED15E560058C39E /* PBXContainerItemProxy */;
+		};
+		D047E1DF2ED17EE40058C39E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D047E1D32ED17EE40058C39E /* ScrollKittyShield */;
+			targetProxy = D047E1DE2ED17EE40058C39E /* PBXContainerItemProxy */;
+		};
+		D047E1F12ED17F090058C39E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D047E1E82ED17F090058C39E /* ScrollKittyAction */;
+			targetProxy = D047E1F02ED17F090058C39E /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		8F54260D50B04697B94DC184 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyReport/ScrollKittyReport.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BQG3LP4P64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScrollKittyReport/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyReport;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyReport;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		B0C3140296A84A8FBD1F89AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyReport/ScrollKittyReport.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BQG3LP4P64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScrollKittyReport/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyReport;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyReport;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		D02C2C1E2EA5D4E30021841C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -704,63 +1037,192 @@
 			};
 			name = Release;
 		};
-		B0C3140296A84A8FBD1F89AA /* Debug */ = {
+		D047E1CC2ED15E560058C39E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ScrollKittyReport/ScrollKittyReport.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyMonitor/ScrollKittyMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BQG3LP4P64;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ScrollKittyReport/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyReport;
+				INFOPLIST_FILE = ScrollKittyMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyReport;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		8F54260D50B04697B94DC184 /* Release */ = {
+		D047E1CD2ED15E560058C39E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ScrollKittyReport/ScrollKittyReport.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyMonitor/ScrollKittyMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BQG3LP4P64;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ScrollKittyReport/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyReport;
+				INFOPLIST_FILE = ScrollKittyMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyReport;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D047E1E22ED17EE40058C39E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyShield/ScrollKittyShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BQG3LP4P64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScrollKittyShield/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyShield;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyShield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D047E1E32ED17EE40058C39E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyShield/ScrollKittyShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BQG3LP4P64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScrollKittyShield/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyShield;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyShield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D047E1F42ED17F090058C39E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyAction/ScrollKittyAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BQG3LP4P64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScrollKittyAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyAction;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D047E1F52ED17F090058C39E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScrollKittyAction/ScrollKittyAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BQG3LP4P64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScrollKittyAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ScrollKittyAction;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jerryUbah.ScrollKitty.ScrollKittyAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -808,6 +1270,33 @@
 			buildConfigurations = (
 				D02C2C272EA5D4E30021841C /* Debug */,
 				D02C2C282EA5D4E30021841C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D047E1CE2ED15E560058C39E /* Build configuration list for PBXNativeTarget "ScrollKittyMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D047E1CC2ED15E560058C39E /* Debug */,
+				D047E1CD2ED15E560058C39E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D047E1E12ED17EE40058C39E /* Build configuration list for PBXNativeTarget "ScrollKittyShield" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D047E1E22ED17EE40058C39E /* Debug */,
+				D047E1E32ED17EE40058C39E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D047E1F32ED17F090058C39E /* Build configuration list for PBXNativeTarget "ScrollKittyAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D047E1F42ED17F090058C39E /* Debug */,
+				D047E1F52ED17F090058C39E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -107,7 +107,7 @@ struct HomeFeature {
                 
             case .startPolling:
                 return .run { send in
-                    for await _ in clock.timer(interval: .seconds(30)) {
+                    for await _ in await clock.timer(interval: .seconds(30)) {
                         await send(.pollingTick)
                     }
                 }
