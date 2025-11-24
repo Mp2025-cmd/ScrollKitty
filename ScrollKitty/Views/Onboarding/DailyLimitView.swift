@@ -17,6 +17,16 @@ enum DailyLimitOption: String, Equatable, CaseIterable {
         case .eightHours: return 480
         }
     }
+
+    var healthCost: Int {
+        switch self {
+        case .threeHours: return 33
+        case .fourHours: return 25
+        case .fiveHours: return 20
+        case .sixHours: return 17
+        case .eightHours: return 12
+        }
+    }
 }
 
 @Reducer

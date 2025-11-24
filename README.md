@@ -164,3 +164,19 @@ We pivoted from the passive "Report Extension" approach (which was sandboxed and
   - This bypasses the "iOS 26 Monitor Bug" by relying on user interaction triggers.
 
 **Status:** ✅ Fixed. Core loop is functional.
+
+## 📝 Next Tasks (Lives + Timed Shields)
+
+1.  **Update Daily Limit Logic:**
+    - Map Daily Limit (3h, 4h, etc.) to **Cat Lives** (5, 7, etc.) instead of raw Health Cost.
+    - Update `DailyLimitView` and `DailyLimitFeature`.
+2.  **Update Shield Logic (`ShieldConfigurationExtension`):**
+    - Implement logic to check **Focus Window** (Time & Day).
+    - Implement logic to check **Shield Cooldown** (is shield active?).
+    - Display remaining **Lives** on the shield.
+3.  **Update Bypass Action (`ShieldActionExtension`):**
+    - Deduct **1 Life** per bypass.
+    - Set **Cooldown Expiration** (Now + Frequency).
+    - Unblock app temporarily.
+4.  **Re-Shielding Reliability:**
+    - Implement mechanism to re-block apps after cooldown expires (using `DeviceActivityMonitor` or Main App check).

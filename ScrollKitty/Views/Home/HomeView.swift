@@ -85,17 +85,10 @@ struct HomeFeature {
                     let dailyLimit = await userSettings.loadDailyLimit() ?? 240
 
                     print("[HomeFeature] Read \(totalSeconds)s (\(Int(totalSeconds/60))m) from selectedTotalSecondsToday (apps only)")
-                    print("[HomeFeature] Daily limit: \(dailyLimit)m")
-
-                    // Calculate health with new formula: 100 - min(1, used/limit) × 100
-                    let dailyLimitSeconds = Double(dailyLimit * 60)  // Convert minutes to seconds
-                    let usageRatio = min(1.0, totalSeconds / dailyLimitSeconds)
-                    let healthPercentage = 100 - (usageRatio * 100)
-
-                    print("[HomeFeature] Usage ratio: \(usageRatio), Health: \(healthPercentage)%")
-
+                    
+                    // Calculate health using the manager which reads from App Group
                     let healthData = await catHealth.calculateHealth(totalSeconds, dailyLimit)
-                    print("[HomeFeature] Cat stage: \(healthData.catStage)")
+                    print("[HomeFeature] Health loaded: \(healthData.healthPercentage)% Stage: \(healthData.catStage)")
                     await send(.catHealthLoaded(healthData))
                 }
 

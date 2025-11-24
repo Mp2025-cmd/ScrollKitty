@@ -32,23 +32,14 @@ struct CatHealthManager: Sendable {
 extension CatHealthManager: DependencyKey {
     static let liveValue = Self(
         calculateHealth: { totalSeconds, dailyLimitMinutes in
-            guard dailyLimitMinutes > 0 else {
-                return CatHealthData(
-                    totalSeconds: totalSeconds,
-                    dailyLimitMinutes: dailyLimitMinutes,
-                    healthPercentage: 100,
-                    catStage: .healthy,
-                    formattedTime: formatTime(totalSeconds)
-                )
-            }
-            
-            let totalMinutes = totalSeconds / 60
-            let usedRatio = totalMinutes / Double(dailyLimitMinutes)
-            let healthPercentage = max(0, min(100, 100 - (usedRatio * 100)))
+            // New Logic: Health is purely based on bypass actions, not time used.
+            // Read the current health from the App Group defaults.
+            let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+            let currentHealth = defaults?.double(forKey: "catHealthPercentage") ?? 100.0
             
             // Determine cat stage based on health
             let catStage: CatState
-            switch healthPercentage {
+            switch currentHealth {
             case 80...100:
                 catStage = .healthy
             case 60..<80:
@@ -64,7 +55,7 @@ extension CatHealthManager: DependencyKey {
             return CatHealthData(
                 totalSeconds: totalSeconds,
                 dailyLimitMinutes: dailyLimitMinutes,
-                healthPercentage: healthPercentage,
+                healthPercentage: currentHealth,
                 catStage: catStage,
                 formattedTime: formatTime(totalSeconds)
             )
@@ -77,12 +68,16 @@ extension CatHealthManager: DependencyKey {
             return !Calendar.current.isDateInToday(lastReset)
         },
         performMidnightReset: {
-            // Note: Daily filter handles reset automatically, but clearing for consistency
             let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            defaults?.set(0, forKey: "selectedTotalSecondsToday")
-
+            
+            // Reset health to 100
+            defaults?.set(100.0, forKey: "catHealthPercentage")
+            defaults?.set("healthy", forKey: "catStage")
+            defaults?.set(0, forKey: "selectedTotalSecondsToday") // Reset usage tracking for display if needed
+            
+            // Mark reset as done for today
             UserDefaults.standard.set(Date(), forKey: "lastResetDate")
-            print("[CatHealthManager] Manual midnight reset performed (daily filter handles automatically)")
+            print("[CatHealthManager] 🌙 Midnight reset performed: Health restored to 100%")
         }
     )
     
@@ -124,4 +119,3 @@ private func formatTime(_ seconds: Double) -> String {
         return "\(minutes)m"
     }
 }
-

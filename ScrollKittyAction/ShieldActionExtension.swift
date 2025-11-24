@@ -11,14 +11,15 @@ class ShieldActionExtension: ShieldActionDelegate {
     override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
         switch action {
         case .primaryButtonPressed:
-            // "Close App"
+            // "Step Back" (Alive) or "Close App" (Dead)
             completionHandler(.close)
             
         case .secondaryButtonPressed:
-            // "Ignore for 15m"
-            penalizeCatHealth()
-            updateStoreToAllow(application)
-            completionHandler(.none)
+            // "Continue - I'll Take It"
+            handleBypass {
+                self.updateStoreToAllow(application)
+                completionHandler(.none)
+            }
             
         @unknown default:
             completionHandler(.close)
@@ -28,37 +29,67 @@ class ShieldActionExtension: ShieldActionDelegate {
     // MARK: - Web Domains
     
     override func handle(action: ShieldAction, for webDomain: WebDomainToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
-        // Web logic
-        penalizeCatHealth()
-        completionHandler(.none)
+        switch action {
+        case .primaryButtonPressed:
+            completionHandler(.close)
+        case .secondaryButtonPressed:
+            handleBypass {
+                completionHandler(.none)
+            }
+        @unknown default:
+            completionHandler(.close)
+        }
     }
     
     // MARK: - Categories
     
     override func handle(action: ShieldAction, for category: ActivityCategoryToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
-        // Category logic
-        penalizeCatHealth()
-        updateStoreToAllow(category)
-        completionHandler(.none)
+        switch action {
+        case .primaryButtonPressed:
+            completionHandler(.close)
+        case .secondaryButtonPressed:
+            handleBypass {
+                self.updateStoreToAllow(category)
+                completionHandler(.none)
+            }
+        @unknown default:
+            completionHandler(.close)
+        }
     }
     
     // MARK: - Helpers
     
-    private func penalizeCatHealth() {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app") else { return }
+    private func handleBypass(completion: () -> Void) {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app") else {
+            completion()
+            return
+        }
         
         let currentHealth = sharedDefaults.double(forKey: "catHealthPercentage")
-        let newHealth = max(0, currentHealth - 10)
+        // If already dead, do nothing (shouldn't happen if config is correct)
+        if currentHealth <= 0 {
+            completion()
+            return
+        }
         
+        let cost = sharedDefaults.integer(forKey: "healthCostPerBypass")
+        let penalty = cost > 0 ? Double(cost) : 10.0 // Default to 10 if not set
+        
+        let newHealth = currentHealth - penalty
+        
+        // Save new health
         sharedDefaults.set(newHealth, forKey: "catHealthPercentage")
         
-        let stage = getCatStage(for: Int(newHealth))
+        // Update stage
+        let stage = getCatStage(for: newHealth)
         sharedDefaults.set(stage, forKey: "catStage")
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "lastShieldPenalty")
         
-        print("[ShieldAction] 📉 Penalized health to \(newHealth)%")
+        print("[ShieldAction] 📉 Penalized health by \(penalty). New Health: \(newHealth)%")
         
-        scheduleNotification(health: Int(newHealth))
+        scheduleNotification(health: newHealth, penalty: Int(penalty))
+        
+        completion()
     }
     
     private func updateStoreToAllow(_ token: ApplicationToken) {
@@ -69,15 +100,23 @@ class ShieldActionExtension: ShieldActionDelegate {
         store.shield.applications = shieldedApps
         
         let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-        let expiration = Date().addingTimeInterval(15 * 60)
+        let expiration = Date().addingTimeInterval(15 * 60) // 15 minutes default unblock window? PRD says "returns to app", effectively unblocking.
         sharedDefaults?.set(expiration.timeIntervalSince1970, forKey: "unblockExpiration")
     }
     
     private func updateStoreToAllow(_ token: ActivityCategoryToken) {
-        // Skip for MVP
+         let store = ManagedSettingsStore()
+         
+         let shieldedCategories = store.shield.applicationCategories ?? .specific([], except: [])
+         
+         if case .specific(let categories, let except) = shieldedCategories {
+             var newCategories = categories
+             newCategories.remove(token)
+             store.shield.applicationCategories = .specific(newCategories, except: except)
+         }
     }
     
-    private func getCatStage(for health: Int) -> String {
+    private func getCatStage(for health: Double) -> String {
         switch health {
         case 80...100: return "healthy"
         case 60..<80: return "concerned"
@@ -87,10 +126,14 @@ class ShieldActionExtension: ShieldActionDelegate {
         }
     }
     
-    private func scheduleNotification(health: Int) {
+    private func scheduleNotification(health: Double, penalty: Int) {
         let content = UNMutableNotificationContent()
         content.title = "Scroll Kitty Hurt! 😿"
-        content.body = "Unlocking the app cost 10 health. Current: \(health)%"
+        if health <= 0 {
+            content.body = "You killed me... I'm gone until tomorrow."
+        } else {
+            content.body = "Unlocking cost \(penalty) health. Current: \(Int(health))%"
+        }
         content.sound = .default
         
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)

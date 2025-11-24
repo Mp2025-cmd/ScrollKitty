@@ -17,6 +17,8 @@ struct AppFeature {
         var yearsLost = YearsLostFeature.State()
         var appSelection = AppSelectionFeature.State()
         var dailyLimit = DailyLimitFeature.State()
+        var shieldFrequency = ShieldFrequencyFeature.State()
+        var focusWindow = FocusWindowFeature.State()
         var solutionIntro = SolutionIntroFeature.State()
         var screenTimeAccess = ScreenTimeAccessFeature.State()
         var characterIntro = CharacterIntroFeature.State()
@@ -33,6 +35,7 @@ struct AppFeature {
         var userAgeSelection: AgeOption?
         var selectedApps: FamilyActivitySelection?
         var selectedLimit: DailyLimitOption?
+        var selectedInterval: ShieldIntervalOption?
     }
     
     enum Destination: Equatable {
@@ -45,12 +48,14 @@ struct AppFeature {
         case screenTimeAccess
         case appSelection
         case dailyLimit
+        case shieldFrequency
+        case focusWindow
         case characterIntro
         case scrollKittyLifecycle
         case commitment
         case home
     }
-
+    
     enum Action {
         case onboarding(OnboardingFeature.Action)
         case resultsLoading(ResultsLoadingFeature.Action)
@@ -59,6 +64,8 @@ struct AppFeature {
         case yearsLost(YearsLostFeature.Action)
         case appSelection(AppSelectionFeature.Action)
         case dailyLimit(DailyLimitFeature.Action)
+        case shieldFrequency(ShieldFrequencyFeature.Action)
+        case focusWindow(FocusWindowFeature.Action)
         case solutionIntro(SolutionIntroFeature.Action)
         case screenTimeAccess(ScreenTimeAccessFeature.Action)
         case characterIntro(CharacterIntroFeature.Action)
@@ -197,13 +204,35 @@ struct AppFeature {
                 
             case .dailyLimit(.delegate(.completeWithSelection(let selection))):
                 state.selectedLimit = selection
-                state.destination = .characterIntro
+                state.destination = .shieldFrequency
                 return .run { _ in
                     await userSettings.saveDailyLimit(selection.minutes)
+                    await userSettings.saveHealthCost(selection.healthCost)
                 }
                 
             case .dailyLimit(.delegate(.goBack)):
                 state.destination = .appSelection
+                return .none
+
+            case .shieldFrequency(.delegate(.completeWithSelection(let selection))):
+                state.selectedInterval = selection
+                state.destination = .focusWindow
+                return .run { _ in
+                    await userSettings.saveShieldInterval(selection.minutes)
+                }
+
+            case .shieldFrequency(.delegate(.goBack)):
+                state.destination = .dailyLimit
+                return .none
+                
+            case .focusWindow(.delegate(.completeWithSelection(let data))):
+                state.destination = .characterIntro
+                return .run { _ in
+                    await userSettings.saveFocusWindow(data)
+                }
+                
+            case .focusWindow(.delegate(.goBack)):
+                state.destination = .shieldFrequency
                 return .none
                 
             case .characterIntro(.delegate(.showNextScreen)):
@@ -211,7 +240,7 @@ struct AppFeature {
                 return .none
                 
             case .characterIntro(.delegate(.goBack)):
-                state.destination = .dailyLimit
+                state.destination = .focusWindow
                 return .none
                 
             case .scrollKittyLifecycle(.delegate(.goBack)):
@@ -265,6 +294,12 @@ struct AppFeature {
                 
             case .dailyLimit:
                 return .none
+
+            case .shieldFrequency:
+                return .none
+                
+            case .focusWindow:
+                return .none
                 
             case .solutionIntro:
                 return .none
@@ -312,6 +347,14 @@ struct AppFeature {
         
         Scope(state: \.dailyLimit, action: \.dailyLimit) {
             DailyLimitFeature()
+        }
+
+        Scope(state: \.shieldFrequency, action: \.shieldFrequency) {
+            ShieldFrequencyFeature()
+        }
+        
+        Scope(state: \.focusWindow, action: \.focusWindow) {
+            FocusWindowFeature()
         }
         
         Scope(state: \.solutionIntro, action: \.solutionIntro) {

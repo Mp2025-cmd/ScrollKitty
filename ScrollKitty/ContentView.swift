@@ -49,6 +49,14 @@ struct ContentView: View {
             DailyLimitView(
                 store: store.scope(state: \.dailyLimit, action: \.dailyLimit)
             )
+        case .shieldFrequency:
+            ShieldFrequencyView(
+                store: store.scope(state: \.shieldFrequency, action: \.shieldFrequency)
+            )
+        case .focusWindow:
+            FocusWindowView(
+                store: store.scope(state: \.focusWindow, action: \.focusWindow)
+            )
         case .characterIntro:
             CharacterIntroView(
                 store: store.scope(state: \.characterIntro, action: \.characterIntro)

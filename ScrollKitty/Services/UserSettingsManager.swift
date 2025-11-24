@@ -9,6 +9,12 @@ struct UserSettingsManager: Sendable {
     nonisolated(unsafe) var loadSelectedApps: @Sendable () async -> FamilyActivitySelection?
     var saveDailyLimit: @Sendable (Int) async -> Void
     var loadDailyLimit: @Sendable () async -> Int?
+    var saveHealthCost: @Sendable (Int) async -> Void
+    var loadHealthCost: @Sendable () async -> Int?
+    var saveShieldInterval: @Sendable (Int) async -> Void
+    var loadShieldInterval: @Sendable () async -> Int?
+    var saveFocusWindow: @Sendable (FocusWindowData) async -> Void
+    var loadFocusWindow: @Sendable () async -> FocusWindowData?
     var getTodayTotal: @Sendable () async -> Double
 }
 
@@ -52,6 +58,39 @@ extension UserSettingsManager: DependencyKey {
                 }
                 return limit
             },
+            saveHealthCost: { cost in
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                defaults?.set(cost, forKey: "healthCostPerBypass")
+            },
+            loadHealthCost: {
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                // Default to 10 (legacy) if not found, or handle appropriately
+                let cost = defaults?.integer(forKey: "healthCostPerBypass") ?? 0
+                return cost > 0 ? cost : 10 
+            },
+            saveShieldInterval: { minutes in
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                defaults?.set(minutes, forKey: "shieldInterval")
+            },
+            loadShieldInterval: {
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                let interval = defaults?.integer(forKey: "shieldInterval") ?? 0
+                return interval > 0 ? interval : 15 // Default to 15 minutes
+            },
+            saveFocusWindow: { data in
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                if let encoded = try? JSONEncoder().encode(data) {
+                    defaults?.set(encoded, forKey: "focusWindow")
+                }
+            },
+            loadFocusWindow: {
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                guard let data = defaults?.data(forKey: "focusWindow"),
+                      let decoded = try? JSONDecoder().decode(FocusWindowData.self, from: data) else {
+                    return nil
+                }
+                return decoded
+            },
             getTodayTotal: {
                 let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
                 return defaults?.double(forKey: "todayTotal") ?? 0
@@ -68,6 +107,12 @@ extension UserSettingsManager: DependencyKey {
             loadSelectedApps: loadApps,
             saveDailyLimit: { _ in },
             loadDailyLimit: { 240 }, // Default 4 hours
+            saveHealthCost: { _ in },
+            loadHealthCost: { 25 }, // Default test cost
+            saveShieldInterval: { _ in },
+            loadShieldInterval: { 15 },
+            saveFocusWindow: { _ in },
+            loadFocusWindow: { nil },
             getTodayTotal: { 5400 } // Mock: 1.5 hours
         )
     }()
@@ -83,4 +128,3 @@ extension DependencyValues {
         set { self[UserSettingsManager.self] = newValue }
     }
 }
-
