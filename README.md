@@ -22,73 +22,65 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 
 ### ✅ Completed Features
 
-#### 1. **Active Shielding System (Brain Rot Core Loop)**
-- **Architecture:** "Active Blocking" strategy for 100% reliability (bypasses iOS 26 Monitor bugs).
-- **Monitor Extension (`ScrollKittyMonitor`):** 
-  - Applies immediate shields to selected apps upon monitoring start.
-  - Tracks intervals and manages `ManagedSettingsStore`.
-- **Shield Configuration (`ScrollKittyShield`):**
-  - Custom "Scroll Kitty says NO!" blocking screen.
-  - "Ignore for 15m (-10 Health)" button logic.
-- **Shield Action (`ScrollKittyAction`):**
-  - Handles "Unlock" interaction.
-  - **Penalizes Health:** Drops cat health by 10% per unlock.
-  - **Notifications:** Sends "Cat is Sick!" alerts immediately.
-  - **Unblocking:** Temporarily unblocks app for 15 minutes.
-- **Data Flow:** Extensions write `catHealthPercentage` / `catStage` to App Group UserDefaults -> Main App reads and updates UI.
+#### 1. **Active Shielding System (Per-App HP + Timed Shields)**
+- **Core Loop:** "Hardcore" mode where bypassing shields costs HP from that specific app.
+- **Per-App Health System:**
+  - Cat has **100 HP total** shared across all selected apps (max 10 apps).
+  - Each app gets equal HP allocation: `100 HP ÷ number of apps`.
+  - Each bypass costs **10 HP** from that specific app only.
+  - Global Cat Health = Sum of all app HPs.
+  - **0 Global HP** = Cat Dies + **Hard Lock on ALL apps** (No bypass button).
+- **Timed Shields (Cooldown):**
+  - User selects Shield Frequency (e.g., 15 min).
+  - Bypassing unblocks the app for that duration.
+  - Local notifications prompt re-shielding.
+- **Focus Window:**
+  - User defines specific Hours & Days for protection.
+- **Extensions:**
+  - `ScrollKittyShield`: Displays per-app HP (e.g., "Instagram: 15/25 HP | Total: 70 HP") or "Dead" shield.
+  - `ScrollKittyAction`: Handles "Continue" tap -> Deducts 10 HP from specific app -> Unblocks App -> Sets Timer.
+  - Uses Swift **Actors** for thread-safe cross-extension communication.
 
-#### 2. **Onboarding Flow (7 Steps)**
+#### 2. **Onboarding Flow (9 Steps)**
 - **Splash Screen** - Auto-advance after 2 seconds (intro animation)
 - **Welcome Screen** - Introduction with cat mascot
-- **Usage Question** - Daily phone hours selection (3hrs → 12hrs+)
-- **Addiction Assessment** - "Do you feel addicted to your phone?" (Not at all → Yes)
-- **Sleep Impact** - "Does phone use interfere with your sleep?" (Never → Almost every night)
-- **Without Phone** - "How do you feel without your phone?" (Totally fine → Very anxious)
-- **Idle Check** - "How often do you check your phone when idle?" (Rarely → Every few minutes)
-- **Age Selection** - User age range (Under 18 → 55+)
+- **Usage Question** - Daily phone hours selection
+- **Addiction Assessment** - "Do you feel addicted?"
+- **Sleep Impact** - "Does it affect sleep?"
+- **Without Phone** - "Anxiety check"
+- **Idle Check** - "Check frequency"
+- **Age Selection** - User demographics
+- **Configuration Phase:**
+  - **App Selection:** FamilyActivityPicker with **10-app maximum** (enforced with live counter)
+  - **Daily Limit:** User awareness setting (3-8 hours) - HP system is consistent across all limits
+  - **Shield Frequency:** Cooldown timer (10-60 min)
+  - **Focus Window:** Active hours & days
 
 #### 3. **Navigation System**
 - **Enum-based destination pattern** - Type-safe state machine (single source of truth)
-- **OnboardingFeature** - Stack-based navigation with `StackState` for 7-step flow
-- **AppFeature** - Enum destination for post-onboarding screens (12 destinations)
-- **Back button support** - Full backward navigation throughout app
-- **Type safety** - Impossible to show multiple screens or invalid states
+- **OnboardingFeature** - Stack-based navigation for assessment
+- **AppFeature** - Enum destination for configuration screens
+- **Back button support** - Full backward navigation
 
 #### 4. **Results Loading & Analysis**
-- **Circular Progress Ring** - 3 concentric circles with percentage counter
-- **Dynamic Gen Z Captions** - Rotating every 1.5 seconds
-- **Results Screen** - Personalized addiction score display
-- **Addiction Score Screen** - Bar graph comparing user vs population average
-- **Years Lost Screen** - Shows "17 years" of life lost to screens
+- **Circular Progress Ring** - 3 concentric circles
+- **Dynamic Captions** - Rotating every 1.5 seconds
+- **Results Screen** - Personalized addiction score
+- **Addiction Score Screen** - Bar graph comparison
+- **Years Lost Screen** - "17 years lost" visualization
 
-#### 5. **Screen Time Integration**
-- **Permission Request Screen** - System-style UI requesting Screen Time access
-- **App Selection Screen** - FamilyActivityPicker for selecting apps/categories to track
-- **Daily Limit Screen** - Set daily limit (3-8 hours)
-- **Flow Order** - Follows Apple guidelines: educate → request → configure
+#### 5. **Home/Dashboard Screen**
+- **Real-Time Dashboard** - Displays live Cat Health & Stage
+- **Health Percentage** - Calculated as sum of all app HPs
+- **Per-App Health Breakdown** - Shows individual app HP allocations
+- **Visual Feedback** - Progress bar changes color (Green → Red)
+- **Background Polling** - Updates automatically
+- **Automatic Migration** - Converts old lives-based data to HP system on first launch
 
-#### 6. **Character Introduction & Lifecycle**
-- **Character Intro Screen** - Introduces "Scroll Kitty" mascot
-- **Lifecycle Carousel** - 5 health states (Healthy → Dead)
-- **Interactive Features** - Page control dots, state-specific colors
+#### 6. **Timeline View**
+- **Vertical Timeline** - Chat-style usage updates from Scroll Kitty
 
-#### 7. **Commitment Screen**
-- **Ready to Take Back Control** - Final onboarding step with commitment pledge
-- **Interactive Checkbox** - Custom checkbox with checkmark icon
-- **TCA Binding Pattern** - Uses `BindableAction` and `@Bindable`
-
-#### 8. **Home/Dashboard Screen**
-- **Real-Time Dashboard** - Displays live Cat Health (Healthy/Sick/Dead)
-- **Health Percentage** - Updates dynamically based on Shield usage
-- **Color-Coded Progress Bar** - Visual feedback (Green → Red)
-- **Background Polling** - Updates every 30 seconds to fetch extension data
-
-#### 9. **Timeline View**
-- **Vertical Timeline** - Blue line with cat dashboard icons
-- **Chat-Style Cards** - Messages from Scroll Kitty about app usage
-- **Cat State Integration** - Uses `CatState` enum for images and colors
-
-#### 10. **Technical Implementation**
+#### 7. **Technical Implementation**
 - **Framework:** SwiftUI + The Composable Architecture (TCA)
 - **Persistence:** App Group UserDefaults (`group.com.scrollkitty.app`)
 - **Screen Time API:** DeviceActivity, FamilyControls, ManagedSettings
@@ -126,16 +118,17 @@ ScrollKitty/
 │   │   └── TimelineView.swift
 │   └── Onboarding/
 │       └── ... (Onboarding Views)
-├── ScrollKittyMonitor/ (New)
+├── ScrollKittyMonitor/
 │   └── DeviceActivityMonitorExtension.swift
-├── ScrollKittyShield/ (New)
+├── ScrollKittyShield/
 │   └── ShieldConfigurationExtension.swift
-├── ScrollKittyAction/ (New)
+├── ScrollKittyAction/
 │   └── ShieldActionExtension.swift
 └── Services/
     ├── ScreenTimeManager.swift
     ├── UserSettingsManager.swift
-    └── CatHealthManager.swift
+    ├── CatHealthManager.swift
+    └── AppHealthManager.swift (Per-app health data + thread-safe actor)
 ```
 
 ### Key TCA Patterns
@@ -144,6 +137,11 @@ ScrollKitty/
 - **Feature + View co-location**
 - **Dependency injection** for Screen Time & Settings
 - **App Group sharing** for Extension communication
+- **Modern Concurrency (2024+):**
+  - Async/await instead of Combine
+  - Swift Actors for thread-safe UserDefaults access
+  - `.run` effects for async operations
+  - Atomic health updates to prevent race conditions
 
 ## 📊 Data & Statistics
 - **Gen Z (18-24):** 8.5 hours/day average
@@ -157,26 +155,52 @@ ScrollKitty uses a **friendly confrontation** approach - delivering hard truths 
 ## ⚠️ PREVIOUS BLOCKER: DeviceActivityReport Extension (RESOLVED)
 
 **Resolution:**
-We pivoted from the passive "Report Extension" approach (which was sandboxed and couldn't write data) to an **Active Shielding Architecture**.
+We pivoted from the passive "Report Extension" approach to an **Active Shielding Architecture**.
 - **Old Approach:** Try to read usage from `DeviceActivityReport` (Blocked by Apple privacy).
 - **New Approach:** Use `ShieldActionExtension` to capture "Unlock" events.
-  - User unlocks app -> Extension runs -> Deducts Health -> Updates Main App.
+  - User unlocks app -> Extension runs -> Deducts Lives -> Updates Main App.
   - This bypasses the "iOS 26 Monitor Bug" by relying on user interaction triggers.
 
 **Status:** ✅ Fixed. Core loop is functional.
 
-## 📝 Next Tasks (Lives + Timed Shields)
+---
 
-1.  **Update Daily Limit Logic:**
-    - Map Daily Limit (3h, 4h, etc.) to **Cat Lives** (5, 7, etc.) instead of raw Health Cost.
-    - Update `DailyLimitView` and `DailyLimitFeature`.
-2.  **Update Shield Logic (`ShieldConfigurationExtension`):**
-    - Implement logic to check **Focus Window** (Time & Day).
-    - Implement logic to check **Shield Cooldown** (is shield active?).
-    - Display remaining **Lives** on the shield.
-3.  **Update Bypass Action (`ShieldActionExtension`):**
-    - Deduct **1 Life** per bypass.
-    - Set **Cooldown Expiration** (Now + Frequency).
-    - Unblock app temporarily.
-4.  **Re-Shielding Reliability:**
-    - Implement mechanism to re-block apps after cooldown expires (using `DeviceActivityMonitor` or Main App check).
+## ✅ RESOLVED: Token Identifier Mismatch
+
+### Problem
+Per-app health tracking was not working correctly. All apps mapped to the same dictionary key because `String(describing: ApplicationToken)` produces a non-unique string.
+
+### Root Cause
+`"ApplicationToken(data: 128 bytes)"` is identical for all apps when converted to String directly.
+
+### Fix Applied
+We switched to using **Base64-encoded token data** as the unique identifier:
+```swift
+guard let tokenData = try? JSONEncoder().encode(token) else { return }
+let tokenId = tokenData.base64EncodedString()
+```
+This ensures every app has a unique, stable key for health tracking and shield configuration.
+
+### Files Updated
+1. `UserSettingsManager.swift` - `initializeAppHealth` closure
+2. `ShieldActionExtension.swift` - `handleBypassForApp` method
+3. `ShieldConfigurationExtension.swift` - `configuration(shielding:)` methods
+
+---
+
+## 🚨 Critical Issues (To Fix)
+
+### 1. Shield Persists During Cooldown
+- **Symptom:** After tapping "Continue" and unlocking the app, the shield (or a generic system shield) remains visible or reappears immediately, blocking access to the app.
+- **Cause:** The `ShieldActionExtension` is failing to successfully remove the app from `ManagedSettingsStore`, or the `DeviceActivityMonitor` is aggressively re-applying it.
+
+### 2. Re-Shielding Reliability
+- **Symptom:** After the cooldown period expires, the shield does not reliably return to block the app again.
+- **Cause:** Lack of a reliable trigger (like `DeviceActivitySchedule` update) to wake up the extension and re-apply the block.
+
+### 3. Notifications Not Appearing
+- **Symptom:** The "Lost 10 HP" and "Shield Returning" notifications are not showing up.
+- **Cause:** Likely missing Notification permissions or authorization request in the main app flow.
+
+### 4. Health Deduction Verification
+- **Status:** Needs verification. Logs indicate deductions happen, but the broken shield UX makes it hard to confirm visually.

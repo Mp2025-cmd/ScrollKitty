@@ -9,11 +9,12 @@ struct CatHealthData: Equatable {
     let healthPercentage: Double
     let catStage: CatState
     let formattedTime: String
-    
+    let perAppHealth: [AppHealthData] // Per-app health breakdown
+
     var totalMinutes: Int {
         Int(totalSeconds / 60)
     }
-    
+
     var totalHours: Double {
         totalSeconds / 3600
     }
@@ -32,11 +33,11 @@ struct CatHealthManager: Sendable {
 extension CatHealthManager: DependencyKey {
     static let liveValue = Self(
         calculateHealth: { totalSeconds, dailyLimitMinutes in
-            // New Logic: Health is purely based on bypass actions, not time used.
-            // Read the current health from the App Group defaults.
-            let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            let currentHealth = defaults?.double(forKey: "catHealthPercentage") ?? 100.0
-            
+            // Health is based on per-app bypass actions aggregated into global health
+            let actor = AppGroupDefaults()
+            let currentHealth = await actor.calculateHealthPercentage()
+            let perAppHealth = Array(await actor.loadAppHealthData().values)
+
             // Determine cat stage based on health
             let catStage: CatState
             switch currentHealth {
@@ -51,13 +52,14 @@ extension CatHealthManager: DependencyKey {
             default:
                 catStage = .dead
             }
-            
+
             return CatHealthData(
                 totalSeconds: totalSeconds,
                 dailyLimitMinutes: dailyLimitMinutes,
                 healthPercentage: currentHealth,
                 catStage: catStage,
-                formattedTime: formatTime(totalSeconds)
+                formattedTime: formatTime(totalSeconds),
+                perAppHealth: perAppHealth
             )
         },
         shouldResetForNewDay: {
@@ -68,13 +70,10 @@ extension CatHealthManager: DependencyKey {
             return !Calendar.current.isDateInToday(lastReset)
         },
         performMidnightReset: {
-            let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            
-            // Reset health to 100
-            defaults?.set(100.0, forKey: "catHealthPercentage")
-            defaults?.set("healthy", forKey: "catStage")
-            defaults?.set(0, forKey: "selectedTotalSecondsToday") // Reset usage tracking for display if needed
-            
+            // Use actor for thread-safe reset
+            let actor = AppGroupDefaults()
+            await actor.performMidnightReset()
+
             // Mark reset as done for today
             UserDefaults.standard.set(Date(), forKey: "lastResetDate")
             print("[CatHealthManager] 🌙 Midnight reset performed: Health restored to 100%")
@@ -83,12 +82,21 @@ extension CatHealthManager: DependencyKey {
     
     static let testValue = Self(
         calculateHealth: { totalSeconds, dailyLimitMinutes in
-            CatHealthData(
+            // Mock per-app health data for testing
+            let mockAppHealth = [
+                AppHealthData(appBundleIdentifier: "com.test.app1", maxHP: 25),
+                AppHealthData(appBundleIdentifier: "com.test.app2", maxHP: 25),
+                AppHealthData(appBundleIdentifier: "com.test.app3", maxHP: 25),
+                AppHealthData(appBundleIdentifier: "com.test.app4", maxHP: 25)
+            ]
+
+            return CatHealthData(
                 totalSeconds: totalSeconds,
                 dailyLimitMinutes: dailyLimitMinutes,
                 healthPercentage: 64,
                 catStage: .concerned,
-                formattedTime: formatTime(totalSeconds)
+                formattedTime: formatTime(totalSeconds),
+                perAppHealth: mockAppHealth
             )
         },
         shouldResetForNewDay: { false },

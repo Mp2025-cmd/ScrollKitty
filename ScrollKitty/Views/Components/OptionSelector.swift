@@ -53,8 +53,8 @@ struct OptionSelector<Option>: View where Option: CaseIterable & Equatable & Raw
                         onToggle?(option)
                     } else {
                         onSelect?(option)
-                    }
                 }
+            }
             }
         }
     }
@@ -87,10 +87,10 @@ struct OptionSelector<Option>: View where Option: CaseIterable & Equatable & Raw
     return VStack {
         Text("Single Select")
         OptionSelector(
-            options: PreviewOption.allCases,
-            selectedOption: .optionB,
-            onSelect: { _ in }
-        )
+        options: PreviewOption.allCases,
+        selectedOption: .optionB,
+        onSelect: { _ in }
+    )
         
         Text("Multi Select")
         OptionSelector(

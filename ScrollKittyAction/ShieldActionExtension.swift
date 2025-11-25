@@ -3,6 +3,95 @@ import ManagedSettingsUI
 import Foundation
 import UserNotifications
 
+// MARK: - App Health Data (Extension Copy)
+
+struct AppHealthData: Codable, Equatable {
+    let appBundleIdentifier: String
+    var currentHP: Double
+    let maxHP: Double
+    var lastBypass: Date?
+}
+
+// MARK: - App Group Actor (Extension Copy)
+
+actor AppGroupDefaults {
+    private let suiteName = "group.com.scrollkitty.app"
+    private var defaults: UserDefaults?
+
+    init() {
+        self.defaults = UserDefaults(suiteName: suiteName)
+    }
+
+    func loadAppHealthData() -> [String: AppHealthData] {
+        guard let defaults = defaults,
+              let data = defaults.data(forKey: "appHealthData"),
+              let decoded = try? JSONDecoder().decode([String: AppHealthData].self, from: data) else {
+            return [:]
+        }
+        return decoded
+    }
+
+    func saveAppHealthData(_ data: [String: AppHealthData]) {
+        guard let defaults = defaults else { return }
+        if let encoded = try? JSONEncoder().encode(data) {
+            defaults.set(encoded, forKey: "appHealthData")
+            defaults.synchronize()
+        }
+    }
+
+    func calculateGlobalHealth() -> Double {
+        let allAppHealth = loadAppHealthData()
+        return allAppHealth.values.map { $0.currentHP }.reduce(0, +)
+    }
+
+    func calculateHealthPercentage() -> Double {
+        let allAppHealth = loadAppHealthData()
+        let totalMaxHP = allAppHealth.values.map { $0.maxHP }.reduce(0, +)
+        guard totalMaxHP > 0 else { return 100.0 }
+        let totalCurrentHP = allAppHealth.values.map { $0.currentHP }.reduce(0, +)
+        return (totalCurrentHP / totalMaxHP) * 100.0
+    }
+
+    func deductHealthFromApp(bundleIdentifier: String, amount: Double) -> (appCurrentHP: Double, appMaxHP: Double, globalHP: Double, isDead: Bool) {
+        var healthData = loadAppHealthData()
+
+        guard var appHealth = healthData[bundleIdentifier] else {
+            // App not found, return safe defaults
+            return (0, 0, calculateGlobalHealth(), false)
+        }
+
+        appHealth.currentHP = max(0, appHealth.currentHP - amount)
+        appHealth.lastBypass = Date()
+        healthData[bundleIdentifier] = appHealth
+
+        saveAppHealthData(healthData)
+
+        let globalHP = calculateGlobalHealth()
+        let percentage = calculateHealthPercentage()
+
+        // Update global health percentage in UserDefaults
+        defaults?.set(percentage, forKey: "catHealthPercentage")
+
+        // Update cat stage
+        let stage = getCatStage(for: percentage)
+        defaults?.set(stage, forKey: "catStage")
+
+        defaults?.synchronize()
+
+        return (appHealth.currentHP, appHealth.maxHP, globalHP, globalHP <= 0)
+    }
+
+    private func getCatStage(for health: Double) -> String {
+        switch health {
+        case 80...100: return "healthy"
+        case 60..<80: return "concerned"
+        case 40..<60: return "tired"
+        case 20..<40: return "sick"
+        default: return "dead"
+        }
+    }
+}
+
 // Modern Shield Action API (iOS 16/17+)
 class ShieldActionExtension: ShieldActionDelegate {
     
@@ -13,14 +102,14 @@ class ShieldActionExtension: ShieldActionDelegate {
         case .primaryButtonPressed:
             // "Step Back" (Alive) or "Close App" (Dead)
             completionHandler(.close)
-            
+
         case .secondaryButtonPressed:
             // "Continue - I'll Take It"
-            handleBypass {
+            handleBypassForApp(application: application) {
                 self.updateStoreToAllow(application)
                 completionHandler(.none)
             }
-            
+
         @unknown default:
             completionHandler(.close)
         }
@@ -49,8 +138,8 @@ class ShieldActionExtension: ShieldActionDelegate {
             completionHandler(.close)
         case .secondaryButtonPressed:
             handleBypass {
-                self.updateStoreToAllow(category)
-                completionHandler(.none)
+                // Don't remove from shields - just save cooldown and close
+                completionHandler(.close)
             }
         @unknown default:
             completionHandler(.close)
@@ -58,85 +147,147 @@ class ShieldActionExtension: ShieldActionDelegate {
     }
     
     // MARK: - Helpers
-    
-    private func handleBypass(completion: () -> Void) {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app") else {
+
+    private func handleBypassForApp(application: ApplicationToken, completion: @escaping () -> Void) {
+        Task {
+            // Use Base64 encoded token data as unique identifier
+            guard let tokenData = try? JSONEncoder().encode(application) else {
+                print("[ShieldAction] ❌ Failed to encode application token")
+                completion()
+                return
+            }
+            let tokenId = tokenData.base64EncodedString()
+
+            let actor = AppGroupDefaults()
+            let result = await actor.deductHealthFromApp(bundleIdentifier: tokenId, amount: 10.0)
+
+            let (appCurrentHP, appMaxHP, globalHP, isDead) = result
+
+            print("[ShieldAction] 📉 App token: \(tokenId)")
+            print("[ShieldAction] 📉 Deducted 10 HP. App Health: \(appCurrentHP)/\(appMaxHP)")
+            print("[ShieldAction] 📉 Global Cat Health: \(globalHP) HP")
+
+            if isDead {
+                print("[ShieldAction] ☠️ Cat is DEAD (Global HP = 0)")
+            }
+
+            // Schedule damage notification
+            await scheduleDamageNotificationHP(
+                appCurrentHP: appCurrentHP,
+                appMaxHP: appMaxHP,
+                globalHP: globalHP,
+                isDead: isDead,
+                bundleId: tokenId
+            )
+
+            // Save per-app cooldown expiration
+            await setPerAppCooldown(bundleId: tokenId)
+
+            // Record penalty timestamp
+            let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+            sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "lastShieldPenalty")
+
             completion()
-            return
         }
-        
-        let currentHealth = sharedDefaults.double(forKey: "catHealthPercentage")
-        // If already dead, do nothing (shouldn't happen if config is correct)
-        if currentHealth <= 0 {
+    }
+
+    // Fallback for categories/web domains (global HP deduction)
+    private func handleBypass(completion: @escaping () -> Void) {
+        Task {
+            let actor = AppGroupDefaults()
+            let healthData = await actor.loadAppHealthData()
+
+            // Deduct 10 HP from first app as fallback
+            if let firstAppId = healthData.keys.first {
+                let result = await actor.deductHealthFromApp(bundleIdentifier: firstAppId, amount: 10.0)
+                print("[ShieldAction] 📉 Fallback bypass: Deducted 10 HP from \(firstAppId)")
+
+                let (_, _, globalHP, isDead) = result
+                await scheduleDamageNotificationHP(
+                    appCurrentHP: 0,
+                    appMaxHP: 0,
+                    globalHP: globalHP,
+                    isDead: isDead,
+                    bundleId: "general"
+                )
+
+                // Set cooldown for fallback too
+                await setPerAppCooldown(bundleId: firstAppId)
+            }
+
             completion()
-            return
         }
-        
-        let cost = sharedDefaults.integer(forKey: "healthCostPerBypass")
-        let penalty = cost > 0 ? Double(cost) : 10.0 // Default to 10 if not set
-        
-        let newHealth = currentHealth - penalty
-        
-        // Save new health
-        sharedDefaults.set(newHealth, forKey: "catHealthPercentage")
-        
-        // Update stage
-        let stage = getCatStage(for: newHealth)
-        sharedDefaults.set(stage, forKey: "catStage")
-        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "lastShieldPenalty")
-        
-        print("[ShieldAction] 📉 Penalized health by \(penalty). New Health: \(newHealth)%")
-        
-        scheduleNotification(health: newHealth, penalty: Int(penalty))
-        
-        completion()
     }
     
-    private func updateStoreToAllow(_ token: ApplicationToken) {
-        let store = ManagedSettingsStore()
-        
-        var shieldedApps = store.shield.applications ?? []
-        shieldedApps.remove(token)
-        store.shield.applications = shieldedApps
-        
+    private func setPerAppCooldown(bundleId: String) async {
         let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-        let expiration = Date().addingTimeInterval(15 * 60) // 15 minutes default unblock window? PRD says "returns to app", effectively unblocking.
-        sharedDefaults?.set(expiration.timeIntervalSince1970, forKey: "unblockExpiration")
+
+        // Get Shield Interval (default 15 mins)
+        let intervalMinutes = sharedDefaults?.integer(forKey: "shieldInterval") ?? 15
+        let intervalSafe = intervalMinutes > 0 ? intervalMinutes : 15
+
+        // Calculate expiration time
+        let expiration = Date().addingTimeInterval(TimeInterval(intervalSafe * 60))
+
+        // Save per-app cooldown with app-specific key
+        let cooldownKey = "cooldown_\(bundleId)"
+        sharedDefaults?.set(expiration.timeIntervalSince1970, forKey: cooldownKey)
+        sharedDefaults?.synchronize()
+
+        print("[ShieldAction] ⏱️ Cooldown set for \(bundleId) until \(expiration)")
+
+        // Schedule countdown notification
+        await scheduleCooldownNotification(
+            bundleId: bundleId,
+            intervalMinutes: intervalSafe
+        )
     }
     
-    private func updateStoreToAllow(_ token: ActivityCategoryToken) {
-         let store = ManagedSettingsStore()
-         
-         let shieldedCategories = store.shield.applicationCategories ?? .specific([], except: [])
-         
-         if case .specific(let categories, let except) = shieldedCategories {
-             var newCategories = categories
-             newCategories.remove(token)
-             store.shield.applicationCategories = .specific(newCategories, except: except)
-         }
-    }
-    
-    private func getCatStage(for health: Double) -> String {
-        switch health {
-        case 80...100: return "healthy"
-        case 60..<80: return "concerned"
-        case 40..<60: return "tired"
-        case 20..<40: return "sick"
-        default: return "dead"
-        }
-    }
-    
-    private func scheduleNotification(health: Double, penalty: Int) {
+    private func scheduleDamageNotificationHP(appCurrentHP: Double, appMaxHP: Double, globalHP: Double, isDead: Bool, bundleId: String) async {
         let content = UNMutableNotificationContent()
         content.title = "Scroll Kitty Hurt! 😿"
-        if health <= 0 {
-            content.body = "You killed me... I'm gone until tomorrow."
+
+        if isDead {
+            content.body = "You killed me... I'm gone until tomorrow. (Global HP = 0)"
         } else {
-            content.body = "Unlocking cost \(penalty) health. Current: \(Int(health))%"
+            let appName = bundleId.components(separatedBy: ".").last?.capitalized ?? "App"
+            content.body = "Lost 10 HP. \(appName): \(Int(appCurrentHP))/\(Int(appMaxHP)) HP | Total: \(Int(globalHP)) HP"
         }
+
         content.sound = .default
-        
+
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            print("[ShieldAction] ⚠️ Failed to schedule notification: \(error)")
+        }
+    }
+    
+    private func scheduleCooldownNotification(bundleId: String, intervalMinutes: Int) async {
+        let appName = bundleId.components(separatedBy: ".").last?.capitalized ?? "App"
+
+        let content = UNMutableNotificationContent()
+        content.title = "\(appName) Unlocked"
+        content.body = "Unblocked for \(intervalMinutes) minutes. Shield will return automatically."
+        content.sound = .default
+
+        // Auto-dismiss after 5 seconds (ScreenZen style)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+
+        let request = UNNotificationRequest(
+            identifier: "cooldown_\(bundleId)_\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            print("[ShieldAction] 🔔 Cooldown notification scheduled for \(appName)")
+        } catch {
+            print("[ShieldAction] ⚠️ Failed to schedule cooldown notification: \(error)")
+        }
     }
 }
+
