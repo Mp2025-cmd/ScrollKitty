@@ -186,13 +186,14 @@ struct AppFeature {
             case .appSelection(.delegate(.completeWithSelection(let selection))):
                 state.selectedApps = selection
                 state.destination = .dailyLimit
-                // Save apps and start monitoring
+                // Save apps, apply shields immediately, then start monitoring for re-shield
                 return .run { [screenTimeManager = self.screenTimeManager] _ in
                     await userSettings.saveSelectedApps(selection)
-                    print("[AppFeature] Apps saved - starting monitoring...")
+                    print("[AppFeature] Apps saved - applying shields immediately...")
+                    await screenTimeManager.applyShields()
                     do {
                         try await screenTimeManager.startMonitoring()
-                        print("[AppFeature] ✅ Monitoring started after app selection")
+                        print("[AppFeature] ✅ Monitoring started (for re-shield only)")
                     } catch {
                         print("[AppFeature] ⚠️ Monitoring setup failed: \(error)")
                     }
@@ -257,12 +258,13 @@ struct AppFeature {
                 
             case .commitment(.delegate(.showNextScreen)):
                 state.destination = .home
-                // Start DeviceActivity monitoring only if apps selected
+                // Apply shields and start monitoring only if apps selected
                 return .run { [screenTimeManager = self.screenTimeManager] _ in
                     print("[AppFeature] Checking for app selection before monitoring...")
                     let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
                     if defaults?.data(forKey: "selectedApps") != nil {
-                        print("[AppFeature] Apps selected - starting monitoring...")
+                        print("[AppFeature] Apps selected - applying shields...")
+                        await screenTimeManager.applyShields()
                         do {
                             try await screenTimeManager.startMonitoring()
                             print("[AppFeature] ✅ Monitoring started successfully")

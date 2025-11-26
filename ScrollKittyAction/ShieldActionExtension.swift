@@ -2,10 +2,15 @@ import ManagedSettings
 import ManagedSettingsUI
 import Foundation
 import UserNotifications
+import FamilyControls
+import DeviceActivity
 
 // Modern Shield Action API (iOS 16/17+)
 class ShieldActionExtension: ShieldActionDelegate {
-    
+
+    private let store = ManagedSettingsStore()
+    private let activityCenter = DeviceActivityCenter()
+
     // MARK: - Applications
     
     override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
@@ -93,27 +98,83 @@ class ShieldActionExtension: ShieldActionDelegate {
     }
     
     private func updateStoreToAllow(_ token: ApplicationToken) {
-        let store = ManagedSettingsStore()
-        
+        // 1. Remove app from shield
         var shieldedApps = store.shield.applications ?? []
         shieldedApps.remove(token)
         store.shield.applications = shieldedApps
-        
+
+        // 2. Get cooldown duration from user settings (default 15 minutes)
         let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-        let expiration = Date().addingTimeInterval(15 * 60) // 15 minutes default unblock window? PRD says "returns to app", effectively unblocking.
+        let cooldownMinutes = sharedDefaults?.integer(forKey: "shieldInterval") ?? 15
+
+        // 3. Store expiration time
+        let expiration = Date().addingTimeInterval(Double(cooldownMinutes * 60))
         sharedDefaults?.set(expiration.timeIntervalSince1970, forKey: "unblockExpiration")
+
+        print("[ShieldAction] 🔓 Unblocked app for \(cooldownMinutes) minutes")
+
+        // 4. Schedule re-shielding via DeviceActivitySchedule
+        scheduleReshieldActivity(cooldownMinutes: cooldownMinutes)
     }
-    
+
     private func updateStoreToAllow(_ token: ActivityCategoryToken) {
-         let store = ManagedSettingsStore()
-         
-         let shieldedCategories = store.shield.applicationCategories ?? .specific([], except: [])
-         
-         if case .specific(let categories, let except) = shieldedCategories {
-             var newCategories = categories
-             newCategories.remove(token)
-             store.shield.applicationCategories = .specific(newCategories, except: except)
-         }
+        // 1. Remove category from shield
+        let shieldedCategories = store.shield.applicationCategories ?? .specific([], except: [])
+
+        if case .specific(let categories, let except) = shieldedCategories {
+            var newCategories = categories
+            newCategories.remove(token)
+            store.shield.applicationCategories = .specific(newCategories, except: except)
+        }
+
+        // 2. Get cooldown duration from user settings (default 15 minutes)
+        let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+        let cooldownMinutes = sharedDefaults?.integer(forKey: "shieldInterval") ?? 15
+
+        print("[ShieldAction] 🔓 Unblocked category for \(cooldownMinutes) minutes")
+
+        // 3. Schedule re-shielding via DeviceActivitySchedule
+        scheduleReshieldActivity(cooldownMinutes: cooldownMinutes)
+    }
+
+    // MARK: - Re-shielding via DeviceActivitySchedule
+
+    private func scheduleReshieldActivity(cooldownMinutes: Int) {
+        let calendar = Calendar.current
+        let actualNow = Date()
+
+        // Calculate end time (when cooldown expires and shield should return)
+        let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: actualNow)!
+        let endComponents = calendar.dateComponents([.hour, .minute], from: endTime)
+
+        // TRICK: DeviceActivitySchedule requires minimum 15-minute interval.
+        // If cooldown < 15 min, shift intervalStart backwards to create a valid interval.
+        // Since we're already "inside" the interval, intervalDidStart fires immediately,
+        // and intervalDidEnd fires at our desired cooldown time.
+        var startTime = actualNow
+        if cooldownMinutes < 15 {
+            let shiftBackMinutes = 15 - cooldownMinutes
+            startTime = calendar.date(byAdding: .minute, value: -shiftBackMinutes, to: actualNow)!
+        }
+        let startComponents = calendar.dateComponents([.hour, .minute], from: startTime)
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: startComponents.hour, minute: startComponents.minute),
+            intervalEnd: DateComponents(hour: endComponents.hour, minute: endComponents.minute),
+            repeats: false
+        )
+
+        let activityName = DeviceActivityName("reshield_cooldown")
+
+        // Stop any existing reshield schedule
+        activityCenter.stopMonitoring([activityName])
+
+        do {
+            try activityCenter.startMonitoring(activityName, during: schedule)
+            print("[ShieldAction] ⏰ Scheduled re-shield at \(endComponents.hour ?? 0):\(String(format: "%02d", endComponents.minute ?? 0)) (interval starts at \(startComponents.hour ?? 0):\(String(format: "%02d", startComponents.minute ?? 0)))")
+        } catch {
+            print("[ShieldAction] ❌ Failed to schedule re-shield: \(error)")
+        }
     }
     
     private func getCatStage(for health: Double) -> String {

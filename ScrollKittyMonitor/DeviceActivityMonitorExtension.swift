@@ -4,43 +4,77 @@ import UserNotifications
 import ManagedSettings
 import FamilyControls
 
-// ACTIVE SHIELDING MONITOR
-// Role: Simply turns the "Shields" ON at the start of the day/interval.
-// The actual logic for health/unlocking is handled by ScrollKittyAction.
+// SIMPLIFIED ACTIVE SHIELDING MONITOR
+// Role: ONLY handles intervalDidEnd for re-shielding after cooldown.
+// Initial shielding is done by main app (ScreenTimeManager.applyShields).
+// Health/unlocking logic is handled by ScrollKittyAction.
 
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
-    
+
     let store = ManagedSettingsStore()
-    
+
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        print("[ScrollKittyMonitor] 🟢 Interval Started (Shields ON)")
-        
-        // 1. Load Selected Apps
+        // NO-OP: Main app handles initial shielding.
+        // This only fires to indicate we're "inside" the scheduled interval.
+        print("[ScrollKittyMonitor] intervalDidStart(\(activity.rawValue)) - ignored (main app handles shielding)")
+    }
+
+    override func intervalDidEnd(for activity: DeviceActivityName) {
+        super.intervalDidEnd(for: activity)
+
+        if activity.rawValue == "reshield_cooldown" {
+            // Cooldown expired - re-apply shields!
+            print("[ScrollKittyMonitor] ⏰ Cooldown expired - Re-shielding!")
+            handleReshieldCooldown()
+        } else if activity.rawValue == "daily_monitor" {
+            // End of day - could clear shields here if needed
+            print("[ScrollKittyMonitor] 🔴 Daily Interval Ended")
+            // Note: We don't clear shields here anymore since main app controls them
+        }
+    }
+
+    // MARK: - Reshield After Cooldown
+
+    private func handleReshieldCooldown() {
+        // Clear the unblock expiration
+        let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+        defaults?.removeObject(forKey: "unblockExpiration")
+
+        // Re-apply shields
+        applyShields()
+
+        // Send notification
+        sendReshieldNotification()
+    }
+
+    // MARK: - Shared Logic
+
+    private func applyShields() {
         let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
         guard let data = defaults?.data(forKey: "selectedApps"),
-              let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) as FamilyActivitySelection else {
+              let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
             print("[ScrollKittyMonitor] ⚠️ No apps to shield")
             return
         }
-        
-        // 2. Apply Shield Immediately
+
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
-        // We skip web domains to avoid over-blocking issues
-        
+
         print("[ScrollKittyMonitor] 🛡️ Shields ACTIVATED")
     }
-    
-    override func intervalDidEnd(for activity: DeviceActivityName) {
-        super.intervalDidEnd(for: activity)
-        print("[ScrollKittyMonitor] 🔴 Interval Ended (Shields OFF)")
-        
-        // 3. Clear Shields (e.g. end of day or user stopped monitoring)
-        store.clearAllSettings()
-        print("[ScrollKittyMonitor] 🛡️ Shields CLEARED")
+
+    private func sendReshieldNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Shield Activated"
+        content.body = "Your cooldown has ended. Apps are blocked again."
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "reshield-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
     }
-    
-    // Note: We removed eventDidReachThreshold because it's flaky on iOS 26.
-    // We rely entirely on ShieldActionExtension for logic.
 }

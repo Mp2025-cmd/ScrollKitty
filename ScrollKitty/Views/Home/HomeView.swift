@@ -27,6 +27,7 @@ struct HomeFeature {
         case tabSelected(HomeTab)
         case checkMidnightReset
         case performReset
+        case checkCooldownExpired
         case startPolling
         case stopPolling
         case pollingTick
@@ -35,6 +36,7 @@ struct HomeFeature {
     @Dependency(\.userSettings) var userSettings
     @Dependency(\.catHealth) var catHealth
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.screenTimeManager) var screenTimeManager
     
     nonisolated struct CancelID: Hashable, Sendable {
         static let polling = Self()
@@ -49,6 +51,7 @@ struct HomeFeature {
                 print("[HomeFeature] onAppear")
                 return .merge(
                     .send(.checkMidnightReset),
+                    .send(.checkCooldownExpired),
                     .send(.startPolling)
                 )
 

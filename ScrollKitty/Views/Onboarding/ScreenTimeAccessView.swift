@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import SwiftUI
 import FamilyControls
+import UserNotifications
 
 // MARK: - Feature
 @Reducer
@@ -53,8 +54,12 @@ struct ScreenTimeAccessFeature {
             case .accessGranted:
                 state.isRequestingAccess = false
                 state.accessGranted = true
-                // Auto-proceed to next screen when granted
-                return .send(.delegate(.showNextScreen))
+                // Request notification permission silently in background
+                return .run { send in
+                    let center = UNUserNotificationCenter.current()
+                    try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+                    await send(.delegate(.showNextScreen))
+                }
                 
             case .accessDenied:
                 state.isRequestingAccess = false

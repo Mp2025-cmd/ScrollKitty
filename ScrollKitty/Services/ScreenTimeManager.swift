@@ -85,6 +85,7 @@ struct ScreenTimeManager: Sendable {
     var checkAuthorization: @Sendable () async -> Bool
     var startMonitoring: @Sendable () async throws -> Void
     var stopMonitoring: @Sendable () async -> Void
+    var applyShields: @Sendable () async -> Void
 }
 
 // MARK: - Dependency Conformance
@@ -146,6 +147,9 @@ extension ScreenTimeManager: DependencyKey {
         },
         stopMonitoring: {
             await stopDeviceActivityMonitoring()
+        },
+        applyShields: {
+            await applyShieldsToSelectedApps()
         }
     )
     
@@ -167,7 +171,8 @@ extension ScreenTimeManager: DependencyKey {
         getScreenTimeRange: { _, _ in [] },
         checkAuthorization: { true },
         startMonitoring: {},
-        stopMonitoring: {}
+        stopMonitoring: {},
+        applyShields: {}
     )
     
     static let previewValue = testValue
@@ -209,6 +214,21 @@ extension DependencyValues {
         let center = DeviceActivityCenter()
         center.stopMonitoring([DeviceActivityName("daily_monitor")])
         print("[ScreenTime] 🛑 Monitoring Stopped")
+    }
+
+    private func applyShieldsToSelectedApps() async {
+        let store = ManagedSettingsStore()
+        let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+
+        guard let data = defaults?.data(forKey: "selectedApps"),
+              let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
+            print("[ScreenTime] ⚠️ No apps to shield")
+            return
+        }
+
+        store.shield.applications = selection.applicationTokens
+        store.shield.applicationCategories = .specific(selection.categoryTokens)
+        print("[ScreenTime] 🛡️ Shields applied immediately to \(selection.applicationTokens.count) apps")
     }
 
 // MARK: - Private Parsing Helper
