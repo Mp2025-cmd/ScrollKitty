@@ -27,7 +27,6 @@ struct HomeFeature {
         case tabSelected(HomeTab)
         case checkMidnightReset
         case performReset
-        case migrateIfNeeded
         case startPolling
         case stopPolling
         case pollingTick
@@ -49,7 +48,6 @@ struct HomeFeature {
             case .onAppear:
                 print("[HomeFeature] onAppear")
                 return .merge(
-                    .send(.migrateIfNeeded),
                     .send(.checkMidnightReset),
                     .send(.startPolling)
                 )
@@ -75,35 +73,6 @@ struct HomeFeature {
                 return .run { send in
                     await catHealth.performMidnightReset()
                     await send(.loadCatHealth)
-                }
-
-            case .migrateIfNeeded:
-                print("[HomeFeature] migrateIfNeeded - checking for old lives data")
-                return .run { _ in
-                    let actor = AppGroupDefaults()
-
-                    // Check if old lives-based data exists
-                    if await actor.hasOldLivesData() {
-                        print("[HomeFeature] 🔄 Old lives data found - migrating to HP system")
-
-                        // Load selected apps
-                        if let selectedApps = await userSettings.loadSelectedApps() {
-                            let appCount = selectedApps.applicationTokens.count
-                            print("[HomeFeature] 🔄 Migrating \(appCount) apps to HP system")
-
-                            // Initialize new health system
-                            await userSettings.initializeAppHealth(selectedApps)
-
-                            // Clear old data
-                            await actor.clearOldLivesData()
-
-                            print("[HomeFeature] ✅ Migration complete")
-                        } else {
-                            print("[HomeFeature] ⚠️ No apps found - skipping migration")
-                        }
-                    } else {
-                        print("[HomeFeature] No migration needed")
-                    }
                 }
 
             case .loadCatHealth:

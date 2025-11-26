@@ -184,13 +184,16 @@ struct FocusWindowView: View {
                     }
                 }
                 
+                Spacer()
                 
-               
+                // Next Button (Fixed at bottom)
+                VStack {
+                    Spacer()
                     PrimaryButton(title: "Next") {
                         store.send(.nextTapped)
                     }
                     .padding(.bottom, 20)
-                
+                }
             }
         }
     }

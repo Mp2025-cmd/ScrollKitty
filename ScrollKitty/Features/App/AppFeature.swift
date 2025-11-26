@@ -186,11 +186,10 @@ struct AppFeature {
             case .appSelection(.delegate(.completeWithSelection(let selection))):
                 state.selectedApps = selection
                 state.destination = .dailyLimit
-                // Save apps, initialize health data, and start monitoring
+                // Save apps and start monitoring
                 return .run { [screenTimeManager = self.screenTimeManager] _ in
                     await userSettings.saveSelectedApps(selection)
-                    await userSettings.initializeAppHealth(selection)
-                    print("[AppFeature] Apps saved & health initialized (\(selection.applicationTokens.count) apps)")
+                    print("[AppFeature] Apps saved - starting monitoring...")
                     do {
                         try await screenTimeManager.startMonitoring()
                         print("[AppFeature] ✅ Monitoring started after app selection")
@@ -208,7 +207,7 @@ struct AppFeature {
                 state.destination = .shieldFrequency
                 return .run { _ in
                     await userSettings.saveDailyLimit(selection.minutes)
-                    print("[AppFeature] Daily limit saved: \(selection.minutes) minutes")
+                    await userSettings.saveHealthCost(selection.healthCost)
                 }
                 
             case .dailyLimit(.delegate(.goBack)):

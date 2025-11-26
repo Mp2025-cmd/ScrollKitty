@@ -20,31 +20,12 @@ struct AppSelectionFeature {
     @ObservableState
     struct State: Equatable {
         var selectedApps: FamilyActivitySelection = FamilyActivitySelection()
-        var showingLimitAlert = false
-
-        var appCount: Int {
-            selectedApps.applicationTokens.count
-        }
-
-        var canSelectMore: Bool {
-            appCount < 10
-        }
-
-        var limitWarning: String? {
-            if appCount >= 10 {
-                return "Maximum 10 apps selected"
-            } else if appCount >= 8 {
-                return "\(10 - appCount) slots remaining"
-            }
-            return nil
-        }
     }
 
     enum Action: Equatable {
         case appsSelected(FamilyActivitySelection)
         case nextTapped
         case backTapped
-        case dismissAlert
         case delegate(Delegate)
 
         enum Delegate: Equatable {
@@ -57,28 +38,14 @@ struct AppSelectionFeature {
         Reduce { state, action in
             switch action {
             case .appsSelected(let selection):
-                // Enforce 10-app limit
-                if selection.applicationTokens.count > 10 {
-                    state.showingLimitAlert = true
-                    return .none
-                }
                 state.selectedApps = selection
                 return .none
 
             case .nextTapped:
-                // Require at least 1 app
-                guard state.appCount > 0 else {
-                    state.showingLimitAlert = true
-                    return .none
-                }
                 return .send(.delegate(.completeWithSelection(state.selectedApps)))
 
             case .backTapped:
                 return .send(.delegate(.goBack))
-
-            case .dismissAlert:
-                state.showingLimitAlert = false
-                return .none
 
             case .delegate:
                 return .none
@@ -108,7 +75,7 @@ struct AppSelectionView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-                // Title with app counter
+                // Title
                 VStack(spacing: 8) {
                     Text("Which apps drain")
                     Text("your energy?")
@@ -116,23 +83,7 @@ struct AppSelectionView: View {
                 .largeTitleStyle()
                 .padding(.top, 40)
                 .padding(.horizontal, 16)
-
-                // App counter and limit warning
-                HStack {
-                    Text("Selected: \(store.appCount)/10 apps")
-                        .font(.system(size: 14, weight: .medium, design: .default))
-                        .foregroundColor(.white.opacity(0.7))
-
-                    Spacer()
-
-                    if let warning = store.limitWarning {
-                        Text(warning)
-                            .font(.system(size: 12, weight: .semibold, design: .default))
-                            .foregroundColor(store.appCount >= 10 ? .red : .orange)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.bottom, 40)
 
                 // Family Activity Picker
                 FamilyActivityPicker(selection: Binding(
@@ -148,23 +99,6 @@ struct AppSelectionView: View {
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
                 }
-            }
-        }
-        .alert(
-            "Selection Limit",
-            isPresented: Binding(
-                get: { store.showingLimitAlert },
-                set: { _ in store.send(.dismissAlert) }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                store.send(.dismissAlert)
-            }
-        } message: {
-            if store.appCount == 0 {
-                Text("Please select at least 1 app to protect your time.")
-            } else {
-                Text("You can select a maximum of 10 apps. This ensures each app gets a meaningful health allocation.")
             }
         }
     }

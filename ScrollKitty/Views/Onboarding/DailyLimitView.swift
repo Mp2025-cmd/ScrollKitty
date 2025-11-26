@@ -18,13 +18,13 @@ enum DailyLimitOption: String, Equatable, CaseIterable {
         }
     }
 
-    var description: String {
+    var healthCost: Int {
         switch self {
-        case .threeHours: return "Strict protection"
-        case .fourHours: return "Balanced control"
-        case .fiveHours: return "Moderate monitoring"
-        case .sixHours: return "Light guidance"
-        case .eightHours: return "Flexible awareness"
+        case .threeHours: return 33
+        case .fourHours: return 25
+        case .fiveHours: return 20
+        case .sixHours: return 17
+        case .eightHours: return 12
         }
     }
 }
@@ -93,19 +93,11 @@ struct DailyLimitView: View {
                 .padding(.top, 8)
 
                 // Title
-                VStack(spacing: 12) {
-                    Text("Set your daily limit")
-                        .largeTitleStyle()
-
-                    Text("Your cat has 100 HP shared across all apps. Each bypass costs 10 HP.")
-                        .font(.system(size: 14, weight: .regular, design: .default))
-                        .foregroundColor(.white.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-                .padding(.top, 40)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 40)
+                Text("Set your daily limit")
+                    .largeTitleStyle()
+                    .padding(.top, 40)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 40)
 
                 // Options
                 OptionSelector(

@@ -9,13 +9,13 @@ struct UserSettingsManager: Sendable {
     nonisolated(unsafe) var loadSelectedApps: @Sendable () async -> FamilyActivitySelection?
     var saveDailyLimit: @Sendable (Int) async -> Void
     var loadDailyLimit: @Sendable () async -> Int?
+    var saveHealthCost: @Sendable (Int) async -> Void
+    var loadHealthCost: @Sendable () async -> Int?
     var saveShieldInterval: @Sendable (Int) async -> Void
     var loadShieldInterval: @Sendable () async -> Int?
     var saveFocusWindow: @Sendable (FocusWindowData) async -> Void
     var loadFocusWindow: @Sendable () async -> FocusWindowData?
     var getTodayTotal: @Sendable () async -> Double
-    var getSelectedAppCount: @Sendable () async -> Int
-    var initializeAppHealth: @Sendable (FamilyActivitySelection) async -> Void
 }
 
 // MARK: - Dependency Key
@@ -58,6 +58,16 @@ extension UserSettingsManager: DependencyKey {
                 }
                 return limit
             },
+            saveHealthCost: { cost in
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                defaults?.set(cost, forKey: "healthCostPerBypass")
+            },
+            loadHealthCost: {
+                let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+                // Default to 10 (legacy) if not found, or handle appropriately
+                let cost = defaults?.integer(forKey: "healthCostPerBypass") ?? 0
+                return cost > 0 ? cost : 10 
+            },
             saveShieldInterval: { minutes in
                 let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
                 defaults?.set(minutes, forKey: "shieldInterval")
@@ -84,19 +94,6 @@ extension UserSettingsManager: DependencyKey {
             getTodayTotal: {
                 let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
                 return defaults?.double(forKey: "todayTotal") ?? 0
-            },
-            getSelectedAppCount: {
-                let actor = AppGroupDefaults()
-                return await actor.getSelectedAppCount()
-            },
-            initializeAppHealth: { selection in
-                let actor = AppGroupDefaults()
-                // Use Base64 encoded token data as unique identifiers
-                let tokenIds = selection.applicationTokens.compactMap { token -> String? in
-                    guard let data = try? JSONEncoder().encode(token) else { return nil }
-                    return data.base64EncodedString()
-                }
-                await actor.initializeAppHealth(appBundleIdentifiers: tokenIds)
             }
         )
     }()
@@ -104,19 +101,19 @@ extension UserSettingsManager: DependencyKey {
     static let testValue: UserSettingsManager = {
         nonisolated(unsafe) let saveApps: @Sendable (FamilyActivitySelection) async -> Void = { _ in }
         nonisolated(unsafe) let loadApps: @Sendable () async -> FamilyActivitySelection? = { nil }
-
+        
         return Self(
             saveSelectedApps: saveApps,
             loadSelectedApps: loadApps,
             saveDailyLimit: { _ in },
             loadDailyLimit: { 240 }, // Default 4 hours
+            saveHealthCost: { _ in },
+            loadHealthCost: { 25 }, // Default test cost
             saveShieldInterval: { _ in },
             loadShieldInterval: { 15 },
             saveFocusWindow: { _ in },
             loadFocusWindow: { nil },
-            getTodayTotal: { 5400 }, // Mock: 1.5 hours
-            getSelectedAppCount: { 4 }, // Mock: 4 apps
-            initializeAppHealth: { _ in } // No-op for tests
+            getTodayTotal: { 5400 } // Mock: 1.5 hours
         )
     }()
     
