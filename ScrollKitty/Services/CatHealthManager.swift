@@ -52,7 +52,7 @@ extension CatHealthManager: DependencyKey {
                 catStage = .dead
             }
             
-            return CatHealthData(
+            return await CatHealthData(
                 totalSeconds: totalSeconds,
                 dailyLimitMinutes: dailyLimitMinutes,
                 healthPercentage: currentHealth,
@@ -83,7 +83,7 @@ extension CatHealthManager: DependencyKey {
     
     static let testValue = Self(
         calculateHealth: { totalSeconds, dailyLimitMinutes in
-            CatHealthData(
+            await CatHealthData(
                 totalSeconds: totalSeconds,
                 dailyLimitMinutes: dailyLimitMinutes,
                 healthPercentage: 64,

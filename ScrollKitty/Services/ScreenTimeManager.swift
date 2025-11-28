@@ -100,7 +100,7 @@ extension ScreenTimeManager: DependencyKey {
             
             // TODO: Implement real DeviceActivity API parsing
             // For now, this is a placeholder that needs DeviceActivity extension implementation
-            return parseScreenTimeReport(for: interval, date: today)
+            return await parseScreenTimeReport(for: interval, date: today)
         },
         getScreenTimeForDate: { date in
             let calendar = Calendar.current
@@ -108,7 +108,7 @@ extension ScreenTimeManager: DependencyKey {
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
             let interval = DateInterval(start: startOfDay, end: endOfDay)
             
-            return parseScreenTimeReport(for: interval, date: date)
+            return await parseScreenTimeReport(for: interval, date: date)
         },
         getScreenTimeRange: { startDate, endDate in
             var results: [DailyScreenTimeData] = []
@@ -123,7 +123,7 @@ extension ScreenTimeManager: DependencyKey {
                     let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
                     let interval = DateInterval(start: startOfDay, end: endOfDay)
                     
-                    if let data = parseScreenTimeReport(for: interval, date: currentDate) {
+                    if let data = await parseScreenTimeReport(for: interval, date: currentDate) {
                         results.append(data)
                     }
                 } catch {

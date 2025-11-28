@@ -57,7 +57,7 @@ struct ScreenTimeAccessFeature {
                 // Request notification permission silently in background
                 return .run { send in
                     let center = UNUserNotificationCenter.current()
-                    try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+                    try await center.requestAuthorization(options: [.alert, .sound, .badge])
                     await send(.delegate(.showNextScreen))
                 }
                 

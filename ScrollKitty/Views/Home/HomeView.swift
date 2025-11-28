@@ -121,6 +121,9 @@ struct HomeFeature {
                 
             case .binding:
                 return .none
+            case .checkCooldownExpired:
+                return .none
+
             }
         }
         ._printChanges()
