@@ -22,7 +22,7 @@ struct UserSettingsManager: Sendable {
 
 extension UserSettingsManager: DependencyKey {
     static let liveValue: UserSettingsManager = {
-        let saveApps: @Sendable (FamilyActivitySelection) async -> Void = { selection in
+        nonisolated(unsafe) let saveApps: @Sendable (FamilyActivitySelection) async -> Void = { selection in
             let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
             // Use JSONEncoder for FamilyActivitySelection (Codable)
             if let encoded = try? JSONEncoder().encode(selection) {
@@ -33,7 +33,7 @@ extension UserSettingsManager: DependencyKey {
             }
         }
 
-        let loadApps: @Sendable () async -> FamilyActivitySelection? = {
+        nonisolated(unsafe) let loadApps: @Sendable () async -> FamilyActivitySelection? = {
             let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
             guard let data = defaults?.data(forKey: "selectedApps"),
                   let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
@@ -99,8 +99,8 @@ extension UserSettingsManager: DependencyKey {
     }()
     
     static let testValue: UserSettingsManager = {
-        let saveApps: @Sendable (FamilyActivitySelection) async -> Void = { _ in }
-        let loadApps: @Sendable () async -> FamilyActivitySelection? = { nil }
+        nonisolated(unsafe) let saveApps: @Sendable (FamilyActivitySelection) async -> Void = { _ in }
+        nonisolated(unsafe) let loadApps: @Sendable () async -> FamilyActivitySelection? = { nil }
         
         return Self(
             saveSelectedApps: saveApps,

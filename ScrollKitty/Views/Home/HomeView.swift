@@ -123,7 +123,6 @@ struct HomeFeature {
                 return .none
             case .checkCooldownExpired:
                 return .none
-
             }
         }
         ._printChanges()
