@@ -25,22 +25,9 @@ struct HomeFeature {
         case loadCatHealth
         case catHealthLoaded(CatHealthData)
         case tabSelected(HomeTab)
-        case checkMidnightReset
-        case performReset
-        case checkCooldownExpired
-        case startPolling
-        case stopPolling
-        case pollingTick
     }
     
-    @Dependency(\.userSettings) var userSettings
     @Dependency(\.catHealth) var catHealth
-    @Dependency(\.continuousClock) var clock
-    @Dependency(\.screenTimeManager) var screenTimeManager
-    
-    nonisolated struct CancelID: Hashable, Sendable {
-        static let polling = Self()
-    }
     
     var body: some Reducer<State, Action> {
         BindingReducer()
@@ -48,80 +35,34 @@ struct HomeFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                print("[HomeFeature] onAppear")
-                return .merge(
-                    .send(.checkMidnightReset),
-                    .send(.checkCooldownExpired),
-                    .send(.startPolling)
-                )
+                print("[HomeFeature] onAppear - loading health (lazy reset if needed)")
+                return .send(.loadCatHealth)
 
             case .onDisappear:
                 print("[HomeFeature] onDisappear")
-                return .send(.stopPolling)
-
-            case .checkMidnightReset:
-                print("[HomeFeature] checkMidnightReset")
-                return .run { send in
-                    if await catHealth.shouldResetForNewDay() {
-                        print("[HomeFeature] Should reset - sending performReset")
-                        await send(.performReset)
-                    } else {
-                        print("[HomeFeature] No reset needed - loading health")
-                        await send(.loadCatHealth)
-                    }
-                }
-
-            case .performReset:
-                print("[HomeFeature] performReset")
-                return .run { send in
-                    await catHealth.performMidnightReset()
-                    await send(.loadCatHealth)
-                }
+                return .none
 
             case .loadCatHealth:
+                // Lazy reset happens automatically inside loadHealth()
                 print("[HomeFeature] loadCatHealth")
                 state.isLoading = true
                 return .run { send in
-                    // Read from App Group UserDefaults (written by extension)
-                    let shared = UserDefaults(suiteName: "group.com.scrollkitty.app")
-                    let totalSeconds = shared?.double(forKey: "selectedTotalSecondsToday") ?? 0
-                    let dailyLimit = await userSettings.loadDailyLimit() ?? 240
-
-                    print("[HomeFeature] Read \(totalSeconds)s (\(Int(totalSeconds/60))m) from selectedTotalSecondsToday (apps only)")
-                    
-                    // Calculate health using the manager which reads from App Group
-                    let healthData = await catHealth.calculateHealth(totalSeconds, dailyLimit)
-                    print("[HomeFeature] Health loaded: \(healthData.healthPercentage)% Stage: \(healthData.catStage)")
+                    let healthData = await catHealth.loadHealth()
+                    print("[HomeFeature] Health loaded: \(healthData.health)% State: \(healthData.catState)")
                     await send(.catHealthLoaded(healthData))
                 }
 
             case .catHealthLoaded(let healthData):
-                print("[HomeFeature] catHealthLoaded - Health: \(healthData.healthPercentage)%")
+                print("[HomeFeature] catHealthLoaded - Health: \(healthData.health)%")
                 state.isLoading = false
                 state.catHealth = healthData
                 return .none
-                
-            case .startPolling:
-                return .run { send in
-                    for await _ in await clock.timer(interval: .seconds(30)) {
-                        await send(.pollingTick)
-                    }
-                }
-                .cancellable(id: CancelID.polling)
-                
-            case .stopPolling:
-                return .cancel(id: CancelID.polling)
-                
-            case .pollingTick:
-                return .send(.loadCatHealth)
                 
             case let .tabSelected(tab):
                 state.selectedTab = tab
                 return .none
                 
             case .binding:
-                return .none
-            case .checkCooldownExpired:
                 return .none
             }
         }
@@ -137,6 +78,7 @@ enum HomeTab: Int, Equatable, Sendable {
 // MARK: - View
 struct HomeView: View {
     @Bindable var store: StoreOf<HomeFeature>
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
         ZStack {
@@ -211,6 +153,13 @@ struct HomeView: View {
         }
         .onAppear { store.send(.onAppear) }
         .onDisappear { store.send(.onDisappear) }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Refresh health when app returns to foreground (triggers lazy reset if needed)
+            if newPhase == .active {
+                print("[HomeView] App became active - refreshing health")
+                store.send(.loadCatHealth)
+            }
+        }
     }
 
     @ViewBuilder
@@ -226,10 +175,10 @@ struct HomeView: View {
                     during: Calendar.current.dateInterval(of: .day, for: Date())!
                 ),
                 users: .all,
-                devices: .all,  // Track on all devices (iPhone/iPad)
-                applications: selection.applicationTokens,  // Apps only
-                categories: selection.categoryTokens,        // Categories only
-                webDomains: []  // EXPLICITLY EMPTY - no website tracking
+                devices: .all,
+                applications: selection.applicationTokens,
+                categories: selection.categoryTokens,
+                webDomains: []
             )
 
             // Hidden report that triggers extension
@@ -251,10 +200,10 @@ struct HomeView: View {
             
             Spacer()
             
-            // Cat Image based on real health
+            // Cat Image based on health state
             ZStack(alignment: .bottom) {
                 VStack {
-                    (store.catHealth?.catStage ?? .healthy).image
+                    (store.catHealth?.catState ?? .healthy).image
                         .resizable()
                         .scaledToFit()
                         .frame(height: 280)
@@ -265,23 +214,23 @@ struct HomeView: View {
             }
             
             VStack(spacing: 16) {
-                // Health Percentage (real data)
-                Text("\(Int(store.catHealth?.healthPercentage ?? 100))%")
+                // Health Percentage
+                Text("\(store.catHealth?.health ?? 100)%")
                     .font(.custom("Sofia Pro-Bold", size: 50))
                     .tracking(-1)
                     .foregroundColor(DesignSystem.Colors.primaryText)
                 
                 // Progress bar with dynamic color based on health
                 ProgressBar(
-                    percentage: store.catHealth?.healthPercentage ?? 100,
-                    filledColor: healthBarColor(for: store.catHealth?.healthPercentage ?? 100)
+                    percentage: Double(store.catHealth?.health ?? 100),
+                    filledColor: healthBarColor(for: store.catHealth?.health ?? 100)
                 )
                 .frame(width: 256)
                 
-                // Screen time display (real data)
-                Text(store.catHealth?.formattedTime ?? "0m")
-                    .font(.custom("Sofia Pro-Semi_Bold", size: 24))
-                    .foregroundColor(DesignSystem.Colors.primaryText)
+                // Cat state label
+                Text(store.catHealth?.catState.shortName ?? "Healthy")
+                    .font(.custom("Sofia Pro-Medium", size: 24))
+                    .foregroundColor(store.catHealth?.catState.color ?? .green)
             }
             .frame(maxWidth: .infinity)
             
@@ -289,13 +238,13 @@ struct HomeView: View {
         }
     }
     
-    private func healthBarColor(for health: Double) -> Color {
+    private func healthBarColor(for health: Int) -> Color {
         switch health {
-        case 80...100: return Color(hex: "#00c54f") // Green
-        case 60..<80: return Color(hex: "#01C9D7")  // Cyan
-        case 40..<60: return Color(hex: "#0191FF")  // Blue
-        case 20..<40: return Color(hex: "#FD4E0F")  // Orange
-        default: return Color(hex: "#F30000")       // Red
+        case 80...100: return Color(hex: "#00c54f") // Green - healthy
+        case 60..<80: return Color(hex: "#FFA500")  // Orange - concerned
+        case 40..<60: return Color(hex: "#FF6B6B")  // Light red - tired
+        case 1..<40: return Color(hex: "#DC143C")   // Crimson - weak
+        default: return Color(hex: "#8B0000")       // Dark red - dead
         }
     }
 }

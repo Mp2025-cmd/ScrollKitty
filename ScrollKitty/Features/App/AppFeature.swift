@@ -6,8 +6,13 @@ import Foundation
 struct AppFeature {
     @ObservableState
     struct State: Equatable {
-        // Navigation
-        var destination: Destination = .onboarding
+        // Persistent onboarding state using TCA's @Shared with App Group UserDefaults
+        // This automatically syncs with UserDefaults and persists across app launches
+        @Shared(.appStorage("hasCompletedOnboarding", store: UserDefaults.appGroup)) 
+        var hasCompletedOnboarding = false
+        
+        // Navigation destination - initialized from persistent state on first launch
+        var destination: Destination = UserDefaults.appGroup.bool(forKey: "hasCompletedOnboarding") ? .home : .onboarding
         
         // Feature States
         var onboarding = OnboardingFeature.State()
@@ -186,9 +191,14 @@ struct AppFeature {
             case .appSelection(.delegate(.completeWithSelection(let selection))):
                 state.selectedApps = selection
                 state.destination = .dailyLimit
-                // Save apps, apply shields immediately, then start monitoring for re-shield
-                return .run { [screenTimeManager = self.screenTimeManager] _ in
+                // Save apps, initialize health to 100, apply shields, start monitoring
+                return .run { [screenTimeManager = self.screenTimeManager, userSettings = self.userSettings] _ in
                     await userSettings.saveSelectedApps(selection)
+                    
+                    // Initialize cat health to 100 (single init point)
+                    await userSettings.initializeHealth()
+                    print("[AppFeature] 💚 Health initialized to 100")
+                    
                     print("[AppFeature] Apps saved - applying shields immediately...")
                     await screenTimeManager.applyShields()
                     do {
@@ -206,9 +216,9 @@ struct AppFeature {
             case .dailyLimit(.delegate(.completeWithSelection(let selection))):
                 state.selectedLimit = selection
                 state.destination = .shieldFrequency
+                // Daily limit is for narrative/timeline only - no game logic effect
                 return .run { _ in
                     await userSettings.saveDailyLimit(selection.minutes)
-                    await userSettings.saveHealthCost(selection.healthCost)
                 }
                 
             case .dailyLimit(.delegate(.goBack)):
@@ -258,11 +268,16 @@ struct AppFeature {
                 
             case .commitment(.delegate(.showNextScreen)):
                 state.destination = .home
-                // Apply shields and start monitoring only if apps selected
+                // Mark onboarding as complete via @Shared (automatically persists to UserDefaults)
+                // Use withLock for thread-safe modification
+                state.$hasCompletedOnboarding.withLock { $0 = true }
+                print("[AppFeature] ✅ Onboarding marked as complete (via @Shared)")
+                
+                // Apply shields and start monitoring
                 return .run { [screenTimeManager = self.screenTimeManager] _ in
-                    print("[AppFeature] Checking for app selection before monitoring...")
-                    let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-                    if defaults?.data(forKey: "selectedApps") != nil {
+                    let defaults = UserDefaults.appGroup
+                    
+                    if defaults.data(forKey: "selectedApps") != nil {
                         print("[AppFeature] Apps selected - applying shields...")
                         await screenTimeManager.applyShields()
                         do {

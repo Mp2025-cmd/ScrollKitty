@@ -4,7 +4,7 @@ public enum CatState: String, Sendable, CaseIterable {
     case healthy = "healthy"
     case concerned = "concerned"
     case tired = "tired"
-    case sick = "sick"
+    case weak = "weak"      // Renamed from "sick" (39-1 HP)
     case dead = "dead"
     
     var displayName: String {
@@ -15,8 +15,8 @@ public enum CatState: String, Sendable, CaseIterable {
             "Concerned & Anxious"
         case .tired:
             "Tired & Low Energy"
-        case .sick:
-            "Extremely Sick"
+        case .weak:
+            "Weak & Struggling"
         case .dead:
             "Dead"
         }
@@ -30,26 +30,15 @@ public enum CatState: String, Sendable, CaseIterable {
             "Concerned"
         case .tired:
             "Tired"
-        case .sick:
-            "Sick"
+        case .weak:
+            "Weak"
         case .dead:
             "Dead"
         }
     }
     
     var image: Image {
-        switch self {
-        case .healthy:
-            return Image("1_Healthy_Cheerful")
-        case .concerned:
-            return Image("2_Concerned_Anxious")
-        case .tired:
-            return Image("3_Tired_Low-Energy")
-        case .sick:
-            return Image("4_Extremely_Sick")
-        case .dead:
-            return Image("5_Tombstone_Dead")
-        }
+        Image(imageName)
     }
     
     var imageName: String {
@@ -60,8 +49,8 @@ public enum CatState: String, Sendable, CaseIterable {
             "2_Concerned_Anxious"
         case .tired:
             "3_Tired_Low-Energy"
-        case .sick:
-            "4_Extremely_Sick"
+        case .weak:
+            "4_Extremely_Sick"  // Reuse existing asset
         case .dead:
             "5_Tombstone_Dead"
         }
@@ -70,53 +59,53 @@ public enum CatState: String, Sendable, CaseIterable {
     var color: Color {
         switch self {
         case .healthy:
-            return Color(hex: "#00c54f") // Green
+            Color(hex: "#00c54f")  // Green
         case .concerned:
-            return Color(hex: "#FFA500") // Orange
+            Color(hex: "#FFA500")  // Orange
         case .tired:
-            return Color(hex: "#FF6B6B") // Red
-        case .sick:
-            return Color(hex: "#DC143C") // Crimson
+            Color(hex: "#FF6B6B")  // Light red
+        case .weak:
+            Color(hex: "#DC143C")  // Crimson
         case .dead:
-            return Color(hex: "#8B0000") // Dark red
+            Color(hex: "#8B0000")  // Dark red
         }
     }
     
     var backgroundColor: Color {
         switch self {
         case .healthy:
-            return Color(hex: "#015AD7") // Bright blue
+            Color(hex: "#015AD7")  // Bright blue
         case .concerned:
-            return Color(hex: "#015AD7") // Bright blue
+            Color(hex: "#015AD7")  // Bright blue
         case .tired:
-            return Color(hex: "#003B8E") // Dark blue
-        case .sick:
-            return Color(hex: "#00183B") // Very dark blue
+            Color(hex: "#003B8E")  // Dark blue
+        case .weak:
+            Color(hex: "#00183B")  // Very dark blue
         case .dead:
-            return Color(hex: "#000000") // Black
+            Color(hex: "#000000")  // Black
         }
     }
     
     var timeColor: Color {
-        return Color(hex: "#BBDBFF") // Light blue for all states
+        Color(hex: "#BBDBFF")  // Light blue for all states
     }
     
     var iconColor: Color {
-        return Color(hex: "#BBDBFF") // Light blue for all states
+        Color(hex: "#BBDBFF")  // Light blue for all states
     }
     
     var healthLevel: HealthLevel {
         switch self {
         case .healthy:
-            return .excellent
+            .excellent
         case .concerned:
-            return .moderate
+            .moderate
         case .tired:
-            return .poor
-        case .sick:
-            return .critical
+            .poor
+        case .weak:
+            .critical
         case .dead:
-            return .dead
+            .dead
         }
     }
     
@@ -136,43 +125,33 @@ public enum CatState: String, Sendable, CaseIterable {
             case .poor:
                 "Your cat is tired and needs rest."
             case .critical:
-                "Your cat is extremely sick from too much screen time."
+                "Your cat is weak and struggling."
             case .dead:
                 "Your cat has died from excessive screen time."
             }
         }
     }
     
-    // Get cat state based on screen time hours
-    static func from(screenTimeHours: Double) -> CatState {
-        switch screenTimeHours {
-        case 0..<2:
-            return .healthy
-        case 2..<4:
-            return .concerned
-        case 4..<6:
-            return .tired
-        case 6..<8:
-            return .sick
-        default:
-            return .dead
-        }
-    }
+    // MARK: - Health to State Mapping (Single Source of Truth)
     
-    // Get cat state based on percentage (0-100)
-    static func from(percentage: Int) -> CatState {
-        switch percentage {
-        case 0..<20:
+    /// Maps global health (0-100) to cat state
+    /// - 100-80: healthy
+    /// - 79-60: concerned
+    /// - 59-40: tired
+    /// - 39-1: weak
+    /// - 0: dead
+    static func from(health: Int) -> CatState {
+        switch health {
+        case 80...100:
             return .healthy
-        case 20..<40:
+        case 60...79:
             return .concerned
-        case 40..<60:
+        case 40...59:
             return .tired
-        case 60..<80:
-            return .sick
+        case 1...39:
+            return .weak
         default:
-            return .dead
+            return .dead  // 0 or negative
         }
     }
 }
-

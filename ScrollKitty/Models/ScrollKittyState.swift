@@ -25,8 +25,8 @@ struct ScrollKittyState: Identifiable, Equatable {
             return "Scroll Kitty is getting concerned about your usage"
         case .tired:
             return "Scroll Kitty is tired and needs rest"
-        case .sick:
-            return "Scroll Kitty is very sick from overuse"
+        case .weak:
+            return "Scroll Kitty is weak and struggling"
         case .dead:
             return "Scroll Kitty has passed away from neglect"
         }

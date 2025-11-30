@@ -1,28 +1,40 @@
 import ManagedSettings
 import ManagedSettingsUI
 import Foundation
-import UserNotifications
 import FamilyControls
 import DeviceActivity
 
-// Modern Shield Action API (iOS 16/17+)
+// MARK: - Timeline Event (Duplicated for Extension - Extensions can't share code with main app)
+
+private struct TimelineEvent: Codable {
+    let timestamp: Date
+    let appName: String
+    let healthBefore: Int
+    let healthAfter: Int
+    let cooldownStarted: Date
+    let eventType: String  // "shieldShown" or "shieldBypassed"
+}
+
+// MARK: - Shield Action Extension
+
 class ShieldActionExtension: ShieldActionDelegate {
 
     private let store = ManagedSettingsStore()
     private let activityCenter = DeviceActivityCenter()
+    private let appGroupID = "group.com.scrollkitty.app"
 
     // MARK: - Applications
     
     override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
         switch action {
         case .primaryButtonPressed:
-            // "Step Back" (Alive) or "Close App" (Dead)
+            // "Step Back" (alive) or "Close App" (dead)
             completionHandler(.close)
             
         case .secondaryButtonPressed:
-            // "Continue - I'll Take It"
-            handleBypass {
-                self.updateStoreToAllow(application)
+            // "Continue / Bypass" - Only available when alive
+            handleBypass(appName: "App") {
+                self.startGlobalCooldown()
                 completionHandler(.none)
             }
             
@@ -38,7 +50,8 @@ class ShieldActionExtension: ShieldActionDelegate {
         case .primaryButtonPressed:
             completionHandler(.close)
         case .secondaryButtonPressed:
-            handleBypass {
+            handleBypass(appName: "Website") {
+                self.startGlobalCooldown()
                 completionHandler(.none)
             }
         @unknown default:
@@ -53,8 +66,8 @@ class ShieldActionExtension: ShieldActionDelegate {
         case .primaryButtonPressed:
             completionHandler(.close)
         case .secondaryButtonPressed:
-            handleBypass {
-                self.updateStoreToAllow(category)
+            handleBypass(appName: "Category") {
+                self.startGlobalCooldown()
                 completionHandler(.none)
             }
         @unknown default:
@@ -62,142 +75,145 @@ class ShieldActionExtension: ShieldActionDelegate {
         }
     }
     
-    // MARK: - Helpers
+    // MARK: - Core Bypass Logic
     
-    private func handleBypass(completion: () -> Void) {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app") else {
+    private func handleBypass(appName: String, completion: () -> Void) {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            print("[ShieldAction] ❌ Failed to access App Group")
             completion()
             return
         }
         
-        let currentHealth = sharedDefaults.double(forKey: "catHealthPercentage")
-        // If already dead, do nothing (shouldn't happen if config is correct)
-        if currentHealth <= 0 {
-            completion()
+        // Read current health
+        let currentHealth = defaults.integer(forKey: "catHealth")
+        let healthBefore = currentHealth > 0 ? currentHealth : 100
+        
+        // If already dead, don't allow bypass (shouldn't happen - shield config hides button)
+        if healthBefore <= 0 {
+            print("[ShieldAction] ⚠️ Cat is dead - bypass blocked")
             return
         }
         
-        let cost = sharedDefaults.integer(forKey: "healthCostPerBypass")
-        let penalty = cost > 0 ? Double(cost) : 10.0 // Default to 10 if not set
-        
-        let newHealth = currentHealth - penalty
+        // Subtract 5 HP (fixed cost)
+        let healthAfter = max(0, healthBefore - 5)
         
         // Save new health
-        sharedDefaults.set(newHealth, forKey: "catHealthPercentage")
+        defaults.set(healthAfter, forKey: "catHealth")
         
-        // Update stage
-        let stage = getCatStage(for: newHealth)
-        sharedDefaults.set(stage, forKey: "catStage")
-        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "lastShieldPenalty")
+        // Log timeline event
+        let now = Date()
+        logTimelineEvent(
+            defaults: defaults,
+            appName: appName,
+            healthBefore: healthBefore,
+            healthAfter: healthAfter,
+            cooldownStarted: now,
+            eventType: "shieldBypassed"
+        )
         
-        print("[ShieldAction] 📉 Penalized health by \(penalty). New Health: \(newHealth)%")
-        
-        scheduleNotification(health: newHealth, penalty: Int(penalty))
+        print("[ShieldAction] 📉 Health: \(healthBefore) → \(healthAfter) (-5 HP)")
         
         completion()
     }
     
-    private func updateStoreToAllow(_ token: ApplicationToken) {
-        // 1. Remove app from shield
-        var shieldedApps = store.shield.applications ?? []
-        shieldedApps.remove(token)
-        store.shield.applications = shieldedApps
-
-        // 2. Get cooldown duration from user settings (default 15 minutes)
-        let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-        let cooldownMinutes = sharedDefaults?.integer(forKey: "shieldInterval") ?? 15
-
-        // 3. Store expiration time
-        let expiration = Date().addingTimeInterval(Double(cooldownMinutes * 60))
-        sharedDefaults?.set(expiration.timeIntervalSince1970, forKey: "unblockExpiration")
-
-        print("[ShieldAction] 🔓 Unblocked app for \(cooldownMinutes) minutes")
-
-        // 4. Schedule re-shielding via DeviceActivitySchedule
-        scheduleReshieldActivity(cooldownMinutes: cooldownMinutes)
+    // MARK: - Global Cooldown
+    
+    private func startGlobalCooldown() {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Get cooldown duration (default: 20 minutes)
+        let cooldownMinutes = defaults.integer(forKey: "shieldInterval")
+        let duration = cooldownMinutes > 0 ? cooldownMinutes : 20
+        
+        // Set global cooldown end time
+        let cooldownEnd = Date().addingTimeInterval(Double(duration * 60))
+        defaults.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
+        
+        // GLOBAL COOLDOWN: Clear ALL shields (not just the bypassed app)
+        store.shield.applications = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomains = nil
+        
+        print("[ShieldAction] ⏱️ Global cooldown started: \(duration) minutes - ALL shields cleared")
+        
+        // Schedule re-shield when cooldown ends
+        scheduleReshield(cooldownMinutes: duration)
     }
-
-    private func updateStoreToAllow(_ token: ActivityCategoryToken) {
-        // 1. Remove category from shield
-        let shieldedCategories = store.shield.applicationCategories ?? .specific([], except: [])
-
-        if case .specific(let categories, let except) = shieldedCategories {
-            var newCategories = categories
-            newCategories.remove(token)
-            store.shield.applicationCategories = .specific(newCategories, except: except)
-        }
-
-        // 2. Get cooldown duration from user settings (default 15 minutes)
-        let sharedDefaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-        let cooldownMinutes = sharedDefaults?.integer(forKey: "shieldInterval") ?? 15
-
-        print("[ShieldAction] 🔓 Unblocked category for \(cooldownMinutes) minutes")
-
-        // 3. Schedule re-shielding via DeviceActivitySchedule
-        scheduleReshieldActivity(cooldownMinutes: cooldownMinutes)
-    }
-
-    // MARK: - Re-shielding via DeviceActivitySchedule
-
-    private func scheduleReshieldActivity(cooldownMinutes: Int) {
+    
+    // MARK: - Re-shield Scheduling
+    
+    private func scheduleReshield(cooldownMinutes: Int) {
         let calendar = Calendar.current
-        let actualNow = Date()
-
-        // Calculate end time (when cooldown expires and shield should return)
-        let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: actualNow)!
+        let now = Date()
+        
+        // Calculate end time
+        let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: now)!
         let endComponents = calendar.dateComponents([.hour, .minute], from: endTime)
-
-        // TRICK: DeviceActivitySchedule requires minimum 15-minute interval.
-        // If cooldown < 15 min, shift intervalStart backwards to create a valid interval.
-        // Since we're already "inside" the interval, intervalDidStart fires immediately,
-        // and intervalDidEnd fires at our desired cooldown time.
-        var startTime = actualNow
+        
+        // DeviceActivitySchedule requires minimum 15-minute interval
+        // If cooldown < 15 min, shift start backwards to create valid interval
+        var startTime = now
         if cooldownMinutes < 15 {
-            let shiftBackMinutes = 15 - cooldownMinutes
-            startTime = calendar.date(byAdding: .minute, value: -shiftBackMinutes, to: actualNow)!
+            let shiftBack = 15 - cooldownMinutes
+            startTime = calendar.date(byAdding: .minute, value: -shiftBack, to: now)!
         }
         let startComponents = calendar.dateComponents([.hour, .minute], from: startTime)
-
+        
         let schedule = DeviceActivitySchedule(
             intervalStart: DateComponents(hour: startComponents.hour, minute: startComponents.minute),
             intervalEnd: DateComponents(hour: endComponents.hour, minute: endComponents.minute),
             repeats: false
         )
-
+        
         let activityName = DeviceActivityName("reshield_cooldown")
-
-        // Stop any existing reshield schedule
+        
+        // Stop any existing schedule
         activityCenter.stopMonitoring([activityName])
-
+        
         do {
             try activityCenter.startMonitoring(activityName, during: schedule)
-            print("[ShieldAction] ⏰ Scheduled re-shield at \(endComponents.hour ?? 0):\(String(format: "%02d", endComponents.minute ?? 0)) (interval starts at \(startComponents.hour ?? 0):\(String(format: "%02d", startComponents.minute ?? 0)))")
+            print("[ShieldAction] ⏰ Re-shield scheduled for \(endComponents.hour ?? 0):\(String(format: "%02d", endComponents.minute ?? 0))")
         } catch {
             print("[ShieldAction] ❌ Failed to schedule re-shield: \(error)")
         }
     }
     
-    private func getCatStage(for health: Double) -> String {
-        switch health {
-        case 80...100: return "healthy"
-        case 60..<80: return "concerned"
-        case 40..<60: return "tired"
-        case 20..<40: return "sick"
-        default: return "dead"
-        }
-    }
+    // MARK: - Timeline Logging
     
-    private func scheduleNotification(health: Double, penalty: Int) {
-        let content = UNMutableNotificationContent()
-        content.title = "Scroll Kitty Hurt! 😿"
-        if health <= 0 {
-            content.body = "You killed me... I'm gone until tomorrow."
-        } else {
-            content.body = "Unlocking cost \(penalty) health. Current: \(Int(health))%"
+    private func logTimelineEvent(
+        defaults: UserDefaults,
+        appName: String,
+        healthBefore: Int,
+        healthAfter: Int,
+        cooldownStarted: Date,
+        eventType: String
+    ) {
+        // Load existing events
+        var events: [TimelineEvent] = []
+        if let data = defaults.data(forKey: "timelineEvents"),
+           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
+            events = decoded
         }
-        content.sound = .default
         
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        // Append new event
+        let event = TimelineEvent(
+            timestamp: Date(),
+            appName: appName,
+            healthBefore: healthBefore,
+            healthAfter: healthAfter,
+            cooldownStarted: cooldownStarted,
+            eventType: eventType
+        )
+        events.append(event)
+        
+        // Keep only last 100 events
+        if events.count > 100 {
+            events = Array(events.suffix(100))
+        }
+        
+        // Save
+        if let encoded = try? JSONEncoder().encode(events) {
+            defaults.set(encoded, forKey: "timelineEvents")
+        }
     }
 }

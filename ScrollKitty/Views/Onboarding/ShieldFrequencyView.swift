@@ -3,8 +3,7 @@ import SwiftUI
 
 enum ShieldIntervalOption: String, Equatable, CaseIterable {
     case tenMinutes = "10 minutes"
-    case fifteenMinutes = "15 minutes"
-    case twentyMinutes = "20 minutes"
+    case twentyMinutes = "20 minutes"      // Default
     case thirtyMinutes = "30 minutes"
     case fortyFiveMinutes = "45 minutes"
     case sixtyMinutes = "60 minutes"
@@ -12,13 +11,14 @@ enum ShieldIntervalOption: String, Equatable, CaseIterable {
     var minutes: Int {
         switch self {
         case .tenMinutes: return 10
-        case .fifteenMinutes: return 15
         case .twentyMinutes: return 20
         case .thirtyMinutes: return 30
         case .fortyFiveMinutes: return 45
         case .sixtyMinutes: return 60
         }
     }
+    
+    static var defaultOption: ShieldIntervalOption { .twentyMinutes }
 }
 
 @Reducer

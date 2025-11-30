@@ -71,7 +71,7 @@ struct TimelineView: View {
                             TimelineItemView(
                                 time: "3:30 PM",
                                 message: createInstagramToastMessage(),
-                                catState: .sick
+                                catState: .weak
                             )
                         }
                     }

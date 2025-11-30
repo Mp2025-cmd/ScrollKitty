@@ -3,96 +3,85 @@ import ComposableArchitecture
 
 // MARK: - Cat Health Data
 
-struct CatHealthData: Equatable {
-    let totalSeconds: Double
-    let dailyLimitMinutes: Int
-    let healthPercentage: Double
-    let catStage: CatState
-    let formattedTime: String
+struct CatHealthData: Equatable, Sendable {
+    let health: Int              // 0-100
+    let catState: CatState
+    let formattedTime: String    // For display (legacy, can be "0m" for now)
     
-    var totalMinutes: Int {
-        Int(totalSeconds / 60)
-    }
-    
-    var totalHours: Double {
-        totalSeconds / 3600
+    var healthPercentage: Double {
+        Double(health)
     }
 }
 
 // MARK: - CatHealthManager (TCA Dependency)
+// READ-ONLY: This manager only reads health. ShieldActionExtension handles mutations.
+// Lazy midnight reset: Automatically resets health when loading on a new day.
 
 struct CatHealthManager: Sendable {
-    var calculateHealth: @Sendable (Double, Int) async -> CatHealthData
-    var shouldResetForNewDay: @Sendable () async -> Bool
-    var performMidnightReset: @Sendable () async -> Void
+    var loadHealth: @Sendable () async -> CatHealthData
 }
 
 // MARK: - Dependency Key
 
+private let appGroupID = "group.com.scrollkitty.app"
+
 extension CatHealthManager: DependencyKey {
     static let liveValue = Self(
-        calculateHealth: { totalSeconds, dailyLimitMinutes in
-            // New Logic: Health is purely based on bypass actions, not time used.
-            // Read the current health from the App Group defaults.
-            let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            let currentHealth = defaults?.double(forKey: "catHealthPercentage") ?? 100.0
+        // Lazy reset: Check if new day, reset if needed, then return health
+        loadHealth: {
+            let defaults = UserDefaults(suiteName: appGroupID)
             
-            // Determine cat stage based on health
-            let catStage: CatState
-            switch currentHealth {
-            case 80...100:
-                catStage = .healthy
-            case 60..<80:
-                catStage = .concerned
-            case 40..<60:
-                catStage = .tired
-            case 20..<40:
-                catStage = .sick
-            default:
-                catStage = .dead
+            // STEP 1: Check if we need to reset for new day
+            let shouldReset: Bool
+            if let lastReset = defaults?.object(forKey: "lastResetDate") as? Date {
+                shouldReset = !Calendar.current.isDateInToday(lastReset)
+            } else {
+                // No lastResetDate means first launch or edge case - reset to be safe
+                shouldReset = true
             }
             
-            return await CatHealthData(
-                totalSeconds: totalSeconds,
-                dailyLimitMinutes: dailyLimitMinutes,
-                healthPercentage: currentHealth,
-                catStage: catStage,
-                formattedTime: formatTime(totalSeconds)
+            // STEP 2: Perform lazy reset if needed
+            if shouldReset {
+                print("[CatHealthManager] 🌙 Lazy midnight reset triggered")
+                
+                // Reset health to 100
+                defaults?.set(100, forKey: "catHealth")
+                
+                // Clear cooldown
+                defaults?.removeObject(forKey: "cooldownEnd")
+                
+                // Clear timeline events for new day
+                defaults?.removeObject(forKey: "timelineEvents")
+                
+                // Mark reset as done for today
+                defaults?.set(Date(), forKey: "lastResetDate")
+                
+                print("[CatHealthManager] ✅ Reset complete: Health=100, Cooldown cleared, Timeline cleared")
+            }
+            
+            // STEP 3: Read current health (potentially just-reset)
+            let health = defaults?.integer(forKey: "catHealth") ?? 100
+            let currentHealth = health > 0 ? health : 100
+            
+            // Map health to cat state (UI only)
+            let catState = CatState.from(health: currentHealth)
+            
+            return CatHealthData(
+                health: currentHealth,
+                catState: catState,
+                formattedTime: "0m" // Legacy field, not actively used
             )
-        },
-        shouldResetForNewDay: {
-            let defaults = UserDefaults.standard
-            guard let lastReset = defaults.object(forKey: "lastResetDate") as? Date else {
-                return true
-            }
-            return !Calendar.current.isDateInToday(lastReset)
-        },
-        performMidnightReset: {
-            let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
-            
-            // Reset health to 100
-            defaults?.set(100.0, forKey: "catHealthPercentage")
-            defaults?.set("healthy", forKey: "catStage")
-            defaults?.set(0, forKey: "selectedTotalSecondsToday") // Reset usage tracking for display if needed
-            
-            // Mark reset as done for today
-            UserDefaults.standard.set(Date(), forKey: "lastResetDate")
-            print("[CatHealthManager] 🌙 Midnight reset performed: Health restored to 100%")
         }
     )
     
     static let testValue = Self(
-        calculateHealth: { totalSeconds, dailyLimitMinutes in
-            await CatHealthData(
-                totalSeconds: totalSeconds,
-                dailyLimitMinutes: dailyLimitMinutes,
-                healthPercentage: 64,
-                catStage: .concerned,
-                formattedTime: formatTime(totalSeconds)
+        loadHealth: {
+            CatHealthData(
+                health: 75,
+                catState: .concerned,
+                formattedTime: "0m"
             )
-        },
-        shouldResetForNewDay: { false },
-        performMidnightReset: {}
+        }
     )
     
     static let previewValue = testValue
@@ -104,18 +93,5 @@ extension DependencyValues {
     var catHealth: CatHealthManager {
         get { self[CatHealthManager.self] }
         set { self[CatHealthManager.self] = newValue }
-    }
-}
-
-// MARK: - Helper Functions
-
-private func formatTime(_ seconds: Double) -> String {
-    let hours = Int(seconds) / 3600
-    let minutes = (Int(seconds) % 3600) / 60
-    
-    if hours > 0 {
-        return "\(hours)h \(minutes)m"
-    } else {
-        return "\(minutes)m"
     }
 }

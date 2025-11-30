@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import SwiftUI
 
+// Daily limit is for narrative/timeline display only - does NOT affect game logic
 enum DailyLimitOption: String, Equatable, CaseIterable {
     case threeHours = "3 hours"
     case fourHours = "4 hours"
@@ -17,15 +18,9 @@ enum DailyLimitOption: String, Equatable, CaseIterable {
         case .eightHours: return 480
         }
     }
-
-    var healthCost: Int {
-        switch self {
-        case .threeHours: return 33
-        case .fourHours: return 25
-        case .fiveHours: return 20
-        case .sixHours: return 17
-        case .eightHours: return 12
-        }
+    
+    var hours: Int {
+        minutes / 60
     }
 }
 
