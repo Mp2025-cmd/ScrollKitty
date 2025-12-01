@@ -9,7 +9,7 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     private func getHealth() -> Int {
         let defaults = UserDefaults(suiteName: appGroupID)
         let health = defaults?.integer(forKey: "catHealth") ?? 100
-        return health > 0 ? health : 100
+        return health  // Return actual value including 0 (dead state)
     }
     
     private func makeAliveConfiguration() -> ShieldConfiguration {
