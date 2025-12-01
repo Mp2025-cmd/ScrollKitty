@@ -37,7 +37,10 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
   - **Unblocking:** Temporarily unblocks app for 15 minutes.
 - **Data Flow:** Extensions write `catHealthPercentage` / `catStage` to App Group UserDefaults -> Main App reads and updates UI.
 
-#### 2. **Onboarding Flow (7 Steps)**
+#### 2. **Onboarding Flow (21 Screens)**
+All onboarding screens are managed by `OnboardingFeature` using stack-based navigation:
+
+**Initial Survey (8 screens):**
 - **Splash Screen** - Auto-advance after 2 seconds (intro animation)
 - **Welcome Screen** - Introduction with cat mascot
 - **Usage Question** - Daily phone hours selection (3hrs → 12hrs+)
@@ -47,11 +50,28 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 - **Idle Check** - "How often do you check your phone when idle?" (Rarely → Every few minutes)
 - **Age Selection** - User age range (Under 18 → 55+)
 
+**Results & Analysis (4 screens):**
+- **Results Loading** - Circular progress ring with Gen Z captions
+- **Results** - Personalized addiction summary
+- **Addiction Score** - Bar graph comparing user vs recommended usage
+- **Years Lost** - Shows estimated years lost to screen time
+
+**Solution Setup (9 screens):**
+- **Solution Intro** - Introduction to Scroll Kitty solution
+- **Screen Time Access** - Request Screen Time permissions
+- **App Selection** - FamilyActivityPicker for apps to block
+- **Daily Limit** - Set daily usage limit (3-8 hours)
+- **Shield Frequency** - Set shield re-application interval
+- **Focus Window** - Configure active protection hours
+- **Character Intro** - Meet Scroll Kitty mascot
+- **Lifecycle Carousel** - 5 health states (Healthy → Dead)
+- **Commitment** - Final pledge to take back control
+
 #### 3. **Navigation System**
-- **Enum-based destination pattern** - Type-safe state machine (single source of truth)
-- **OnboardingFeature** - Stack-based navigation with `StackState` for 7-step flow
-- **AppFeature** - Enum destination for post-onboarding screens (12 destinations)
-- **Back button support** - Full backward navigation throughout app
+- **Simplified AppFeature** - Only 2 destinations: `onboarding` and `home`
+- **OnboardingFeature** - Stack-based navigation with `StackState` managing all 21 onboarding screens
+- **Self-contained navigation** - OnboardingFeature owns its complete flow, delegating only `.onboardingComplete` to AppFeature
+- **Back button support** - Full backward navigation throughout onboarding
 - **Type safety** - Impossible to show multiple screens or invalid states
 
 #### 4. **Results Loading & Analysis**
@@ -139,11 +159,12 @@ ScrollKitty/
 ```
 
 ### Key TCA Patterns
-- **Enum-based navigation**
-- **Stack-based navigation**
-- **Feature + View co-location**
-- **Dependency injection** for Screen Time & Settings
-- **App Group sharing** for Extension communication
+- **Simplified root navigation** - AppFeature manages only 2 destinations (onboarding/home)
+- **Stack-based child navigation** - OnboardingFeature uses `StackState<Path.State>` for 21 screens
+- **Delegate pattern** - Child features communicate via delegate actions (e.g., `.onboardingComplete`)
+- **Feature + View co-location** - Each screen has paired Feature + View files
+- **Dependency injection** - `@Dependency` for Screen Time & Settings managers
+- **App Group sharing** - UserDefaults for main app ↔ extension communication
 
 ## 📊 Data & Statistics
 - **Gen Z (18-24):** 8.5 hours/day average
