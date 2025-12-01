@@ -19,3 +19,36 @@ extension HourOption {
         }
     }
 }
+
+// MARK: - UserOnboardingProfile Mapping
+extension SleepOption {
+    var profileValue: String {
+        switch self {
+        case .almostEveryNight: return "significant"
+        case .fewTimesWeek: return "some"
+        case .rarely, .never: return "none"
+        }
+    }
+}
+
+extension IdleCheckOption {
+    var profileValue: String {
+        switch self {
+        case .everyFewMinutes: return "constantly"
+        case .everyHour: return "often"
+        case .fewTimesDay: return "sometimes"
+        case .rarely: return "rarely"
+        }
+    }
+}
+
+extension AgeOption {
+    var profileValue: String {
+        switch self {
+        case .under18: return "13-17"
+        case .age18to24: return "18-24"
+        case .age25to34, .age35to44: return "25-34"
+        case .age45to54, .age55plus: return "35+"
+        }
+    }
+}

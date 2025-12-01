@@ -140,7 +140,7 @@ public enum CatState: String, Sendable, CaseIterable {
     /// - 59-40: tired
     /// - 39-1: weak
     /// - 0: dead
-    static func from(health: Int) -> CatState {
+    nonisolated static func from(health: Int) -> CatState {
         switch health {
         case 80...100:
             return .healthy

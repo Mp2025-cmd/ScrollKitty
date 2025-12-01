@@ -65,6 +65,8 @@ struct OnboardingFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
+                // Only initialize if path is empty to prevent reset on view re-render
+                guard state.path.isEmpty else { return .none }
                 state.path.append(.splash(SplashFeature.State()))
                 return .none
 
@@ -233,8 +235,24 @@ struct OnboardingFeature {
                 return .none
 
             case .path(.element(id: _, action: .commitment(.delegate(.showNextScreen)))):
-                // Final screen - apply shields, start monitoring, then complete onboarding
-                return .run { [screenTimeManager] send in
+                // Final screen - save profile, apply shields, start monitoring, then complete onboarding
+                return .run { [screenTimeManager, userSettings, state] send in
+                    // Save onboarding profile for AI tone tuning
+                    if let hourSelection = state.hourSelection,
+                       let sleepSelection = state.sleepSelection,
+                       let idleCheckSelection = state.idleCheckSelection,
+                       let ageSelection = state.ageSelection {
+                        
+                        let profile = UserOnboardingProfile(
+                            dailyUsageHours: hourSelection.dailyHours,
+                            sleepImpact: sleepSelection.profileValue,
+                            ageGroup: ageSelection.profileValue,
+                            idleCheckFrequency: idleCheckSelection.profileValue
+                        )
+                        await userSettings.saveOnboardingProfile(profile)
+                        print("[OnboardingFeature] 👤 Onboarding profile saved")
+                    }
+                    
                     let defaults = UserDefaults.appGroup
 
                     if defaults.data(forKey: "selectedApps") != nil {
@@ -282,6 +300,7 @@ struct OnboardingFeature {
                 return .none
             }
         }
+        ._printChanges()
         .forEach(\.path, action: \.path)
     }
 }

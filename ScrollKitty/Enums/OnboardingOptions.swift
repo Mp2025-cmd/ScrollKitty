@@ -58,3 +58,4 @@ enum AgeOption: String, CaseIterable, Equatable, RawRepresentable {
     case age45to54 = "45 - 54yrs"
     case age55plus = "55+yrs"
 }
+

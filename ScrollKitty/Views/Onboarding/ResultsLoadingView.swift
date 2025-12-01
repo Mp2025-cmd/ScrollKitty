@@ -46,6 +46,12 @@ struct ResultsLoadingFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
+                // Cancel any existing timers first to prevent duplicates on re-render
+                let cancelExisting: Effect<Action> = .merge(
+                    .cancel(id: CancelID.captionTimer),
+                    .cancel(id: CancelID.loadingTimer)
+                )
+
                 let captionEffect: Effect<Action> = .run { send in
                     for _ in 0..<10 {
                         try await clock.sleep(for: .seconds(1.2))
@@ -64,7 +70,7 @@ struct ResultsLoadingFeature {
                 }
                 .cancellable(id: CancelID.loadingTimer)
 
-                return .merge(captionEffect, loadingEffect)
+                return .concatenate(cancelExisting, .merge(captionEffect, loadingEffect))
                 
             case .captionTimerTick:
                 state.currentCaptionIndex = (state.currentCaptionIndex + 1) % state.captions.count

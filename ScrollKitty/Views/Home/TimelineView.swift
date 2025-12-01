@@ -1,6 +1,9 @@
 import SwiftUI
+import ComposableArchitecture
 
 struct TimelineView: View {
+    @Bindable var store: StoreOf<TimelineFeature>
+    
     var body: some View {
         ZStack {
             DesignSystem.Colors.background
@@ -19,101 +22,151 @@ struct TimelineView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 16)
                 
-                // Timeline Content
-                ScrollView(.vertical, showsIndicators: false) {
-                    ZStack(alignment: .topLeading) {
-                        // Vertical timeline line
-                        Rectangle()
-                            .fill(DesignSystem.Colors.timelineLine)
-                            .frame(width: 3)
-                            .padding(.leading, 39)
-                            .padding(.top, 28)
-                        
-                        // Timeline items
-                        VStack(spacing: 0) {
-                            // Date header
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(DesignSystem.Colors.timelineIndicator)
-                                    .frame(width: 10, height: 10)
-                                
-                                Text("Jan 1")
-                                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                                    .foregroundColor(DesignSystem.Colors.primaryText)
-                                
-                                Text("• Monday")
-                                    .font(.custom("Sofia Pro-Regular", size: 16))
-                                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-                                Spacer()
-                            }
-                            .padding(.leading, 35)
-                            .padding(.bottom, 20)
-                            
-                            // Timeline items
-                            TimelineItemView(
-                                time: "11:00 AM",
-                                message: AttributedString("Scrolling away on\nScroll Kitty I see. Don't\nforget about me! 🐱"),
-                                catState: .healthy
-                            )
-                            
-                            TimelineItemView(
-                                time: "3:30 PM",
-                                message: createInstagramMessage(),
-                                catState: .healthy
-                            )
-                            
-                            TimelineItemView(
-                                time: "3:30 PM",
-                                message: createTikTokMessage(),
-                                catState: .tired
-                            )
-                            
-                            TimelineItemView(
-                                time: "3:30 PM",
-                                message: createInstagramToastMessage(),
-                                catState: .weak
-                            )
-                        }
+                // AI Unavailable Notice (one-time)
+                if store.showAIUnavailableNotice && !store.hasShownAINotice {
+                    AIUnavailableNoticeView {
+                        store.send(.dismissAINotice)
                     }
-                    .padding(.bottom, 100) // Space for tab bar
+                    .padding(.horizontal, 34)
+                    .padding(.bottom, 12)
+                }
+                
+                // Timeline Content
+                if store.isLoading {
+                    Spacer()
+                    ProgressView()
+                        .tint(DesignSystem.Colors.primaryText)
+                    Spacer()
+                } else if store.timelineEvents.isEmpty {
+                    Spacer()
+                    EmptyTimelineView()
+                    Spacer()
+                } else {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        ZStack(alignment: .topLeading) {
+                            // Vertical timeline line
+                            Rectangle()
+                                .fill(DesignSystem.Colors.timelineLine)
+                                .frame(width: 3)
+                                .padding(.leading, 39)
+                                .padding(.top, 28)
+                            
+                            // Timeline items grouped by date
+                            VStack(spacing: 0) {
+                                ForEach(groupedEvents(), id: \.date) { group in
+                                    DateHeaderView(date: group.date)
+                                        .padding(.leading, 35)
+                                        .padding(.bottom, 20)
+                                    
+                                    ForEach(group.events, id: \.id) { event in
+                                        TimelineItemView(event: event)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.bottom, 100) // Space for tab bar
+                    }
                 }
             }
         }
+        .onAppear {
+            store.send(.onAppear)
+        }
     }
     
-    private func createInstagramMessage() -> AttributedString {
-        var text = AttributedString("Yikes! You have spent\n")
-        var highlight = AttributedString("2 hours and 14 minutes")
-        highlight.foregroundColor = DesignSystem.Colors.highlightCyan
-        text.append(highlight)
-        text.append(AttributedString(" on\nInstagram today. 😔"))
-        return text
+    private func groupedEvents() -> [(date: Date, events: [TimelineEvent])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: store.timelineEvents) { event in
+            calendar.startOfDay(for: event.timestamp)
+        }
+        return grouped.sorted { $0.key > $1.key }.map { (date: $0.key, events: $0.value.sorted { $0.timestamp > $1.timestamp }) }
+    }
+}
+
+// MARK: - Date Header View
+struct DateHeaderView: View {
+    let date: Date
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(DesignSystem.Colors.timelineIndicator)
+                .frame(width: 10, height: 10)
+            
+            Text(formattedDate())
+                .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                .foregroundColor(DesignSystem.Colors.primaryText)
+            
+            Text("• \(formattedDayOfWeek())")
+                .font(.custom("Sofia Pro-Regular", size: 16))
+                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+            Spacer()
+        }
     }
     
-    private func createTikTokMessage() -> AttributedString {
-        var text = AttributedString("Oh no! I'm getting sick.\nYou've been on TikTok for\nover ")
-        var highlight = AttributedString("3 hours")
-        highlight.foregroundColor = DesignSystem.Colors.highlightOrange
-        text.append(highlight)
-        text.append(AttributedString("."))
-        return text
+    private func formattedDate() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
     }
     
-    private func createInstagramToastMessage() -> AttributedString {
-        var text = AttributedString("My paws are toast. I sure\nhope the ")
-        var highlight = AttributedString("4 hours ")
-        highlight.foregroundColor = DesignSystem.Colors.highlightRed
-        text.append(highlight)
-        text.append(AttributedString("spent on\nInstagram was worth it."))
-        return text
+    private func formattedDayOfWeek() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Empty Timeline View
+struct EmptyTimelineView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "clock")
+                .font(.system(size: 48))
+                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+            
+            Text("No timeline entries yet")
+                .font(.custom("Sofia Pro-Semi_Bold", size: 18))
+                .foregroundColor(DesignSystem.Colors.primaryText)
+            
+            Text("Your journey with Scroll Kitty\nwill appear here")
+                .font(.custom("Sofia Pro-Regular", size: 14))
+                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(40)
+    }
+}
+
+// MARK: - AI Unavailable Notice View
+struct AIUnavailableNoticeView: View {
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(.blue)
+            
+            Text("On this device, I use my simpler built-in notes instead of my full brain.")
+                .font(.custom("Sofia Pro-Regular", size: 13))
+                .foregroundColor(DesignSystem.Colors.primaryText)
+                .lineLimit(nil)
+            
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+            }
+        }
+        .padding(12)
+        .background(Color.blue.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
 // MARK: - Timeline Item View
 struct TimelineItemView: View {
-    let time: String
-    let message: AttributedString
-    let catState: CatState
+    let event: TimelineEvent
     
     var body: some View {
         HStack(spacing: 0) {
@@ -141,15 +194,25 @@ struct TimelineItemView: View {
                 HStack(spacing: 0) {
                     // Left side - Text content
                     VStack(alignment: .leading, spacing: 13) {
-                        Text(time)
+                        Text(formattedTime)
                             .font(DesignSystem.Typography.timelineTime())
                             .foregroundColor(catState.timeColor)
                         
-                        Text(message)
-                            .font(DesignSystem.Typography.timelineMessage())
-                            .foregroundColor(DesignSystem.Colors.white)
-                            .tracking(DesignSystem.Typography.timelineMessageTracking)
-                            .lineSpacing(DesignSystem.Typography.timelineMessageLineSpacing)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(messageText)
+                                .font(DesignSystem.Typography.timelineMessage())
+                                .foregroundColor(DesignSystem.Colors.white)
+                                .tracking(DesignSystem.Typography.timelineMessageTracking)
+                                .lineSpacing(DesignSystem.Typography.timelineMessageLineSpacing)
+                            
+                            // Fallback notice (if AI was slow)
+                            if event.showFallbackNotice {
+                                Text("My brain was a bit slow for this one, so I used one of my simpler notes 🐾")
+                                    .font(.custom("Sofia Pro-Regular", size: 11))
+                                    .foregroundColor(DesignSystem.Colors.white.opacity(0.7))
+                                    .italic()
+                            }
+                        }
                     }
                     .padding(.leading, 13)
                     .padding(.top, 11)
@@ -165,15 +228,34 @@ struct TimelineItemView: View {
                         .offset(y: 5)
                 }
             }
-            .frame(width: 310, height: 129)
+            .frame(width: 310, height: event.showFallbackNotice ? 150 : 129)
             
             Spacer()
         }
         .padding(.leading, 27)
         .padding(.bottom, 15)
     }
-}
-
-#Preview {
-    TimelineView()
+    
+    private var catState: CatState {
+        CatState.from(health: event.healthAfter)
+    }
+    
+    private var formattedTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: event.timestamp)
+    }
+    
+    private var messageText: String {
+        if let aiMessage = event.aiMessage {
+            // AI-generated message
+            if let emoji = event.aiEmoji {
+                return "\(aiMessage) \(emoji)"
+            }
+            return aiMessage
+        } else {
+            // Legacy event (no AI message)
+            return "Pushed through on \(event.appName)"
+        }
+    }
 }

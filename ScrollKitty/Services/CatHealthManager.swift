@@ -29,7 +29,7 @@ extension CatHealthManager: DependencyKey {
     static let liveValue = Self(
         // Lazy reset: Check if new day, reset if needed, then return health
         loadHealth: {
-            let defaults = UserDefaults(suiteName: appGroupID)
+            let defaults = await UserDefaults(suiteName: appGroupID)
             
             // STEP 1: Check if we need to reset for new day
             let shouldReset: Bool
@@ -64,7 +64,7 @@ extension CatHealthManager: DependencyKey {
             let currentHealth = health > 0 ? health : 100
             
             // Map health to cat state (UI only)
-            let catState = CatState.from(health: currentHealth)
+            let catState = await CatState.from(health: currentHealth)
             
             return CatHealthData(
                 health: currentHealth,

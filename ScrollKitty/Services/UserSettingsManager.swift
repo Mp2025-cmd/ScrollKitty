@@ -5,6 +5,7 @@ import ComposableArchitecture
 // MARK: - Timeline Event Model
 
 public struct TimelineEvent: Codable, Equatable, Sendable {
+    let id: UUID
     let timestamp: Date
     let appName: String // Display name for timeline
     let healthBefore: Int
@@ -12,9 +13,42 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
     let cooldownStarted: Date
     let eventType: EventType
     
+    // AI-generated message fields
+    let aiMessage: String?
+    let aiEmoji: String?
+    let trigger: String? // TimelineEntryTrigger.rawValue
+    let showFallbackNotice: Bool
+    
     enum EventType: String, Codable, Sendable {
         case shieldShown
         case shieldBypassed
+        case aiGenerated // For AI-only entries (daily summary, welcome, etc.)
+    }
+    
+    init(
+        id: UUID = UUID(),
+        timestamp: Date,
+        appName: String,
+        healthBefore: Int,
+        healthAfter: Int,
+        cooldownStarted: Date,
+        eventType: EventType,
+        aiMessage: String? = nil,
+        aiEmoji: String? = nil,
+        trigger: String? = nil,
+        showFallbackNotice: Bool = false
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.appName = appName
+        self.healthBefore = healthBefore
+        self.healthAfter = healthAfter
+        self.cooldownStarted = cooldownStarted
+        self.eventType = eventType
+        self.aiMessage = aiMessage
+        self.aiEmoji = aiEmoji
+        self.trigger = trigger
+        self.showFallbackNotice = showFallbackNotice
     }
 }
 
@@ -51,6 +85,10 @@ public struct UserSettingsManager: Sendable {
     var appendTimelineEvent: @Sendable (TimelineEvent) async -> Void
     var loadTimelineEvents: @Sendable () async -> [TimelineEvent]
     var clearTimelineEvents: @Sendable () async -> Void
+    
+    // Onboarding Profile (for AI tone tuning)
+    var saveOnboardingProfile: @Sendable (UserOnboardingProfile) async -> Void
+    var loadOnboardingProfile: @Sendable () async -> UserOnboardingProfile?
     
     // Legacy (for migration)
     var getTodayTotal: @Sendable () async -> Double
@@ -189,6 +227,23 @@ extension UserSettingsManager: DependencyKey {
                 print("[UserSettings] 📝 Timeline cleared")
             },
             
+            // Onboarding Profile
+            saveOnboardingProfile: { profile in
+                let defaults = UserDefaults(suiteName: appGroupID)
+                if let encoded = try? JSONEncoder().encode(profile) {
+                    defaults?.set(encoded, forKey: "onboardingProfile")
+                    print("[UserSettings] 👤 Onboarding profile saved")
+                }
+            },
+            loadOnboardingProfile: {
+                let defaults = UserDefaults(suiteName: appGroupID)
+                guard let data = defaults?.data(forKey: "onboardingProfile"),
+                      let decoded = try? JSONDecoder().decode(UserOnboardingProfile.self, from: data) else {
+                    return nil
+                }
+                return decoded
+            },
+            
             // Legacy
             getTodayTotal: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -219,6 +274,8 @@ extension UserSettingsManager: DependencyKey {
             appendTimelineEvent: { _ in },
             loadTimelineEvents: { [] },
             clearTimelineEvents: { },
+            saveOnboardingProfile: { _ in },
+            loadOnboardingProfile: { nil },
             getTodayTotal: { 5400 }
         )
     }()

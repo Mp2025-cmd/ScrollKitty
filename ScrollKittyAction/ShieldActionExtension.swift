@@ -7,12 +7,43 @@ import DeviceActivity
 // MARK: - Timeline Event (Duplicated for Extension - Extensions can't share code with main app)
 
 private struct TimelineEvent: Codable {
+    let id: String  // UUID string
     let timestamp: Date
     let appName: String
     let healthBefore: Int
     let healthAfter: Int
     let cooldownStarted: Date
     let eventType: String  // "shieldShown" or "shieldBypassed"
+    let aiMessage: String?
+    let aiEmoji: String?
+    let trigger: String?
+    let showFallbackNotice: Bool
+    
+    init(
+        id: String = UUID().uuidString,
+        timestamp: Date,
+        appName: String,
+        healthBefore: Int,
+        healthAfter: Int,
+        cooldownStarted: Date,
+        eventType: String,
+        aiMessage: String? = nil,
+        aiEmoji: String? = nil,
+        trigger: String? = nil,
+        showFallbackNotice: Bool = false
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.appName = appName
+        self.healthBefore = healthBefore
+        self.healthAfter = healthAfter
+        self.cooldownStarted = cooldownStarted
+        self.eventType = eventType
+        self.aiMessage = aiMessage
+        self.aiEmoji = aiEmoji
+        self.trigger = trigger
+        self.showFallbackNotice = showFallbackNotice
+    }
 }
 
 // MARK: - Shield Action Extension

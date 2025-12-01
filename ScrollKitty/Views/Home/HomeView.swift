@@ -16,6 +16,7 @@ struct HomeFeature {
         var selectedTab: HomeTab = .dashboard
         var catHealth: CatHealthData?
         var isLoading = false
+        var timeline = TimelineFeature.State()
     }
     
     enum Action: BindableAction {
@@ -25,6 +26,7 @@ struct HomeFeature {
         case loadCatHealth
         case catHealthLoaded(CatHealthData)
         case tabSelected(HomeTab)
+        case timeline(TimelineFeature.Action)
     }
     
     @Dependency(\.catHealth) var catHealth
@@ -62,11 +64,18 @@ struct HomeFeature {
                 state.selectedTab = tab
                 return .none
                 
+            case .timeline:
+                return .none
+                
             case .binding:
                 return .none
             }
         }
         ._printChanges()
+        
+        Scope(state: \.timeline, action: \.timeline) {
+            TimelineFeature()
+        }
     }
 }
 
@@ -90,7 +99,7 @@ struct HomeView: View {
             case .dashboard:
                 dashboardContent
             case .timeline:
-                TimelineView()
+                TimelineView(store: store.scope(state: \.timeline, action: \.timeline))
             }
             
             VStack {
