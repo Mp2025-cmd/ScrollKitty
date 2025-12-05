@@ -18,7 +18,7 @@ enum DailyLimitOption: String, Equatable, CaseIterable {
         case .eightHours: return 480
         }
     }
-    
+
     var hours: Int {
         minutes / 60
     }

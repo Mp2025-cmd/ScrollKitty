@@ -23,6 +23,7 @@ struct HomeFeature {
         case binding(BindingAction<State>)
         case onAppear
         case onDisappear
+        case appBecameActive
         case loadCatHealth
         case catHealthLoaded(CatHealthData)
         case tabSelected(HomeTab)
@@ -43,6 +44,15 @@ struct HomeFeature {
             case .onDisappear:
                 print("[HomeFeature] onDisappear")
                 return .none
+                
+            case .appBecameActive:
+                // Process raw events, prewarm AI, and refresh health when app becomes active
+                print("[HomeFeature] App became active - processing events & refreshing health")
+                return .merge(
+                    .send(.loadCatHealth),
+                    .send(.timeline(.prewarmAI)),
+                    .send(.timeline(.processRawEvents))
+                )
 
             case .loadCatHealth:
                 // Lazy reset happens automatically inside loadHealth()
@@ -163,10 +173,8 @@ struct HomeView: View {
         .onAppear { store.send(.onAppear) }
         .onDisappear { store.send(.onDisappear) }
         .onChange(of: scenePhase) { _, newPhase in
-            // Refresh health when app returns to foreground (triggers lazy reset if needed)
             if newPhase == .active {
-                print("[HomeView] App became active - refreshing health")
-                store.send(.loadCatHealth)
+                store.send(.appBecameActive)
             }
         }
     }

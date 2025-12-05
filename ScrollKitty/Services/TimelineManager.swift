@@ -11,7 +11,6 @@ import ComposableArchitecture
 // MARK: - TimelineManager (TCA Dependency)
 
 struct TimelineManager: Sendable {
-    var processNewEvent: @Sendable (TimelineEvent, CatState) async -> [TimelineEvent]
     var checkForDailySummary: @Sendable () async -> TimelineEvent?
     var getWelcomeMessage: @Sendable () async -> TimelineEvent?
     var shouldShowAIUnavailableNotice: @Sendable () async -> Bool
@@ -22,62 +21,6 @@ struct TimelineManager: Sendable {
 
 extension TimelineManager {
     static let liveValue = TimelineManager(
-        processNewEvent: { event, catState in
-            @Dependency(\.userSettings) var userSettings: UserSettingsManager
-            @Dependency(\.timelineAI) var timelineAI: TimelineAIService
-            
-            var newEntries: [TimelineEvent] = []
-            
-            // Load existing events
-            let existingEvents = await userSettings.loadTimelineEvents()
-            let todayEvents = existingEvents.filter { Calendar.current.isDateInToday($0.timestamp) }
-            
-            // Check if we've hit the 8-entry-per-day cap
-            let aiGeneratedToday = todayEvents.filter { $0.eventType == .aiGenerated }.count
-            if aiGeneratedToday >= 8 {
-                print("[TimelineManager] 🚫 Daily AI entry cap reached (8/8)")
-                return []
-            }
-            
-            // Detect trigger type
-            let triggers = await detectTriggers(
-                newEvent: event,
-                existingEvents: todayEvents,
-                catState: catState
-            )
-            
-            // Generate AI message for each trigger
-            for trigger in triggers {
-                let context = await buildContext(
-                    trigger: trigger,
-                    event: event,
-                    todayEvents: todayEvents,
-                    catState: catState
-                )
-                
-                let result = await timelineAI.generateMessage(context)
-                
-                let aiEvent = TimelineEvent(
-                    id: UUID(),
-                    timestamp: Date(),
-                    appName: event.appName,
-                    healthBefore: event.healthBefore,
-                    healthAfter: event.healthAfter,
-                    cooldownStarted: event.cooldownStarted,
-                    eventType: .aiGenerated,
-                    aiMessage: result.message,
-                    aiEmoji: result.emoji,
-                    trigger: trigger.rawValue,
-                    showFallbackNotice: result.showFallbackNotice
-                )
-                
-                newEntries.append(aiEvent)
-                print("[TimelineManager] ✨ Generated AI entry for trigger: \(trigger.rawValue)")
-            }
-            
-            return newEntries
-        },
-        
         checkForDailySummary: {
             @Dependency(\.userSettings) var userSettings: UserSettingsManager
             @Dependency(\.timelineAI) var timelineAI: TimelineAIService
@@ -122,6 +65,7 @@ extension TimelineManager {
                 recentEventWindow: 0,
                 timeSinceLastEvent: nil,
                 profile: await userSettings.loadOnboardingProfile(),
+                timestamp: now,  // For time-of-day context
                 appName: nil,
                 healthBefore: nil,
                 healthAfter: nil
@@ -149,27 +93,14 @@ extension TimelineManager {
         
         getWelcomeMessage: {
             @Dependency(\.userSettings) var userSettings: UserSettingsManager
-            @Dependency(\.timelineAI) var timelineAI: TimelineAIService
             
             let existingEvents = await userSettings.loadTimelineEvents()
             
             // Only show if timeline is completely empty
             guard existingEvents.isEmpty else { return nil }
             
-            let context = TimelineAIContext(
-                trigger: .welcomeMessage,
-                tone: .playful,
-                currentHealth: 100,
-                eventCount: 0,
-                recentEventWindow: 0,
-                timeSinceLastEvent: nil,
-                profile: await userSettings.loadOnboardingProfile(),
-                appName: nil,
-                healthBefore: nil,
-                healthAfter: nil
-            )
-            
-            let result = await timelineAI.generateMessage(context)
+            // Always use the pre-written welcome message (never AI-generated)
+            let welcomeMessage = "We're just starting our journey together. I'll jot little notes here as our day unfolds 😸"
             
             let welcomeEvent = TimelineEvent(
                 id: UUID(),
@@ -179,13 +110,13 @@ extension TimelineManager {
                 healthAfter: 100,
                 cooldownStarted: Date(),
                 eventType: .aiGenerated,
-                aiMessage: result.message,
-                aiEmoji: result.emoji,
+                aiMessage: welcomeMessage,
+                aiEmoji: nil,
                 trigger: TimelineEntryTrigger.welcomeMessage.rawValue,
                 showFallbackNotice: false
             )
             
-            print("[TimelineManager] 👋 Generated welcome message")
+            print("[TimelineManager] 👋 Welcome message created")
             return welcomeEvent
         },
         
@@ -210,107 +141,12 @@ extension TimelineManager {
             print("[TimelineManager] ℹ️ AI unavailable notice marked as shown")
         }
     )
-    
-    // MARK: - Private Helpers
-    
-    private static func detectTriggers(
-        newEvent: TimelineEvent,
-        existingEvents: [TimelineEvent],
-        catState: CatState
-    ) async -> [TimelineEntryTrigger] {
-        var triggers: [TimelineEntryTrigger] = []
-        
-        // Only process bypassed events for triggers
-        guard newEvent.eventType == .shieldBypassed else { return [] }
-        
-        let bypassEvents = existingEvents.filter { $0.eventType == .shieldBypassed }
-        
-        // 1. First bypass of day
-        if bypassEvents.isEmpty {
-            triggers.append(.firstBypassOfDay)
-        }
-        
-        // 2. Cluster detection (3+ bypasses in 15 minutes)
-        let fifteenMinutesAgo = Date().addingTimeInterval(-15 * 60)
-        let recentBypasses = bypassEvents.filter { $0.timestamp >= fifteenMinutesAgo }
-        
-        if recentBypasses.count + 1 >= 3 { // +1 for the new event
-            // Check if we haven't already logged a cluster recently (prevent spam)
-            let hasRecentCluster = existingEvents.contains { event in
-                event.trigger == TimelineEntryTrigger.cluster.rawValue &&
-                event.timestamp >= fifteenMinutesAgo
-            }
-            
-            if !hasRecentCluster {
-                triggers.append(.cluster)
-            }
-        }
-        
-        // 3. Quiet return (first event after 4+ hours)
-        if let lastBypass = bypassEvents.last {
-            let timeSinceLastBypass = Date().timeIntervalSince(lastBypass.timestamp)
-            if timeSinceLastBypass >= (4 * 3600) { // 4 hours
-                triggers.append(.quietReturn)
-            }
-        }
-        
-        // 4. Daily limit reached (narrative only)
-        @Dependency(\.userSettings) var userSettings
-        if let dailyLimit = await userSettings.loadDailyLimit() {
-            let totalMinutesToday = bypassEvents.count * 5 // Rough estimate
-            if totalMinutesToday >= dailyLimit {
-                let hasLimitEntry = existingEvents.contains { $0.trigger == TimelineEntryTrigger.dailyLimitReached.rawValue }
-                if !hasLimitEntry {
-                    triggers.append(.dailyLimitReached)
-                }
-            }
-        }
-        
-        return triggers
-    }
-    
-    private static func buildContext(
-        trigger: TimelineEntryTrigger,
-        event: TimelineEvent,
-        todayEvents: [TimelineEvent],
-        catState: CatState
-    ) async -> TimelineAIContext {
-        @Dependency(\.userSettings) var userSettings
-        
-        let bypassCount = todayEvents.filter { $0.eventType == .shieldBypassed }.count
-        
-        // Count recent bypasses (15-min window)
-        let fifteenMinutesAgo = Date().addingTimeInterval(-15 * 60)
-        let recentBypasses = todayEvents.filter {
-            $0.eventType == .shieldBypassed && $0.timestamp >= fifteenMinutesAgo
-        }.count
-        
-        // Calculate time since last event
-        var timeSinceLastEvent: TimeInterval? = nil
-        if let lastEvent = todayEvents.last {
-            timeSinceLastEvent = Date().timeIntervalSince(lastEvent.timestamp)
-        }
-        
-        return TimelineAIContext(
-            trigger: trigger,
-            tone: CatTone.from(catState: catState),
-            currentHealth: event.healthAfter,
-            eventCount: bypassCount,
-            recentEventWindow: recentBypasses,
-            timeSinceLastEvent: timeSinceLastEvent,
-            profile: await userSettings.loadOnboardingProfile(),
-            appName: event.appName,
-            healthBefore: event.healthBefore,
-            healthAfter: event.healthAfter
-        )
-    }
 }
 
 // MARK: - Test Implementation
 
 extension TimelineManager {
     static let testValue = TimelineManager(
-        processNewEvent: { _, _ in [] },
         checkForDailySummary: { nil },
         getWelcomeMessage: { nil },
         shouldShowAIUnavailableNotice: { false },
@@ -323,11 +159,11 @@ extension TimelineManager {
 extension CatTone {
     nonisolated static func from(catState: CatState) -> CatTone {
         switch catState {
-        case .healthy: return .playful
-        case .concerned: return .concerned
-        case .tired: return .concerned
-        case .weak: return .strained
-        case .dead: return .faint
+        case .healthy: return .playful      // 80-100 HP
+        case .concerned: return .concerned  // 60-79 HP
+        case .tired: return .strained       // 40-59 HP
+        case .weak: return .faint           // 1-39 HP
+        case .dead: return .faint           // 0 HP - use faint (AI doesn't recognize "dead" as valid tone)
         }
     }
 }

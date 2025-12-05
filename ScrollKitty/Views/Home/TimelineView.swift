@@ -79,7 +79,8 @@ struct TimelineView: View {
         let grouped = Dictionary(grouping: store.timelineEvents) { event in
             calendar.startOfDay(for: event.timestamp)
         }
-        return grouped.sorted { $0.key > $1.key }.map { (date: $0.key, events: $0.value.sorted { $0.timestamp > $1.timestamp }) }
+        // Sort oldest first (welcome message at top, new entries at bottom)
+        return grouped.sorted { $0.key < $1.key }.map { (date: $0.key, events: $0.value.sorted { $0.timestamp < $1.timestamp }) }
     }
 }
 

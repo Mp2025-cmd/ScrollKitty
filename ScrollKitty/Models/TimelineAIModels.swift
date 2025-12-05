@@ -51,6 +51,7 @@ struct TimelineAIContext: Sendable {
     let recentEventWindow: Int    // Bypasses in last 15 min
     let timeSinceLastEvent: TimeInterval?
     let profile: UserOnboardingProfile?
+    let timestamp: Date?          // Event timestamp for time-of-day context
     
     // Optional event-specific data
     let appName: String?

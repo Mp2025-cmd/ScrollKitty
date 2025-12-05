@@ -22,20 +22,15 @@ ScrollKitty takes users on a journey of self-discovery about their phone usage h
 
 ### ✅ Completed Features
 
-#### 1. **Active Shielding System (Brain Rot Core Loop)**
-- **Architecture:** "Active Blocking" strategy for 100% reliability (bypasses iOS 26 Monitor bugs).
-- **Monitor Extension (`ScrollKittyMonitor`):** 
-  - Applies immediate shields to selected apps upon monitoring start.
-  - Tracks intervals and manages `ManagedSettingsStore`.
-- **Shield Configuration (`ScrollKittyShield`):**
-  - Custom "Scroll Kitty says NO!" blocking screen.
-  - "Ignore for 15m (-10 Health)" button logic.
-- **Shield Action (`ScrollKittyAction`):**
-  - Handles "Unlock" interaction.
-  - **Penalizes Health:** Drops cat health by 10% per unlock.
-  - **Notifications:** Sends "Cat is Sick!" alerts immediately.
-  - **Unblocking:** Temporarily unblocks app for 15 minutes.
-- **Data Flow:** Extensions write `catHealthPercentage` / `catStage` to App Group UserDefaults -> Main App reads and updates UI.
+#### 1. **Active Shielding System (Core Loop)**
+- **Architecture:** "Active Blocking" strategy for 100% reliability.
+- **Global Health Pool:** 100 HP starting, -5 HP per bypass, resets at midnight.
+- **Global Cooldown:** User-selected interval (10/20/30/45/60 min). Shield only reappears after cooldown expires.
+- **Dead Cat State:** At 0 HP, all apps locked until midnight (no bypass option).
+- **Monitor Extension (`ScrollKittyMonitor`):** Applies shields to selected apps.
+- **Shield Configuration (`ScrollKittyShield`):** Custom blocking screen with cat state visuals.
+- **Shield Action (`ScrollKittyAction`):** Handles bypass, deducts HP, starts cooldown, logs timeline event.
+- **Data Flow:** Extensions write to App Group UserDefaults → Main App reads and updates UI.
 
 #### 2. **Onboarding Flow (21 Screens)**
 All onboarding screens are managed by `OnboardingFeature` using stack-based navigation:
@@ -98,15 +93,17 @@ All onboarding screens are managed by `OnboardingFeature` using stack-based navi
 - **TCA Binding Pattern** - Uses `BindableAction` and `@Bindable`
 
 #### 8. **Home/Dashboard Screen**
-- **Real-Time Dashboard** - Displays live Cat Health (Healthy/Sick/Dead)
-- **Health Percentage** - Updates dynamically based on Shield usage
-- **Color-Coded Progress Bar** - Visual feedback (Green → Red)
-- **Background Polling** - Updates every 30 seconds to fetch extension data
+- **Real-Time Dashboard** - Displays Cat Health (Healthy → Concerned → Tired → Weak → Dead)
+- **Health Percentage** - Updates on app foreground (lazy refresh)
+- **Color-Coded Progress Bar** - Visual feedback (Green → Orange → Red)
+- **Midnight Reset** - Health resets to 100 on new day (lazy, checked on app open)
 
-#### 9. **Timeline View**
-- **Vertical Timeline** - Blue line with cat dashboard icons
-- **Chat-Style Cards** - Messages from Scroll Kitty about app usage
-- **Cat State Integration** - Uses `CatState` enum for images and colors
+#### 9. **Timeline View (AI-Powered)**
+- **Vertical Timeline** - Blue line with cat icons, date-grouped
+- **AI-Generated Messages** - Apple Foundation Models for contextual cat responses
+- **Fallback Templates** - Pre-written messages when AI unavailable
+- **Event Triggers** - First bypass, cluster detection, quiet return, daily summary
+- **Tone System** - Messages adjust based on cat health (playful → faint)
 
 #### 10. **Technical Implementation**
 - **Framework:** SwiftUI + The Composable Architecture (TCA)
@@ -186,18 +183,122 @@ We pivoted from the passive "Report Extension" approach (which was sandboxed and
 
 **Status:** ✅ Fixed. Core loop is functional.
 
-## 📝 Next Tasks (Lives + Timed Shields)
+---
 
-1.  **Update Daily Limit Logic:**
-    - Map Daily Limit (3h, 4h, etc.) to **Cat Lives** (5, 7, etc.) instead of raw Health Cost.
-    - Update `DailyLimitView` and `DailyLimitFeature`.
-2.  **Update Shield Logic (`ShieldConfigurationExtension`):**
-    - Implement logic to check **Focus Window** (Time & Day).
-    - Implement logic to check **Shield Cooldown** (is shield active?).
-    - Display remaining **Lives** on the shield.
-3.  **Update Bypass Action (`ShieldActionExtension`):**
-    - Deduct **1 Life** per bypass.
-    - Set **Cooldown Expiration** (Now + Frequency).
-    - Unblock app temporarily.
-4.  **Re-Shielding Reliability:**
-    - Implement mechanism to re-block apps after cooldown expires (using `DeviceActivityMonitor` or Main App check).
+## ✅ Current Status (Dec 2025)
+
+### Core Mechanics - COMPLETE
+| Feature | Status |
+|---------|--------|
+| Global Health Pool (100 HP, -5 per bypass) | ✅ |
+| Global Cooldown System (10-60 min) | ✅ |
+| Midnight Health Reset (lazy) | ✅ |
+| Dead Cat Lockout (0 HP = locked until midnight) | ✅ |
+| Timeline Event Logging | ✅ |
+| AI-Powered Timeline Messages | ✅ |
+
+### Timeline AI - WORKING
+- **Apple Foundation Models** for on-device AI generation
+- **Fallback templates** when AI unavailable
+- **Event triggers**: First bypass, cluster (3+ in 15 min), quiet return, daily summary
+- **Tone system**: Playful → Concerned → Strained → Faint (based on cat health)
+- **Pre-written welcome message** on first timeline view
+
+---
+
+## 🔧 Recent Improvements (Dec 2025)
+
+### AI Prompt System Overhaul
+**Problem:** AI was generating generic, repetitive responses that ignored context (tone, health, event type).
+
+**Solution Implemented:**
+1. **Structured System Prompt** (`TimelineAIService.swift`)
+   - TONE_LEVEL enforcement at top (must use provided tone)
+   - Emotion rules (allowed: tired, wobbly; forbidden: pain, harm)
+   - Language rules (no technical terms, no hype phrases)
+   - 8 style guide examples (2 per tone level)
+   - Token budget: ~300 tokens for system prompt
+
+2. **Semantic Context Format** (`TimelineAIService.swift`)
+   - Per-request prompts use structured format:
+     ```
+     TONE_LEVEL: {{tone}}
+     CONTEXT:
+     - Event meaning: {{semantic description}}
+     - Cat state: {{health-based state}}
+     - Time of day: {{morning/afternoon/evening/late night}}
+     - Pattern: {{usage pattern summary}}
+     ```
+   - Replaced technical language ("pushed through shield") with emotional language
+
+3. **Generation Options**
+   - Temperature: 0.25 (low for consistency)
+   - Token limit: 80 tokens (concise output)
+
+4. **Context Data**
+   - Added `timestamp` to `TimelineAIContext` for time-of-day derivation
+   - Personalization hints (usage vs baseline, sleep impact, idle check style)
+
+### Critical Bugs Fixed
+
+1. **Tone Mapping Mismatch** (`TimelineManager.swift`)
+   - **Bug:** `.tired` (40-59 HP) mapped to `.concerned` instead of `.strained`
+   - **Fix:** Corrected all tone mappings:
+     - `.tired` → `.strained`
+     - `.weak` → `.faint`
+     - `.dead` → `.faint` (for AI compatibility)
+
+2. **Dead Cat Bypass Exploit** (`ShieldActionExtension.swift`)
+   - **Bug:** Health value of 0 was converted to 100, making dead cat check unreachable
+   - **Fix:** Check if key exists AND value is 0 before applying default
+   - **Impact:** Prevented dead cats from bypassing shields and resurrecting
+
+3. **Invalid AI Tone Value** (`TimelineManager.swift`)
+   - **Bug:** `.dead` tone sent to AI, but system instructions only accept 4 tones
+   - **Fix:** Map `.dead` → `.faint` for AI context
+
+### Current Issues Identified
+
+**Problem:** AI still generating generic responses despite improvements.
+
+**Root Causes:**
+1. **Event Meaning Too Euphemistic** (`TimelineAIService.swift:186`)
+   - `.firstBypassOfDay` described as "our first check-in" instead of acknowledging bypass
+   - Should reflect actual event (bypass) in emotional language
+
+2. **Pattern Detection Broken** (`TimelineFeature.swift:124-125`)
+   - `recentEventWindow: 0` hardcoded (should calculate from actual events)
+   - `timeSinceLastEvent: nil` not calculated
+   - Prevents cluster detection and pattern awareness
+
+3. **Pattern Summary Can't Work** (`TimelineAIService.swift:227-238`)
+   - `patternSummary()` checks `recentEventWindow >= 3` but it's always 0
+   - Pattern detection never triggers
+
+**Next Steps:**
+- Fix event meaning to acknowledge bypasses appropriately
+- Calculate `recentEventWindow` from actual timeline events
+- Calculate `timeSinceLastEvent` for quiet return detection
+- Ensure pattern summary reflects actual usage patterns
+
+---
+
+## 🔮 Planned (Next)
+
+### AI Refinements (Priority)
+- [ ] Fix event meaning to acknowledge bypasses (not "check-in")
+- [ ] Calculate `recentEventWindow` from actual events for pattern detection
+- [ ] Calculate `timeSinceLastEvent` for quiet return detection
+- [ ] Fix `patternSummary()` to work with real data
+- [ ] Add daily cap enforcement to processRawEvents
+- [ ] Improve cluster detection logic
+
+### Optimizations
+- [ ] Timeline UI polish
+- [ ] Performance profiling
+- [ ] Error handling edge cases
+
+### Future Features
+- [ ] Focus Window enforcement (time-based blocking)
+- [ ] Streaks & achievements
+- [ ] Analytics dashboard

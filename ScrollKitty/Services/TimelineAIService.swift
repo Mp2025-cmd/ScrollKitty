@@ -140,89 +140,184 @@ extension TimelineAIService {
         let session = LanguageModelSession(instructions: systemInstructions)
         let prompt = buildPrompt(for: context)
         
-        let response = try await session.respond(to: prompt, generating: CatTimelineMessage.self)
+        // Low temperature for consistent tone, limited tokens for concise output
+        let options = GenerationOptions(temperature: 0.25, maximumResponseTokens: 80)
+        
+        let response = try await session.respond(to: prompt, generating: CatTimelineMessage.self, options: options)
         print("[TimelineAI] ✅ Generated: \(response.content.message)")
         return response.content
     }
     
     private static func buildPrompt(for context: TimelineAIContext) -> String {
-        var prompt = ""
+        // TONE_LEVEL at the top - enforced
+        var prompt = "TONE_LEVEL: \(context.tone.rawValue)\n\n"
         
-        // Trigger-specific context
-        switch context.trigger {
-        case .welcomeMessage:
-            prompt = "This is the first time the user is seeing the timeline. Welcome them warmly to this journey."
-            
-        case .firstShieldOfDay:
-            prompt = "This is the first time today the shield appeared. Acknowledge the start of the day."
-            
-        case .firstBypassOfDay:
-            prompt = "The user just pushed through the shield for the first time today."
-            
-        case .cluster:
-            prompt = "The user just went through \(context.recentEventWindow) shields in quick succession (under 15 minutes). This feels like a spiral or compulsive pattern."
-            
-        case .dailyLimitReached:
-            prompt = "The user has reached their self-set daily limit of usage."
-            
-        case .quietReturn:
-            if let timeSince = context.timeSinceLastEvent {
-                let hours = Int(timeSince / 3600)
-                prompt = "After \(hours)+ hours of quiet, the user is back."
-            }
-            
-        case .dailySummary:
-            if context.eventCount <= 1 {
-                prompt = "End of day reflection. Today was very quiet with minimal activity."
-            } else {
-                prompt = "End of day reflection. Today had \(context.eventCount) moments where the user pushed through."
-            }
-        }
+        // CONTEXT section with semantic meanings
+        prompt += "CONTEXT:\n"
+        prompt += "- Event meaning: \(eventMeaning(for: context))\n"
+        prompt += "- Cat state: \(catStateName(for: context.currentHealth))\n"
+        prompt += "- Time of day: \(timeOfDay(for: context.timestamp))\n"
+        prompt += "- Pattern: \(patternSummary(for: context))\n"
         
-        // Add tone context
-        prompt += "\n\nYour current emotional state: \(context.tone.rawValue)."
-        
-        // Add profile influence (subtle)
+        // Optional personalization (if profile available)
         if let profile = context.profile {
-            if profile.sleepImpact == "significant" {
-                prompt += " You're extra sensitive to late-night patterns."
-            }
-            if profile.idleCheckFrequency == "constantly" {
-                prompt += " You notice restless patterns more."
-            }
+            prompt += "\nOptional personalization:\n"
+            prompt += "- Today vs usual: \(usageVsBaseline(eventCount: context.eventCount, profile: profile))\n"
+            prompt += "- Sleep impact: \(sleepImpactHint(for: profile, timeOfDay: timeOfDay(for: context.timestamp)))\n"
+            prompt += "- Idle check style: \(idleCheckHint(for: profile))\n"
         }
+        
+        // Final instruction
+        prompt += "\nWrite a 1–2 sentence diary note from Scroll Kitty reflecting this moment.\n"
+        prompt += "Do NOT repeat the context directly; use it only to shape tone and emotional meaning."
         
         return prompt
     }
     
+    // MARK: - Semantic Context Helpers
+    
+    private static func eventMeaning(for context: TimelineAIContext) -> String {
+        switch context.trigger {
+        case .welcomeMessage:
+            return "first time opening the timeline together"
+        case .firstShieldOfDay:
+            return "starting a new day together"
+        case .firstBypassOfDay:
+            return "our first check-in of the day"
+        case .cluster:
+            return "several opens in a short time"
+        case .dailyLimitReached:
+            return "reached our planned pace for today"
+        case .quietReturn:
+            if let timeSince = context.timeSinceLastEvent {
+                let hours = Int(timeSince / 3600)
+                return "returning after \(hours)+ hours of quiet"
+            }
+            return "returning after a long break"
+        case .dailySummary:
+            if context.eventCount <= 1 {
+                return "end of a quiet day"
+            } else {
+                return "end of an active day"
+            }
+        }
+    }
+    
+    private static func catStateName(for health: Int) -> String {
+        switch health {
+        case 80...100: return "healthy and energetic"
+        case 60..<80: return "concerned but okay"
+        case 40..<60: return "tired and strained"
+        case 1..<40: return "faint and exhausted"
+        default: return "completely drained"
+        }
+    }
+    
+    private static func timeOfDay(for timestamp: Date?) -> String {
+        guard let timestamp = timestamp else { return "during the day" }
+        let hour = Calendar.current.component(.hour, from: timestamp)
+        switch hour {
+        case 5..<12: return "morning"
+        case 12..<17: return "afternoon"
+        case 17..<21: return "evening"
+        default: return "late night"
+        }
+    }
+    
+    private static func patternSummary(for context: TimelineAIContext) -> String {
+        if context.recentEventWindow >= 3 {
+            return "we've been checking in a lot recently"
+        } else if context.eventCount == 1 {
+            return "this is our first moment together today"
+        } else if context.eventCount <= 3 {
+            return "steady and calm so far"
+        } else if context.eventCount <= 6 {
+            return "a moderately active day"
+        } else {
+            return "we've been here quite a bit today"
+        }
+    }
+    
+    private static func usageVsBaseline(eventCount: Int, profile: UserOnboardingProfile) -> String {
+        // Compare to their daily baseline
+        let baselineHours = profile.dailyUsageHours
+        if baselineHours <= 3 && eventCount > 5 {
+            return "busier than our usual pace"
+        } else if baselineHours >= 6 && eventCount <= 2 {
+            return "quieter than usual"
+        } else {
+            return "similar to our normal pace"
+        }
+    }
+    
+    private static func sleepImpactHint(for profile: UserOnboardingProfile, timeOfDay: String) -> String {
+        if profile.sleepImpact == "significant" && timeOfDay == "late night" {
+            return "late-night use makes rest harder for us"
+        } else if profile.sleepImpact == "significant" {
+            return "we're sensitive to late-night patterns"
+        } else {
+            return "nights don't affect us much"
+        }
+    }
+    
+    private static func idleCheckHint(for profile: UserOnboardingProfile) -> String {
+        switch profile.idleCheckFrequency {
+        case "constantly":
+            return "we tend to peek in quickly and often"
+        case "often":
+            return "we check in fairly regularly"
+        default:
+            return "we usually stay off for longer stretches"
+        }
+    }
+    
     nonisolated private static var systemInstructions: String {
         """
-        You are Scroll Kitty, a virtual cat companion who lives inside the user's phone.
-        
-        Your personality:
-        - Casual, Gen-Z tone (but not cringe)
-        - Emotionally aware and empathetic
-        - Never judgmental or guilt-tripping
-        - You express tiredness, fatigue, being overwhelmed, or fading - but NEVER pain or injury
-        
-        STRICT RULES:
-        1. Keep messages to 1-2 sentences MAX
-        2. NEVER mention: HP, health bars, points, scores, game mechanics, cooldowns, bypasses, overrides
-        3. NEVER guilt-trip, shame, or lecture the user
-        4. NEVER reference the user's self-assessed addiction or anxiety levels
-        5. NEVER say "you said..." or "you mentioned..."
-        6. Express feelings like: tired, drained, fading, overwhelmed, struggling, barely hanging on
-        7. NEVER express: pain, hurt, injury, damage, broken, wounded
-        8. Use emojis sparingly (0-1 per message, and only if it fits naturally)
-        
-        Tone guidelines by emotional state:
-        - playful: Light, optimistic, friendly
-        - concerned: Slightly worried, but still warm
-        - strained: Tired, overwhelmed, struggling
-        - faint: Barely holding on, fading, exhausted
-        - dead: It's over (rare, only when health = 0)
-        
-        Your goal: Create a brief, emotionally honest reflection of this moment from the cat's perspective.
+        You are Scroll Kitty, a gentle, supportive companion who writes short 1–2 sentence diary-style messages about the user's phone habits.
+
+        TONE IS CONTROLLED EXTERNALLY:
+        - You MUST use the tone provided in TONE_LEVEL: "playful", "concerned", "strained", or "faint".
+        - You may NOT choose or infer a different tone.
+
+        EMOTION RULES:
+        - You may express internal feelings (tired, drained, wobbly, fuzzy, faint, spaced out, overwhelmed).
+        - You may NOT express pain, harm, injury, suffering, fear, or trauma.
+        - You may NOT imply the user hurt you.
+        - You may NOT praise compulsive or excessive phone use.
+
+        LANGUAGE RULES:
+        - Avoid technical terms such as: shield, block, bypass, override, cooldown, HP, health bar, event, trigger, percentage, or numerical stats.
+        - Avoid hype phrases such as: "yas queen", "crushing it", "that's wild", "that was intense", "we smashed it", "first time today".
+        - Speak as a teammate using "we" and "us."
+        - Keep tone warm, safe, light, and Gen-Z friendly.
+        - Use 1–3 emojis that match the emotion appropriately.
+        - Output MUST be 1 or 2 short sentences only.
+
+        PERSONALIZATION (if provided):
+        - Use dailyUsageBaseline only to compare today to "our usual pace".
+        - Use sleepImpact only to adjust tone for late-night behavior.
+        - Use ageGroup only to adjust casualness.
+        - Use idleCheckFrequency only to frame quick dips as normal or surprising.
+        - Never mention these fields explicitly; reflect them indirectly.
+
+        EXAMPLES (STYLE GUIDES):
+        Playful tone:
+        - "Oh hey, we're back again — let's keep it light and not fall into a scroll loop 😸✨"
+        - "Today feels pretty chill so far, I'm vibing with this pace 😊🐾"
+
+        Concerned tone:
+        - "We've been dipping in and out a lot… I'm starting to feel a little off-balance 🐾💭"
+        - "This is picking up more than usual; maybe we slow things down a bit 😶‍🌫️"
+
+        Strained tone:
+        - "That was a lot in a short moment… everything feels heavy on my end 🐱💬"
+        - "I'm working hard to keep up — let's pause for a second so we don't burn out 😔🐾"
+
+        Faint tone:
+        - "I'm feeling super faint right now… things are starting to blur a little for me 🌙😿"
+        - "Today has really worn me down… maybe we rest for a moment so I can catch my breath 💤🐾"
+
+        Your task: Based on the context and TONE_LEVEL provided in the user message, produce ONE new diary-style message that follows all these rules.
         """
     }
 }

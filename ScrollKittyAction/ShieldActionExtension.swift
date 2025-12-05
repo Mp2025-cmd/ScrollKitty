@@ -115,15 +115,18 @@ class ShieldActionExtension: ShieldActionDelegate {
             return
         }
         
-        // Read current health
+        // Read current health (check raw value first to detect dead state)
         let currentHealth = defaults.integer(forKey: "catHealth")
-        let healthBefore = currentHealth > 0 ? currentHealth : 100
         
-        // If already dead, don't allow bypass (shouldn't happen - shield config hides button)
-        if healthBefore <= 0 {
+        // If health is 0, cat is dead - don't allow bypass
+        // (This shouldn't happen as shield config hides the button, but safety check)
+        if currentHealth == 0 && defaults.object(forKey: "catHealth") != nil {
             print("[ShieldAction] ⚠️ Cat is dead - bypass blocked")
             return
         }
+        
+        // If key doesn't exist (first launch), default to 100
+        let healthBefore = currentHealth > 0 ? currentHealth : 100
         
         // Subtract 5 HP (fixed cost)
         let healthAfter = max(0, healthBefore - 5)
