@@ -46,13 +46,10 @@ struct HomeFeature {
                 return .none
                 
             case .appBecameActive:
-                // Process raw events, prewarm AI, and refresh health when app becomes active
-                print("[HomeFeature] App became active - processing events & refreshing health")
-                return .merge(
-                    .send(.loadCatHealth),
-                    .send(.timeline(.prewarmAI)),
-                    .send(.timeline(.processRawEvents))
-                )
+                // Load health first (may trigger lazy midnight reset that clears timeline)
+                // Timeline processing happens in catHealthLoaded AFTER reset completes
+                print("[HomeFeature] App became active - loading health (lazy reset if needed)")
+                return .send(.loadCatHealth)
 
             case .loadCatHealth:
                 // Lazy reset happens automatically inside loadHealth()
@@ -68,7 +65,17 @@ struct HomeFeature {
                 print("[HomeFeature] catHealthLoaded - Health: \(healthData.health)%")
                 state.isLoading = false
                 state.catHealth = healthData
-                return .none
+                // Sequential to ensure proper dependency chain:
+                // 1. Prewarm AI session first
+                // 2. Check for welcome message (creates first event if needed)
+                // 3. Process raw events (reads timeline after welcome is created)
+                // 4. Check for daily summary (after lazy reset and events are processed)
+                return .run { send in
+                    await send(.timeline(.prewarmAI))
+                    await send(.timeline(.checkForWelcomeMessage))
+                    await send(.timeline(.processRawEvents))
+                    await send(.timeline(.checkForDailySummary))
+                }
                 
             case let .tabSelected(tab):
                 state.selectedTab = tab
@@ -177,6 +184,12 @@ struct HomeView: View {
                 store.send(.appBecameActive)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .dailySummaryNotificationTapped)) { _ in
+            // User tapped 11 PM notification - route through appBecameActive to ensure
+            // lazy midnight reset completes BEFORE daily summary is triggered
+            print("[HomeView] Received daily summary notification tap - routing through appBecameActive")
+            store.send(.appBecameActive)
+        }
     }
 
     @ViewBuilder
@@ -206,14 +219,36 @@ struct HomeView: View {
         }
     }
     
+    @State private var showDebugSheet = false
+    @State private var debugLogText = ""
+
     @ViewBuilder
     private var dashboardContent: some View {
         VStack(spacing: 0) {
-            Text("Scroll Kitty")
-                .font(.custom("Sofia Pro-Bold", size: 36))
-                .tracking(-1)
-                .foregroundColor(DesignSystem.Colors.primaryText)
-                .padding(.top, 16)
+            HStack {
+                Spacer()
+                Text("Scroll Kitty")
+                    .font(.custom("Sofia Pro-Bold", size: 36))
+                    .tracking(-1)
+                    .foregroundColor(DesignSystem.Colors.primaryText)
+                Spacer()
+
+                // Debug export button (dev only)
+                #if DEBUG
+                Button {
+                    Task {
+                        debugLogText = await AIDebugLogger.shared.exportLogsAsText()
+                        showDebugSheet = true
+                    }
+                } label: {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 18))
+                        .foregroundColor(DesignSystem.Colors.secondaryText)
+                }
+                .padding(.trailing, 16)
+                #endif
+            }
+            .padding(.top, 16)
             
             Spacer()
             
@@ -253,8 +288,34 @@ struct HomeView: View {
             
             Spacer()
         }
+        #if DEBUG
+        .sheet(isPresented: $showDebugSheet) {
+            NavigationView {
+                ScrollView {
+                    Text(debugLogText)
+                        .font(.system(.caption, design: .monospaced))
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .navigationTitle("AI Debug Log")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Close") {
+                            showDebugSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        ShareLink(item: debugLogText) {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                    }
+                }
+            }
+        }
+        #endif
     }
-    
+
     private func healthBarColor(for health: Int) -> Color {
         switch health {
         case 80...100: return Color(hex: "#00c54f") // Green - healthy

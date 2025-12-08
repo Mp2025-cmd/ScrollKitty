@@ -42,17 +42,17 @@ struct TimelineView: View {
                     EmptyTimelineView()
                     Spacer()
                 } else {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        ZStack(alignment: .topLeading) {
-                            // Vertical timeline line
-                            Rectangle()
-                                .fill(DesignSystem.Colors.timelineLine)
-                                .frame(width: 3)
-                                .padding(.leading, 39)
-                                .padding(.top, 28)
-                            
+                ScrollView(.vertical, showsIndicators: false) {
+                    ZStack(alignment: .topLeading) {
+                        // Vertical timeline line
+                        Rectangle()
+                            .fill(DesignSystem.Colors.timelineLine)
+                            .frame(width: 3)
+                            .padding(.leading, 39)
+                            .padding(.top, 28)
+                        
                             // Timeline items grouped by date
-                            VStack(spacing: 0) {
+                        VStack(spacing: 0) {
                                 ForEach(groupedEvents(), id: \.date) { group in
                                     DateHeaderView(date: group.date)
                                         .padding(.leading, 35)
@@ -76,7 +76,11 @@ struct TimelineView: View {
     
     private func groupedEvents() -> [(date: Date, events: [TimelineEvent])] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: store.timelineEvents) { event in
+
+        // Only show events with AI messages
+        let aiEvents = store.timelineEvents.filter { $0.aiMessage != nil }
+
+        let grouped = Dictionary(grouping: aiEvents) { event in
             calendar.startOfDay(for: event.timestamp)
         }
         // Sort oldest first (welcome message at top, new entries at bottom)
@@ -89,20 +93,20 @@ struct DateHeaderView: View {
     let date: Date
     
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(DesignSystem.Colors.timelineIndicator)
-                .frame(width: 10, height: 10)
-            
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(DesignSystem.Colors.timelineIndicator)
+                                    .frame(width: 10, height: 10)
+                                
             Text(formattedDate())
-                .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                .foregroundColor(DesignSystem.Colors.primaryText)
-            
+                                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                                    .foregroundColor(DesignSystem.Colors.primaryText)
+                                
             Text("• \(formattedDayOfWeek())")
-                .font(.custom("Sofia Pro-Regular", size: 16))
-                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-            Spacer()
-        }
+                                    .font(.custom("Sofia Pro-Regular", size: 16))
+                                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+                                Spacer()
+                            }
     }
     
     private func formattedDate() -> String {
@@ -201,18 +205,10 @@ struct TimelineItemView: View {
                         
                         VStack(alignment: .leading, spacing: 6) {
                             Text(messageText)
-                                .font(DesignSystem.Typography.timelineMessage())
-                                .foregroundColor(DesignSystem.Colors.white)
-                                .tracking(DesignSystem.Typography.timelineMessageTracking)
-                                .lineSpacing(DesignSystem.Typography.timelineMessageLineSpacing)
-                            
-                            // Fallback notice (if AI was slow)
-                            if event.showFallbackNotice {
-                                Text("My brain was a bit slow for this one, so I used one of my simpler notes 🐾")
-                                    .font(.custom("Sofia Pro-Regular", size: 11))
-                                    .foregroundColor(DesignSystem.Colors.white.opacity(0.7))
-                                    .italic()
-                            }
+                            .font(DesignSystem.Typography.timelineMessage())
+                            .foregroundColor(DesignSystem.Colors.white)
+                            .tracking(DesignSystem.Typography.timelineMessageTracking)
+                            .lineSpacing(DesignSystem.Typography.timelineMessageLineSpacing)
                         }
                     }
                     .padding(.leading, 13)
@@ -229,7 +225,7 @@ struct TimelineItemView: View {
                         .offset(y: 5)
                 }
             }
-            .frame(width: 310, height: event.showFallbackNotice ? 150 : 129)
+            .frame(width: 310, height: 129)
             
             Spacer()
         }
@@ -239,8 +235,8 @@ struct TimelineItemView: View {
     
     private var catState: CatState {
         CatState.from(health: event.healthAfter)
-    }
-    
+}
+
     private var formattedTime: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
@@ -248,15 +244,10 @@ struct TimelineItemView: View {
     }
     
     private var messageText: String {
-        if let aiMessage = event.aiMessage {
-            // AI-generated message
-            if let emoji = event.aiEmoji {
-                return "\(aiMessage) \(emoji)"
-            }
-            return aiMessage
-        } else {
-            // Legacy event (no AI message)
-            return "Pushed through on \(event.appName)"
+        guard let aiMessage = event.aiMessage else { return "" }
+        if let emoji = event.aiEmoji {
+            return "\(aiMessage) \(emoji)"
         }
+        return aiMessage
     }
 }

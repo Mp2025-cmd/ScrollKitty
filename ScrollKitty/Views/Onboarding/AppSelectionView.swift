@@ -3,7 +3,7 @@ import SwiftUI
 import FamilyControls
 
 // Make FamilyActivitySelection conform to Equatable
-extension FamilyActivitySelection: Equatable {
+extension FamilyActivitySelection {
     public static func == (lhs: FamilyActivitySelection, rhs: FamilyActivitySelection) -> Bool {
         // Compare by encoding to data
         let encoder = JSONEncoder()
@@ -22,8 +22,8 @@ struct AppSelectionFeature {
         var selectedApps: FamilyActivitySelection = FamilyActivitySelection()
     }
 
-    enum Action: Equatable {
-        case appsSelected(FamilyActivitySelection)
+    enum Action: BindableAction, Equatable {
+        case binding(BindingAction<State>)
         case nextTapped
         case backTapped
         case delegate(Delegate)
@@ -35,10 +35,11 @@ struct AppSelectionFeature {
     }
 
     var body: some Reducer<State, Action> {
+        BindingReducer()
+
         Reduce { state, action in
             switch action {
-            case .appsSelected(let selection):
-                state.selectedApps = selection
+            case .binding:
                 return .none
 
             case .nextTapped:
@@ -57,7 +58,7 @@ struct AppSelectionFeature {
 // MARK: - View
 
 struct AppSelectionView: View {
-    let store: StoreOf<AppSelectionFeature>
+    @Bindable var store: StoreOf<AppSelectionFeature>
 
     var body: some View {
         ZStack {
@@ -85,11 +86,8 @@ struct AppSelectionView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
 
-                // Family Activity Picker
-                FamilyActivityPicker(selection: Binding(
-                    get: { store.selectedApps },
-                    set: { store.send(.appsSelected($0)) }
-                ))
+                // Family Activity Picker - using proper TCA binding
+                FamilyActivityPicker(selection: $store.selectedApps)
                 .frame(maxHeight: .infinity)
                 .padding(.horizontal, 16)
 

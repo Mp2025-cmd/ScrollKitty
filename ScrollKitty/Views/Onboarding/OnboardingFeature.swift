@@ -72,51 +72,61 @@ struct OnboardingFeature {
 
             // MARK: - Initial Survey Flow (Splash → Age)
 
-            case .path(.element(id: _, action: .splash(.delegate(.splashCompleted)))):
+            case let .path(.element(id: id, action: .splash(.delegate(.splashCompleted)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.welcome(WelcomeFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .welcome(.delegate(.proceedToNextStep)))):
+            case let .path(.element(id: id, action: .welcome(.delegate(.proceedToNextStep)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.usageQuestion(UsageQuestionFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .usageQuestion(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .usageQuestion(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.hourSelection = selection
                 state.path.append(.addiction(AddictionFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .addiction(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .addiction(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.addictionSelection = selection
                 state.path.append(.sleep(SleepFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .sleep(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .sleep(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.sleepSelection = selection
                 state.path.append(.withoutPhone(WithoutPhoneFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .withoutPhone(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .withoutPhone(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.withoutPhoneSelection = selection
                 state.path.append(.idleCheck(IdleCheckFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .idleCheck(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .idleCheck(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.idleCheckSelection = selection
                 state.path.append(.age(AgeFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .age(.delegate(.completeWithSelection(let ageSelection))))):
+            case .path(.element(id: let id, action: .age(.delegate(.completeWithSelection(let ageSelection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.ageSelection = ageSelection
                 state.path.append(.resultsLoading(ResultsLoadingFeature.State()))
                 return .none
 
             // MARK: - Results Flow (ResultsLoading → YearsLost)
 
-            case .path(.element(id: _, action: .resultsLoading(.delegate(.resultsCalculated)))):
+            case let .path(.element(id: id, action: .resultsLoading(.delegate(.resultsCalculated)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.results(ResultsFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .results(.delegate(.showAddictionScore)))):
+            case let .path(.element(id: id, action: .results(.delegate(.showAddictionScore)))):
+                guard id == state.path.ids.last else { return .none }
                 guard let hourSelection = state.hourSelection,
                       let addictionSelection = state.addictionSelection,
                       let sleepSelection = state.sleepSelection,
@@ -138,7 +148,8 @@ struct OnboardingFeature {
                 state.path.append(.addictionScore(AddictionScoreFeature.State()))
                 return .send(.path(.element(id: state.path.ids.last!, action: .addictionScore(.calculateScore(userData)))))
 
-            case .path(.element(id: _, action: .addictionScore(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .addictionScore(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 guard let hourSelection = state.hourSelection,
                       let addictionSelection = state.addictionSelection,
                       let sleepSelection = state.sleepSelection,
@@ -169,21 +180,25 @@ struct OnboardingFeature {
                 state.path.append(.yearsLost(YearsLostFeature.State()))
                 return .send(.path(.element(id: state.path.ids.last!, action: .yearsLost(.calculateYearsLost(userData, userScore: userScore)))))
 
-            case .path(.element(id: _, action: .yearsLost(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .yearsLost(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.solutionIntro(SolutionIntroFeature.State()))
                 return .none
 
             // MARK: - Solution Flow (SolutionIntro → Commitment)
 
-            case .path(.element(id: _, action: .solutionIntro(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .solutionIntro(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.screenTimeAccess(ScreenTimeAccessFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .screenTimeAccess(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .screenTimeAccess(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.appSelection(AppSelectionFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .appSelection(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .appSelection(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.selectedApps = selection
                 state.path.append(.dailyLimit(DailyLimitFeature.State()))
                 // Save apps, initialize health to 100, apply shields, start monitoring
@@ -204,7 +219,8 @@ struct OnboardingFeature {
                     }
                 }
 
-            case .path(.element(id: _, action: .dailyLimit(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .dailyLimit(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.selectedLimit = selection
                 state.path.append(.shieldFrequency(ShieldFrequencyFeature.State()))
                 // Daily limit is for narrative/timeline only - no game logic effect
@@ -212,29 +228,34 @@ struct OnboardingFeature {
                     await userSettings.saveDailyLimit(selection.minutes)
                 }
 
-            case .path(.element(id: _, action: .shieldFrequency(.delegate(.completeWithSelection(let selection))))):
+            case .path(.element(id: let id, action: .shieldFrequency(.delegate(.completeWithSelection(let selection))))):
+                guard id == state.path.ids.last else { return .none }
                 state.selectedInterval = selection
                 state.path.append(.focusWindow(FocusWindowFeature.State()))
                 return .run { [userSettings] _ in
                     await userSettings.saveShieldInterval(selection.minutes)
                 }
 
-            case .path(.element(id: _, action: .focusWindow(.delegate(.completeWithSelection(let data))))):
+            case .path(.element(id: let id, action: .focusWindow(.delegate(.completeWithSelection(let data))))):
+                guard id == state.path.ids.last else { return .none }
                 state.selectedFocusWindow = data
                 state.path.append(.characterIntro(CharacterIntroFeature.State()))
                 return .run { [userSettings] _ in
                     await userSettings.saveFocusWindow(data)
                 }
 
-            case .path(.element(id: _, action: .characterIntro(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .characterIntro(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.scrollKittyLifecycle(ScrollKittyLifecycleFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .scrollKittyLifecycle(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .scrollKittyLifecycle(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.append(.commitment(CommitmentFeature.State()))
                 return .none
 
-            case .path(.element(id: _, action: .commitment(.delegate(.showNextScreen)))):
+            case let .path(.element(id: id, action: .commitment(.delegate(.showNextScreen)))):
+                guard id == state.path.ids.last else { return .none }
                 // Final screen - save profile, apply shields, start monitoring, then complete onboarding
                 return .run { [screenTimeManager, userSettings, state] send in
                     // Save onboarding profile for AI tone tuning
@@ -273,23 +294,24 @@ struct OnboardingFeature {
 
             // MARK: - Back Navigation
 
-            case .path(.element(id: _, action: .usageQuestion(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .addiction(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .sleep(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .withoutPhone(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .idleCheck(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .age(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .addictionScore(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .yearsLost(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .solutionIntro(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .screenTimeAccess(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .appSelection(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .dailyLimit(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .shieldFrequency(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .focusWindow(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .characterIntro(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .scrollKittyLifecycle(.delegate(.goBack)))),
-                 .path(.element(id: _, action: .commitment(.delegate(.goBack)))):
+            case .path(.element(id: let id, action: .usageQuestion(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .addiction(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .sleep(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .withoutPhone(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .idleCheck(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .age(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .addictionScore(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .yearsLost(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .solutionIntro(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .screenTimeAccess(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .appSelection(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .dailyLimit(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .shieldFrequency(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .focusWindow(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .characterIntro(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .scrollKittyLifecycle(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .commitment(.delegate(.goBack)))):
+                guard id == state.path.ids.last else { return .none }
                 state.path.removeLast()
                 return .none
 

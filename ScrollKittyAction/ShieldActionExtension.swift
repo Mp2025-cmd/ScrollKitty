@@ -17,8 +17,7 @@ private struct TimelineEvent: Codable {
     let aiMessage: String?
     let aiEmoji: String?
     let trigger: String?
-    let showFallbackNotice: Bool
-    
+
     init(
         id: String = UUID().uuidString,
         timestamp: Date,
@@ -29,8 +28,7 @@ private struct TimelineEvent: Codable {
         eventType: String,
         aiMessage: String? = nil,
         aiEmoji: String? = nil,
-        trigger: String? = nil,
-        showFallbackNotice: Bool = false
+        trigger: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -42,7 +40,6 @@ private struct TimelineEvent: Codable {
         self.aiMessage = aiMessage
         self.aiEmoji = aiEmoji
         self.trigger = trigger
-        self.showFallbackNotice = showFallbackNotice
     }
 }
 
@@ -151,25 +148,37 @@ class ShieldActionExtension: ShieldActionDelegate {
     }
     
     // MARK: - Global Cooldown
-    
+
     private func startGlobalCooldown() {
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
-        
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            print("[ShieldAction] ❌ Failed to access App Group for cooldown")
+            return
+        }
+
         // Get cooldown duration (default: 20 minutes)
         let cooldownMinutes = defaults.integer(forKey: "shieldInterval")
         let duration = cooldownMinutes > 0 ? cooldownMinutes : 20
-        
-        // Set global cooldown end time
-        let cooldownEnd = Date().addingTimeInterval(Double(duration * 60))
-        defaults.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
-        
+
+        // Atomic operation: Write cooldown end time and force synchronize before clearing shields
+        autoreleasepool {
+            let cooldownEnd = Date().addingTimeInterval(Double(duration * 60))
+            defaults.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
+
+            // Force synchronize to ensure UserDefaults write completes before ManagedSettings changes
+            let syncSuccess = defaults.synchronize()
+            if !syncSuccess {
+                print("[ShieldAction] ⚠️ UserDefaults sync warning for cooldown")
+            }
+        }
+
         // GLOBAL COOLDOWN: Clear ALL shields (not just the bypassed app)
+        // Only proceed if UserDefaults write succeeded
         store.shield.applications = nil
         store.shield.applicationCategories = nil
         store.shield.webDomains = nil
-        
+
         print("[ShieldAction] ⏱️ Global cooldown started: \(duration) minutes - ALL shields cleared")
-        
+
         // Schedule re-shield when cooldown ends
         scheduleReshield(cooldownMinutes: duration)
     }

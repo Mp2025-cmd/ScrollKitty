@@ -10,6 +10,7 @@ import Foundation
 
 @Reducer
 struct TimelineFeature {
+
     @ObservableState
     struct State: Equatable {
         var timelineEvents: [TimelineEvent] = []
@@ -26,6 +27,8 @@ struct TimelineFeature {
         case rawEventsProcessed([TimelineEvent])
         case checkForWelcomeMessage
         case welcomeMessageGenerated(TimelineEvent?)
+        case checkForDailyWelcome
+        case dailyWelcomeGenerated(TimelineEvent?)
         case checkForDailySummary
         case dailySummaryGenerated(TimelineEvent?)
         case checkAIAvailability
@@ -43,12 +46,9 @@ struct TimelineFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                // Raw events are processed by HomeFeature.appBecameActive
-                // Here we just load and display + check for welcome/summary
                 return .run { send in
                     await send(.checkAIAvailability)
                     await send(.loadTimeline)
-                    await send(.checkForWelcomeMessage)
                     await send(.checkForDailySummary)
                 }
                 
@@ -77,62 +77,105 @@ struct TimelineFeature {
                 
             case .processRawEvents:
                 // Find events without AI messages and generate messages for them
+                // Trigger: healthBandDrop only (when crossing 10-point boundaries: 90, 80, 70, etc.)
                 return .run { [userSettings, timelineAI, catHealth] send in
                     let events = await userSettings.loadTimelineEvents()
-                    let healthData = await catHealth.loadHealth()
                     let profile = await userSettings.loadOnboardingProfile()
-                    
+
+                    // Load recent AI message history for context preservation
+                    let recentAIMessages = await userSettings.loadRecentAIMessages(1) // Last 1 day
+
+                    // Sort events chronologically to ensure proper first-bypass detection
+                    let sortedEvents = events.sorted { $0.timestamp < $1.timestamp }
+
                     var updatedEvents: [TimelineEvent] = []
                     var hasChanges = false
-                    
-                    // Get events that already have AI messages (for trigger detection)
-                    let processedEvents = events.filter { $0.aiMessage != nil }
-                    let processedBypassCount = processedEvents.filter { $0.eventType == .shieldBypassed || $0.trigger == "firstBypassOfDay" }.count
-                    
-                    for event in events {
+
+                    // Count today's stats from ALL events (processed and unprocessed)
+                    let todayEvents = sortedEvents.filter { Calendar.current.isDateInToday($0.timestamp) }
+                    let todayBypasses = todayEvents.filter { $0.eventType == .shieldBypassed }
+                    let totalDismissalsToday = todayBypasses.count
+
+                    // Count health band drops today (only already-processed events)
+                    let existingHealthDrops = todayEvents.filter {
+                        $0.trigger == TimelineEntryTrigger.healthBandDrop.rawValue &&
+                        $0.aiMessage != nil
+                    }.count
+                    var healthDropsToday = existingHealthDrops
+
+                    for event in sortedEvents {
                         // Skip events that already have AI messages
                         if event.aiMessage != nil {
                             updatedEvents.append(event)
                             continue
                         }
-                        
-                        // Skip non-bypass events (only generate AI for bypasses)
+
+                        // Skip non-bypass events
                         guard event.eventType == .shieldBypassed else {
                             updatedEvents.append(event)
                             continue
                         }
-                        
-                        // Determine trigger type
-                        let trigger: TimelineEntryTrigger
-                        if processedBypassCount == 0 {
-                            trigger = .firstBypassOfDay
+
+                        // Calculate health bands
+                        let previousBand = TimelineAIContext.healthBand(event.healthBefore)
+                        let currentBand = TimelineAIContext.healthBand(event.healthAfter)
+                        let crossedBand = previousBand != currentBand
+
+                        // Determine trigger - only healthBandDrop matters
+                        let trigger: TimelineEntryTrigger?
+                        if crossedBand {
+                            trigger = .healthBandDrop
+                            // Only count drops from today
+                            if Calendar.current.isDateInToday(event.timestamp) {
+                                healthDropsToday += 1
+                            }
                         } else {
-                            // For subsequent bypasses, just use a generic bypass trigger
-                            // (cluster detection, etc. would need more complex logic)
-                            trigger = .firstBypassOfDay // Reuse for now - generates appropriate message
+                            trigger = nil // No AI for this event
                         }
-                        
+
+                        // If no trigger, just keep the event without AI
+                        guard let trigger = trigger else {
+                            updatedEvents.append(event)
+                            continue
+                        }
+
                         // Build context for AI
                         let catState = CatState.from(health: event.healthAfter)
                         let tone = CatTone.from(catState: catState)
-                        
+
                         let context = TimelineAIContext(
                             trigger: trigger,
                             tone: tone,
                             currentHealth: event.healthAfter,
-                            eventCount: processedBypassCount + 1,
-                            recentEventWindow: 0,
-                            timeSinceLastEvent: nil,
                             profile: profile,
-                            timestamp: event.timestamp,  // For time-of-day context
-                            appName: nil,  // Don't send app name to AI
+                            timestamp: event.timestamp,
+                            appName: event.appName,
                             healthBefore: event.healthBefore,
-                            healthAfter: event.healthAfter
+                            healthAfter: event.healthAfter,
+                            currentHealthBand: currentBand,
+                            previousHealthBand: previousBand,
+                            totalShieldDismissalsToday: totalDismissalsToday,
+                            totalHealthDropsToday: healthDropsToday
                         )
-                        
-                        // Generate AI message
-                        let result = await timelineAI.generateMessage(context)
-                        
+
+                        // Generate AI message with recent history for context
+                        guard let result = await timelineAI.generateMessage(context, recentAIMessages) else {
+                            // AI unavailable - skip adding AI message to this event
+                            print("[TimelineFeature] ⚠️ AI unavailable for event: \(event.id) - keeping event without AI message")
+                            updatedEvents.append(event)
+                            continue
+                        }
+
+                        // Save to AI message history for future context
+                        let historyEntry = AIMessageHistory(
+                            timestamp: event.timestamp,
+                            trigger: trigger.rawValue,
+                            healthBand: currentBand,
+                            response: result.message,
+                            emoji: result.emoji
+                        )
+                        await userSettings.appendAIMessageHistory(historyEntry)
+
                         // Create enriched event
                         let enrichedEvent = TimelineEvent(
                             id: event.id,
@@ -144,27 +187,31 @@ struct TimelineFeature {
                             eventType: event.eventType,
                             aiMessage: result.message,
                             aiEmoji: result.emoji,
-                            trigger: trigger.rawValue,
-                            showFallbackNotice: result.showFallbackNotice
+                            trigger: trigger.rawValue
                         )
                         updatedEvents.append(enrichedEvent)
                         hasChanges = true
-                        print("[TimelineFeature] ✨ Generated AI message for event: \(event.id)")
+                        print("[TimelineFeature] ✨ Generated AI message for event: \(event.id) (trigger: \(trigger.rawValue), band: \(previousBand)→\(currentBand))")
                     }
-                    
+
+                    // Check if any event reached 0 health (triggers daily summary)
+                    let reachedZeroHealth = updatedEvents.contains { $0.healthAfter == 0 }
+
                     // Save updated events if we made changes
                     if hasChanges {
                         await send(.rawEventsProcessed(updatedEvents))
                     }
+
+                    // Trigger daily summary AFTER events are saved (if health reached 0)
+                    if reachedZeroHealth {
+                        await send(.checkForDailySummary)
+                    }
                 }
                 
             case .rawEventsProcessed(let updatedEvents):
-                // Save all updated events back to UserDefaults, then reload
+                // Save all updated events back to UserDefaults atomically, then reload
                 return .run { [userSettings] send in
-                    await userSettings.clearTimelineEvents()
-                    for event in updatedEvents {
-                        await userSettings.appendTimelineEvent(event)
-                    }
+                    await userSettings.saveTimelineEvents(updatedEvents)
                     print("[TimelineFeature] 💾 Saved \(updatedEvents.count) events with AI messages")
                     // Reload timeline to show AI-enriched messages
                     await send(.loadTimeline)
@@ -190,6 +237,22 @@ struct TimelineFeature {
                 
             case .welcomeMessageGenerated(let event):
                 if let event = event {
+                    return .run { send in
+                        await userSettings.appendTimelineEvent(event)
+                        await send(.loadTimeline)
+                        await send(.checkForDailyWelcome)
+                    }
+                }
+                return .send(.checkForDailyWelcome)
+
+            case .checkForDailyWelcome:
+                return .run { send in
+                    let dailyWelcomeEvent = await timelineManager.getDailyWelcome()
+                    await send(.dailyWelcomeGenerated(dailyWelcomeEvent))
+                }
+
+            case .dailyWelcomeGenerated(let event):
+                if let event = event {
                     // Save and reload
                     return .run { send in
                         await userSettings.appendTimelineEvent(event)
@@ -197,7 +260,7 @@ struct TimelineFeature {
                     }
                 }
                 return .none
-                
+
             case .checkForDailySummary:
                 return .run { send in
                     let summaryEvent = await timelineManager.checkForDailySummary()

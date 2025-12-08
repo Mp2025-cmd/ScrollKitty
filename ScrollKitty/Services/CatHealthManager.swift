@@ -29,7 +29,7 @@ extension CatHealthManager: DependencyKey {
     static let liveValue = Self(
         // Lazy reset: Check if new day, reset if needed, then return health
         loadHealth: {
-            let defaults = await UserDefaults(suiteName: appGroupID)
+            let defaults = UserDefaults(suiteName: appGroupID)
             
             // STEP 1: Check if we need to reset for new day
             let shouldReset: Bool
@@ -43,28 +43,35 @@ extension CatHealthManager: DependencyKey {
             // STEP 2: Perform lazy reset if needed
             if shouldReset {
                 print("[CatHealthManager] 🌙 Lazy midnight reset triggered")
-                
-                // Reset health to 100
-                defaults?.set(100, forKey: "catHealth")
-                
-                // Clear cooldown
-                defaults?.removeObject(forKey: "cooldownEnd")
-                
-                // Clear timeline events for new day
-                defaults?.removeObject(forKey: "timelineEvents")
-                
-                // Mark reset as done for today
-                defaults?.set(Date(), forKey: "lastResetDate")
-                
+
+                // Perform all reset operations atomically by batching UserDefaults writes
+                autoreleasepool {
+                    // Reset health to 100
+                    defaults?.set(100, forKey: "catHealth")
+
+                    // Clear cooldown
+                    defaults?.removeObject(forKey: "cooldownEnd")
+
+                    // Clear timeline events for new day
+                    defaults?.removeObject(forKey: "timelineEvents")
+
+                    // Mark reset as done for today
+                    defaults?.set(Date(), forKey: "lastResetDate")
+
+                    // Force synchronize to ensure atomicity
+                    defaults?.synchronize()
+                }
+
                 print("[CatHealthManager] ✅ Reset complete: Health=100, Cooldown cleared, Timeline cleared")
             }
             
             // STEP 3: Read current health (potentially just-reset)
             let health = defaults?.integer(forKey: "catHealth") ?? 100
-            let currentHealth = health > 0 ? health : 100
+            // Allow 0 health (dead state) to pass through - only default to 100 if key doesn't exist
+            let currentHealth = defaults?.object(forKey: "catHealth") != nil ? health : 100
             
             // Map health to cat state (UI only)
-            let catState = await CatState.from(health: currentHealth)
+            let catState = CatState.from(health: currentHealth)
             
             return CatHealthData(
                 health: currentHealth,

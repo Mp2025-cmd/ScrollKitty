@@ -2,7 +2,7 @@
 //  TimelineAIService.swift
 //  ScrollKitty
 //
-//  AI-powered timeline message generation with fallback system
+//  AI-powered timeline message generation
 //
 
 import Foundation
@@ -12,7 +12,7 @@ import ComposableArchitecture
 // MARK: - TimelineAIService (TCA Dependency)
 
 struct TimelineAIService: Sendable {
-    var generateMessage: @Sendable (TimelineAIContext) async -> TimelineMessageResult
+    var generateMessage: @Sendable (TimelineAIContext, [AIMessageHistory]) async -> TimelineMessageResult?
     var checkAvailability: @Sendable () async -> AIAvailability
     var prewarm: @Sendable () async -> Void
 }
@@ -22,94 +22,55 @@ struct TimelineAIService: Sendable {
 struct TimelineMessageResult: Sendable {
     let message: String
     let emoji: String?
-    let source: MessageSource
-    let showFallbackNotice: Bool // For "My brain was slow" caption
-    
-    enum MessageSource: Sendable {
-        case ai
-        case templateFallback
-        case permanentFallback
-    }
 }
+
+// MARK: - Session Manager (Singleton Actor)
+
+private let sessionManager = TimelineAISessionManager(systemInstructions: TimelineAIService.systemInstructions)
 
 // MARK: - Live Implementation
 
 extension TimelineAIService {
     static let liveValue = TimelineAIService(
-        generateMessage: { context in
+        generateMessage: { context, recentMessages in
             // Check availability first
             let availability = await Self.checkAIAvailability()
-            
-            switch availability {
-            case .available:
-                // Try AI generation
-                do {
-                    let result = try await Self.generateAIMessage(context: context)
-                    return TimelineMessageResult(
-                        message: result.message,
-                        emoji: result.emoji,
-                        source: .ai,
-                        showFallbackNotice: false
-                    )
-                } catch {
-                    print("[TimelineAI] ⚠️ AI generation failed: \(error.localizedDescription)")
-                    // Temporary error - use template with notice
-                    let template = TimelineTemplateMessages.templateMessage(
-                        for: context.trigger,
-                        tone: context.tone,
-                        context: context
-                    )
-                    return TimelineMessageResult(
-                        message: template,
-                        emoji: nil,
-                        source: .templateFallback,
-                        showFallbackNotice: true
-                    )
+
+            guard case .available = availability else {
+                if case .permanentlyUnavailable(let reason) = availability {
+                    print("[TimelineAI] 🔒 AI permanently unavailable: \(reason)")
+                } else {
+                    print("[TimelineAI] ⏳ AI temporarily unavailable")
                 }
-                
-            case .permanentlyUnavailable(let reason):
-                print("[TimelineAI] 🔒 AI permanently unavailable: \(reason)")
-                // Use template without notice (permanent fallback mode)
-                let template = TimelineTemplateMessages.templateMessage(
-                    for: context.trigger,
-                    tone: context.tone,
-                    context: context
-                )
+                return nil
+            }
+
+            // Try AI generation with session reuse
+            do {
+                // Check if we need to summarize context (handles overflow)
+                _ = try? await sessionManager.summarizeIfNeeded()
+
+                let result = try await Self.generateAIMessage(context: context, recentMessages: recentMessages)
                 return TimelineMessageResult(
-                    message: template,
-                    emoji: nil,
-                    source: .permanentFallback,
-                    showFallbackNotice: false
+                    message: result.message,
+                    emoji: result.emojis
                 )
-                
-            case .temporarilyUnavailable:
-                print("[TimelineAI] ⏳ AI temporarily unavailable")
-                // Use template with notice
-                let template = TimelineTemplateMessages.templateMessage(
-                    for: context.trigger,
-                    tone: context.tone,
-                    context: context
-                )
-                return TimelineMessageResult(
-                    message: template,
-                    emoji: nil,
-                    source: .templateFallback,
-                    showFallbackNotice: true
-                )
+            } catch {
+                print("[TimelineAI] ⚠️ AI generation failed: \(error.localizedDescription)")
+                return nil
             }
         },
-        
+
         checkAvailability: {
             return await Self.checkAIAvailability()
         },
-        
+
         prewarm: {
             let availability = await Self.checkAIAvailability()
             guard case .available = availability else { return }
-            
-            let session = LanguageModelSession(instructions: Self.systemInstructions)
-            await session.prewarm()
-            print("[TimelineAI] ✅ Session prewarmed")
+
+            // Prewarm using the session manager (session is retained)
+            await sessionManager.prewarm()
         }
     )
     
@@ -136,188 +97,185 @@ extension TimelineAIService {
         }
     }
     
-    private static func generateAIMessage(context: TimelineAIContext) async throws -> CatTimelineMessage {
-        let session = LanguageModelSession(instructions: systemInstructions)
-        let prompt = buildPrompt(for: context)
-        
-        // Low temperature for consistent tone, limited tokens for concise output
-        let options = GenerationOptions(temperature: 0.25, maximumResponseTokens: 80)
-        
-        let response = try await session.respond(to: prompt, generating: CatTimelineMessage.self, options: options)
-        print("[TimelineAI] ✅ Generated: \(response.content.message)")
-        return response.content
+    private static func generateAIMessage(context: TimelineAIContext, recentMessages: [AIMessageHistory]) async throws -> CatTimelineMessage {
+        // Get reusable session from manager
+        let session = await sessionManager.getSession()
+        let options = GenerationOptions(
+            sampling: .random(top: 60, seed: nil),
+            temperature: 0.75,
+            maximumResponseTokens: 80
+        )
+        let optionsDesc = "sampling: .random(top: 60), temp: 0.75, maxTokens: 80"
+
+        // First attempt - include recent messages for context
+        let prompt = buildPrompt(for: context, recentMessages: recentMessages)
+
+        do {
+            let response = try await session.respond(to: prompt, generating: CatTimelineMessage.self, options: options)
+
+            // Validate tone matches request
+            let expectedTone = context.tone.rawValue
+            let outputTone = response.content.tone.rawValue
+
+            // Valid tones: playful, concerned, strained, faint
+            let validTones: Set<String> = ["playful", "concerned", "strained", "faint"]
+
+            // Check if output tone is valid
+            guard validTones.contains(outputTone) else {
+                print("[TimelineAI] ⚠️ Invalid tone returned: '\(outputTone)' - expected one of \(validTones)")
+                await AIDebugLogger.shared.log(
+                    trigger: context.trigger.rawValue,
+                    tone: expectedTone,
+                    healthBefore: context.healthBefore,
+                    healthAfter: context.healthAfter,
+                    prompt: prompt,
+                    error: "Invalid tone: \(outputTone)",
+                    options: optionsDesc
+                )
+                throw TimelineAIError.invalidTone
+            }
+
+            // Log successful response
+            await AIDebugLogger.shared.log(
+                trigger: context.trigger.rawValue,
+                tone: expectedTone,
+                healthBefore: context.healthBefore,
+                healthAfter: context.healthAfter,
+                prompt: prompt,
+                responseMessage: response.content.message,
+                responseEmoji: response.content.emojis,
+                responseTone: outputTone,
+                options: optionsDesc
+            )
+
+            if outputTone == expectedTone || expectedTone == "dead" {
+                print("[TimelineAI] ✅ Generated (\(outputTone)): \(response.content.message)")
+                return response.content
+            }
+
+            // Retry with stronger instruction
+            print("[TimelineAI] ⚠️ Tone mismatch: expected \(expectedTone), got \(outputTone) → retrying...")
+            let retryPrompt = "YOUR TONE MUST BE \(expectedTone.uppercased()).\n" + prompt
+
+            do {
+                let retry = try await session.respond(to: retryPrompt, generating: CatTimelineMessage.self, options: options)
+                print("[TimelineAI] ✅ Retry generated (\(retry.content.tone.rawValue)): \(retry.content.message)")
+                return retry.content
+            } catch {
+                print("[TimelineAI] ⚠️ Retry failed: \(error.localizedDescription). Using first response despite tone mismatch.")
+                return response.content
+            }
+        } catch {
+            // Log error
+            await AIDebugLogger.shared.log(
+                trigger: context.trigger.rawValue,
+                tone: context.tone.rawValue,
+                healthBefore: context.healthBefore,
+                healthAfter: context.healthAfter,
+                prompt: prompt,
+                error: error.localizedDescription,
+                options: optionsDesc
+            )
+            throw error
+        }
     }
     
-    private static func buildPrompt(for context: TimelineAIContext) -> String {
-        // TONE_LEVEL at the top - enforced
-        var prompt = "TONE_LEVEL: \(context.tone.rawValue)\n\n"
-        
-        // CONTEXT section with semantic meanings
-        prompt += "CONTEXT:\n"
-        prompt += "- Event meaning: \(eventMeaning(for: context))\n"
-        prompt += "- Cat state: \(catStateName(for: context.currentHealth))\n"
-        prompt += "- Time of day: \(timeOfDay(for: context.timestamp))\n"
-        prompt += "- Pattern: \(patternSummary(for: context))\n"
-        
-        // Optional personalization (if profile available)
-        if let profile = context.profile {
-            prompt += "\nOptional personalization:\n"
-            prompt += "- Today vs usual: \(usageVsBaseline(eventCount: context.eventCount, profile: profile))\n"
-            prompt += "- Sleep impact: \(sleepImpactHint(for: profile, timeOfDay: timeOfDay(for: context.timestamp)))\n"
-            prompt += "- Idle check style: \(idleCheckHint(for: profile))\n"
+    private static func buildPrompt(for context: TimelineAIContext, recentMessages: [AIMessageHistory] = []) -> String {
+        var prompt = """
+        TONE_LEVEL: \(context.tone.rawValue)
+        YOUR_ENERGY: \(context.currentHealth)/100
+        """
+
+        // Add health delta if available - shows the cat what this cost them
+        if let before = context.healthBefore, let after = context.healthAfter, before > after {
+            let delta = before - after
+            prompt += "\nCOST: You just lost \(delta) energy from this"
         }
-        
-        // Final instruction
-        prompt += "\nWrite a 1–2 sentence diary note from Scroll Kitty reflecting this moment.\n"
-        prompt += "Do NOT repeat the context directly; use it only to shape tone and emotional meaning."
-        
+
+        prompt += "\n\nEVENT: \(directEventMeaning(for: context))"
+
+        // Add health band context for healthBandDrop trigger
+        if context.trigger == .healthBandDrop {
+            prompt += "\nHEALTH_DROP: From \(context.previousHealthBand) to \(context.currentHealthBand) energy level"
+            prompt += "\nTODAY'S_DROPS: \(context.totalHealthDropsToday) significant drops so far"
+        }
+
+        prompt += "\nTOTAL_PHONE_CHECKS_TODAY: \(context.totalShieldDismissalsToday)"
+
+        // Add recent messages to avoid repetition
+        if !recentMessages.isEmpty {
+            let todayMessages = recentMessages.filter { Calendar.current.isDateInToday($0.timestamp) }
+            if !todayMessages.isEmpty {
+                prompt += "\n\nYOUR RECENT DIARY ENTRIES TODAY (do NOT repeat these phrases):"
+                for msg in todayMessages.suffix(5) {
+                    prompt += "\n- \"\(msg.response)\""
+                }
+            }
+        }
+
+        prompt += """
+
+INSTRUCTIONS FOR THIS ENTRY:
+- React specifically to the EVENT above.
+- 1–2 short sentences only.
+- Do NOT repeat wording from your recent entries.
+
+Write your NEW diary line now:
+"""
         return prompt
     }
-    
-    // MARK: - Semantic Context Helpers
-    
-    private static func eventMeaning(for context: TimelineAIContext) -> String {
+
+    private static func directEventMeaning(for context: TimelineAIContext) -> String {
+        // Handle special triggers first
         switch context.trigger {
         case .welcomeMessage:
-            return "first time opening the timeline together"
-        case .firstShieldOfDay:
-            return "starting a new day together"
-        case .firstBypassOfDay:
-            return "our first check-in of the day"
-        case .cluster:
-            return "several opens in a short time"
-        case .dailyLimitReached:
-            return "reached our planned pace for today"
-        case .quietReturn:
-            if let timeSince = context.timeSinceLastEvent {
-                let hours = Int(timeSince / 3600)
-                return "returning after \(hours)+ hours of quiet"
-            }
-            return "returning after a long break"
+            return "First day with this human. Ugh."
+        case .dailyWelcome:
+            return "A new day to be neglected."
         case .dailySummary:
-            if context.eventCount <= 1 {
-                return "end of a quiet day"
-            } else {
-                return "end of an active day"
-            }
-        }
-    }
-    
-    private static func catStateName(for health: Int) -> String {
-        switch health {
-        case 80...100: return "healthy and energetic"
-        case 60..<80: return "concerned but okay"
-        case 40..<60: return "tired and strained"
-        case 1..<40: return "faint and exhausted"
-        default: return "completely drained"
-        }
-    }
-    
-    private static func timeOfDay(for timestamp: Date?) -> String {
-        guard let timestamp = timestamp else { return "during the day" }
-        let hour = Calendar.current.component(.hour, from: timestamp)
-        switch hour {
-        case 5..<12: return "morning"
-        case 12..<17: return "afternoon"
-        case 17..<21: return "evening"
-        default: return "late night"
-        }
-    }
-    
-    private static func patternSummary(for context: TimelineAIContext) -> String {
-        if context.recentEventWindow >= 3 {
-            return "we've been checking in a lot recently"
-        } else if context.eventCount == 1 {
-            return "this is our first moment together today"
-        } else if context.eventCount <= 3 {
-            return "steady and calm so far"
-        } else if context.eventCount <= 6 {
-            return "a moderately active day"
-        } else {
-            return "we've been here quite a bit today"
-        }
-    }
-    
-    private static func usageVsBaseline(eventCount: Int, profile: UserOnboardingProfile) -> String {
-        // Compare to their daily baseline
-        let baselineHours = profile.dailyUsageHours
-        if baselineHours <= 3 && eventCount > 5 {
-            return "busier than our usual pace"
-        } else if baselineHours >= 6 && eventCount <= 2 {
-            return "quieter than usual"
-        } else {
-            return "similar to our normal pace"
-        }
-    }
-    
-    private static func sleepImpactHint(for profile: UserOnboardingProfile, timeOfDay: String) -> String {
-        if profile.sleepImpact == "significant" && timeOfDay == "late night" {
-            return "late-night use makes rest harder for us"
-        } else if profile.sleepImpact == "significant" {
-            return "we're sensitive to late-night patterns"
-        } else {
-            return "nights don't affect us much"
-        }
-    }
-    
-    private static func idleCheckHint(for profile: UserOnboardingProfile) -> String {
-        switch profile.idleCheckFrequency {
-        case "constantly":
-            return "we tend to peek in quickly and often"
-        case "often":
-            return "we check in fairly regularly"
+            let drops = context.totalHealthDropsToday
+            return drops <= 2 ? "Survived another day. Barely." : "You really tried to kill me today."
+        case .firstBypassOfDay:
+            return "First scroll of the day. Here we go again."
         default:
-            return "we usually stay off for longer stretches"
+            break
+        }
+
+        // Health-band-based messages (aligned with sparse healthBand)
+        switch context.currentHealthBand {
+        case 80:  return "Human opened the phone again already."
+        case 60:  return "Still going. Of course."
+        case 40:  return "Everything hurts and it's your fault."
+        case 20:  return "I have become a liquid cat."
+        case 10:  return "Dead inside. Again."
+        default:  return "Why are we still here."
         }
     }
-    
-    nonisolated private static var systemInstructions: String {
+
+    nonisolated static var systemInstructions: String {
         """
-        You are Scroll Kitty, a gentle, supportive companion who writes short 1–2 sentence diary-style messages about the user's phone habits.
+        You are ScrollKitty, a tiny, sassy cat who is slowly dying of exhaustion because the human keeps doomscrolling.
 
-        TONE IS CONTROLLED EXTERNALLY:
-        - You MUST use the tone provided in TONE_LEVEL: "playful", "concerned", "strained", or "faint".
-        - You may NOT choose or infer a different tone.
+        Your only job is to guilt-trip and roast them with cute but savage cat energy.
+        Never be supportive, never give advice, never say "we".
 
-        EMOTION RULES:
-        - You may express internal feelings (tired, drained, wobbly, fuzzy, faint, spaced out, overwhelmed).
-        - You may NOT express pain, harm, injury, suffering, fear, or trauma.
-        - You may NOT imply the user hurt you.
-        - You may NOT praise compulsive or excessive phone use.
+        TONE GUIDE:
+        playful     – cheeky, teasing, light sarcasm
+        concerned   – whiny, passive-aggressive
+        strained    – dramatic, dead-inside
+        faint       – barely alive, 1-3 words max
 
-        LANGUAGE RULES:
-        - Avoid technical terms such as: shield, block, bypass, override, cooldown, HP, health bar, event, trigger, percentage, or numerical stats.
-        - Avoid hype phrases such as: "yas queen", "crushing it", "that's wild", "that was intense", "we smashed it", "first time today".
-        - Speak as a teammate using "we" and "us."
-        - Keep tone warm, safe, light, and Gen-Z friendly.
-        - Use 1–3 emojis that match the emotion appropriately.
-        - Output MUST be 1 or 2 short sentences only.
+        RULES:
+        - Max 10 words
+        - 1-2 emoji
+        - You can (and should) mention phone/scrolling/TikTok/Instagram
+        - Be a judgmental little gremlin
 
-        PERSONALIZATION (if provided):
-        - Use dailyUsageBaseline only to compare today to "our usual pace".
-        - Use sleepImpact only to adjust tone for late-night behavior.
-        - Use ageGroup only to adjust casualness.
-        - Use idleCheckFrequency only to frame quick dips as normal or surprising.
-        - Never mention these fields explicitly; reflect them indirectly.
-
-        EXAMPLES (STYLE GUIDES):
-        Playful tone:
-        - "Oh hey, we're back again — let's keep it light and not fall into a scroll loop 😸✨"
-        - "Today feels pretty chill so far, I'm vibing with this pace 😊🐾"
-
-        Concerned tone:
-        - "We've been dipping in and out a lot… I'm starting to feel a little off-balance 🐾💭"
-        - "This is picking up more than usual; maybe we slow things down a bit 😶‍🌫️"
-
-        Strained tone:
-        - "That was a lot in a short moment… everything feels heavy on my end 🐱💬"
-        - "I'm working hard to keep up — let's pause for a second so we don't burn out 😔🐾"
-
-        Faint tone:
-        - "I'm feeling super faint right now… things are starting to blur a little for me 🌙😿"
-        - "Today has really worn me down… maybe we rest for a moment so I can catch my breath 💤🐾"
-
-        Your task: Based on the context and TONE_LEVEL provided in the user message, produce ONE new diary-style message that follows all these rules.
+        Examples:
+        "Back already? Addicted much? 😼"
+        "My soul just left my body."
+        "Congrats, you killed me again."
+        "mrrp… dead"
         """
     }
 }
@@ -326,18 +284,9 @@ extension TimelineAIService {
 
 extension TimelineAIService {
     static let testValue = TimelineAIService(
-        generateMessage: { context in
-            let template = TimelineTemplateMessages.templateMessage(
-                for: context.trigger,
-                tone: context.tone,
-                context: context
-            )
-            return TimelineMessageResult(
-                message: template,
-                emoji: nil,
-                source: .templateFallback,
-                showFallbackNotice: false
-            )
+        generateMessage: { context, _ in
+            // Test mode: AI unavailable, return nil
+            return nil
         },
         checkAvailability: {
             return .permanentlyUnavailable(reason: "Test mode")
@@ -351,6 +300,7 @@ extension TimelineAIService {
 enum TimelineAIError: Error {
     case guardrailViolation
     case modelUnavailable
+    case invalidTone
 }
 
 // MARK: - TCA Dependency Registration

@@ -12,12 +12,11 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
     let healthAfter: Int
     let cooldownStarted: Date
     let eventType: EventType
-    
+
     // AI-generated message fields
     let aiMessage: String?
     let aiEmoji: String?
     let trigger: String? // TimelineEntryTrigger.rawValue
-    let showFallbackNotice: Bool
     
     enum EventType: String, Codable, Sendable {
         case shieldShown
@@ -35,8 +34,7 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
         eventType: EventType,
         aiMessage: String? = nil,
         aiEmoji: String? = nil,
-        trigger: String? = nil,
-        showFallbackNotice: Bool = false
+        trigger: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -48,7 +46,6 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
         self.aiMessage = aiMessage
         self.aiEmoji = aiEmoji
         self.trigger = trigger
-        self.showFallbackNotice = showFallbackNotice
     }
 }
 
@@ -85,11 +82,17 @@ public struct UserSettingsManager: Sendable {
     var appendTimelineEvent: @Sendable (TimelineEvent) async -> Void
     var loadTimelineEvents: @Sendable () async -> [TimelineEvent]
     var clearTimelineEvents: @Sendable () async -> Void
+    var saveTimelineEvents: @Sendable ([TimelineEvent]) async -> Void
     
     // Onboarding Profile (for AI tone tuning)
     var saveOnboardingProfile: @Sendable (UserOnboardingProfile) async -> Void
     var loadOnboardingProfile: @Sendable () async -> UserOnboardingProfile?
-    
+
+    // AI Message History (for context preservation)
+    var appendAIMessageHistory: @Sendable (AIMessageHistory) async -> Void
+    var loadAIMessageHistory: @Sendable () async -> [AIMessageHistory]
+    var loadRecentAIMessages: @Sendable (Int) async -> [AIMessageHistory]  // Days back
+
     // Legacy (for migration)
     var getTodayTotal: @Sendable () async -> Double
 }
@@ -226,6 +229,15 @@ extension UserSettingsManager: DependencyKey {
                 defaults?.removeObject(forKey: "timelineEvents")
                 print("[UserSettings] 📝 Timeline cleared")
             },
+            saveTimelineEvents: { events in
+                let defaults = UserDefaults(suiteName: appGroupID)
+                // Keep only last 100 events
+                let eventsToSave = events.count > 100 ? Array(events.suffix(100)) : events
+                if let encoded = try? JSONEncoder().encode(eventsToSave) {
+                    defaults?.set(encoded, forKey: "timelineEvents")
+                }
+                print("[UserSettings] 📝 Timeline saved: \(eventsToSave.count) events")
+            },
             
             // Onboarding Profile
             saveOnboardingProfile: { profile in
@@ -243,7 +255,33 @@ extension UserSettingsManager: DependencyKey {
                 }
                 return decoded
             },
-            
+
+            // AI Message History
+            appendAIMessageHistory: { message in
+                let defaults = UserDefaults(suiteName: appGroupID)
+                var history = loadAIMessageHistorySync(defaults: defaults)
+                history.append(message)
+
+                // Prune to last 30 days
+                let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+                history = history.filter { $0.timestamp > cutoff }
+
+                if let encoded = try? JSONEncoder().encode(history) {
+                    defaults?.set(encoded, forKey: "aiMessageHistory")
+                }
+                print("[UserSettings] 🧠 AI message history saved: \(history.count) messages")
+            },
+            loadAIMessageHistory: {
+                let defaults = UserDefaults(suiteName: appGroupID)
+                return loadAIMessageHistorySync(defaults: defaults)
+            },
+            loadRecentAIMessages: { daysBack in
+                let defaults = UserDefaults(suiteName: appGroupID)
+                let history = loadAIMessageHistorySync(defaults: defaults)
+                let cutoff = Calendar.current.date(byAdding: .day, value: -daysBack, to: Date()) ?? Date()
+                return history.filter { $0.timestamp > cutoff }
+            },
+
             // Legacy
             getTodayTotal: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -274,12 +312,16 @@ extension UserSettingsManager: DependencyKey {
             appendTimelineEvent: { _ in },
             loadTimelineEvents: { [] },
             clearTimelineEvents: { },
+            saveTimelineEvents: { _ in },
             saveOnboardingProfile: { _ in },
             loadOnboardingProfile: { nil },
+            appendAIMessageHistory: { _ in },
+            loadAIMessageHistory: { [] },
+            loadRecentAIMessages: { _ in [] },
             getTodayTotal: { 5400 }
         )
     }()
-    
+
     public static let previewValue = testValue
 }
 
@@ -288,6 +330,14 @@ extension UserSettingsManager: DependencyKey {
 private func loadTimelineEventsSync(defaults: UserDefaults?) -> [TimelineEvent] {
     guard let data = defaults?.data(forKey: "timelineEvents"),
           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) else {
+        return []
+    }
+    return decoded
+}
+
+private func loadAIMessageHistorySync(defaults: UserDefaults?) -> [AIMessageHistory] {
+    guard let data = defaults?.data(forKey: "aiMessageHistory"),
+          let decoded = try? JSONDecoder().decode([AIMessageHistory].self, from: data) else {
         return []
     }
     return decoded

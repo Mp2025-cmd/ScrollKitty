@@ -24,11 +24,14 @@ struct AppUsage: Identifiable, Equatable, Codable {
     var formattedDuration: String {
         let hours = Int(duration) / 3600
         let minutes = (Int(duration) % 3600) / 60
-        
+        let seconds = Int(duration) % 60
+
         if hours > 0 {
             return "\(hours)h \(minutes)m"
-        } else {
+        } else if minutes > 0 {
             return "\(minutes)m"
+        } else {
+            return "\(seconds)s"
         }
     }
 }
@@ -55,11 +58,14 @@ struct DailyScreenTimeData: Equatable, Codable {
     var formattedTotalScreenTime: String {
         let hours = Int(totalScreenTime) / 3600
         let minutes = (Int(totalScreenTime) % 3600) / 60
-        
+        let seconds = Int(totalScreenTime) % 60
+
         if hours > 0 {
             return "\(hours)h \(minutes)m"
-        } else {
+        } else if minutes > 0 {
             return "\(minutes)m"
+        } else {
+            return "\(seconds)s"
         }
     }
     
