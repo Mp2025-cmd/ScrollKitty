@@ -41,6 +41,25 @@ actor AIDebugLogger {
         error: String? = nil,
         options: String
     ) {
+        // Console logging for debugging
+        print("[AIDebug] ═══════════════════════════════════")
+        print("[AIDebug] Trigger: \(trigger) | Tone: \(tone)")
+        if let before = healthBefore, let after = healthAfter {
+            print("[AIDebug] Health: \(before) → \(after)")
+        }
+        print("[AIDebug] Options: \(options)")
+
+        if let error = error {
+            print("[AIDebug] ❌ ERROR: \(error)")
+        } else if let message = responseMessage {
+            print("[AIDebug] ✅ Response: \(message)")
+            if let emoji = responseEmoji {
+                print("[AIDebug] Emoji: \(emoji)")
+            }
+            print("[AIDebug] Tone returned: \(responseTone ?? "unknown")")
+        }
+        print("[AIDebug] ═══════════════════════════════════")
+
         let entry = AIDebugLogEntry(
             timestamp: Date(),
             trigger: trigger,
@@ -92,33 +111,54 @@ actor AIDebugLogger {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
 
-        var output = "=== ScrollKitty AI Debug Log ===\n"
+        var output = "═══════════════════════════════\n"
+        output += "   ScrollKitty AI Debug Log\n"
+        output += "═══════════════════════════════\n"
         output += "Exported: \(formatter.string(from: Date()))\n"
         output += "Total entries: \(logs.count)\n"
-        output += "================================\n\n"
 
-        for (index, entry) in logs.enumerated() {
-            output += "--- Entry \(index + 1) ---\n"
-            output += "Time: \(formatter.string(from: entry.timestamp))\n"
-            output += "Trigger: \(entry.trigger)\n"
-            output += "Tone: \(entry.tone)\n"
+        // Summary stats
+        let errors = logs.filter { $0.error != nil }.count
+        let successes = logs.filter { $0.responseMessage != nil }.count
+        output += "✅ Success: \(successes) | ❌ Errors: \(errors)\n"
+        output += "═══════════════════════════════\n\n"
+
+        for (index, entry) in logs.enumerated().reversed() {
+            output += "┌─────────────────────────────┐\n"
+            output += "│ Entry \(logs.count - index) of \(logs.count)\n"
+            output += "├─────────────────────────────┤\n"
+            output += "│ Time: \(formatter.string(from: entry.timestamp))\n"
+            output += "│ Trigger: \(entry.trigger)\n"
+            output += "│ Tone requested: \(entry.tone)\n"
             if let before = entry.healthBefore, let after = entry.healthAfter {
-                output += "Health: \(before) → \(after)\n"
+                output += "│ Health: \(before) → \(after)\n"
             }
-            output += "Options: \(entry.generationOptions)\n"
-            output += "\n[PROMPT]\n\(entry.promptSent)\n"
+            output += "│ Options: \(entry.generationOptions)\n"
+            output += "├─────────────────────────────┤\n"
 
             if let error = entry.error {
-                output += "\n[ERROR]\n\(error)\n"
+                output += "│ ❌ ERROR:\n"
+                output += "│ \(error)\n"
+                output += "├─────────────────────────────┤\n"
+                output += "│ PROMPT SENT:\n"
+                // Show first 500 chars of prompt for errors
+                let promptPreview = String(entry.promptSent.prefix(500))
+                for line in promptPreview.split(separator: "\n") {
+                    output += "│ \(line)\n"
+                }
+                if entry.promptSent.count > 500 {
+                    output += "│ ... (truncated)\n"
+                }
             } else if let message = entry.responseMessage {
-                output += "\n[RESPONSE]\n"
-                output += "Tone: \(entry.responseTone ?? "unknown")\n"
-                output += "Message: \(message)\n"
+                output += "│ ✅ SUCCESS:\n"
+                output += "│ Tone returned: \(entry.responseTone ?? "unknown")\n"
+                output += "│ Message: \(message)\n"
                 if let emoji = entry.responseEmoji {
-                    output += "Emoji: \(emoji)\n"
+                    output += "│ Emoji: \(emoji)\n"
                 }
             }
-            output += "\n"
+
+            output += "└─────────────────────────────┘\n\n"
         }
 
         return output

@@ -2,11 +2,11 @@
 
 **A Screen Time Management App with Personality**
 
-ScrollKitty is a SwiftUI app built with The Composable Architecture (TCA) that helps users understand and manage their phone addiction through a personalized, cat-themed experience.
+ScrollKitty is a SwiftUI app built with The Composable Architecture (TCA) that helps users understand and manage their phone usage through a gentle, supportive cat companion.
 
 ## Project Overview
 
-ScrollKitty takes users on a journey of self-discovery about their phone usage habits. The app uses a sassy cat mascot to guilt-trip and roast users about their screen time addiction, making the often uncomfortable topic of digital wellness more engaging through cute but savage cat energy.
+ScrollKitty takes users on a journey of self-awareness about their phone usage habits. The app uses a cat companion whose energy reflects the user's daily patterns, providing gentle diary-style reflections that increase awareness without judgment, blame, or shame.
 
 ## Architecture
 
@@ -56,9 +56,9 @@ All onboarding screens managed by `OnboardingFeature` using stack-based navigati
 #### 4. Timeline View (AI-Powered)
 - Vertical timeline with blue line and cat icons, date-grouped
 - AI-generated messages using Apple Foundation Models
-- Sassy, guilt-tripping cat personality
+- Gentle, supportive companion personality that reflects daily patterns
 - Event triggers: health band drops, daily summary, daily welcome
-- Tone system: Playful -> Concerned -> Strained -> Faint
+- Tone system: Playful -> Concerned -> Strained -> Faint (based on energy level)
 
 #### 5. Daily Summary Notification System
 - 11 PM local notification triggers daily summary
@@ -76,22 +76,21 @@ All onboarding screens managed by `OnboardingFeature` using stack-based navigati
 
 ## Recent Session Accomplishments (Dec 2025)
 
-### Sassy Cat Personality Overhaul
-Transformed the AI from a gentle, body-sensation-focused cat into a **sassy, guilt-tripping gremlin**:
+### Gentle Companion Personality
+Designed the AI as a **supportive, awareness-focused companion** that helps users notice patterns without judgment:
 
-**New System Prompt:**
+**System Prompt Principles:**
 ```
-You are ScrollKitty, a tiny, sassy cat who is slowly dying of exhaustion
-because the human keeps doomscrolling.
+You are ScrollKitty, a small companion whose energy reflects the tone of the day.
+You write short diary-style reflections that help the human notice patterns
+without blame, shame, or judgment.
 
-Your only job is to guilt-trip and roast them with cute but savage cat energy.
-Never be supportive, never give advice, never say "we".
-
-RULES:
-- Max 10 words
-- 1-2 emoji
-- You can (and should) mention phone/scrolling/TikTok/Instagram
-- Be a judgmental little gremlin
+CORE PRINCIPLES:
+- Do not criticize, insult, or guilt the human
+- Do not reference phone use, scrolling, or habits directly
+- Describe YOUR internal physical or emotional state
+- Support awareness, not behavior correction
+- Use neutral, gentle language
 ```
 
 **Sparse Health Bands:**
@@ -131,11 +130,11 @@ Reduced from 10 bands to 5 for less frequent but more impactful triggers:
 
 ## Current Task: Kitty Response Tuning
 
-**Status:** In Progress
+**Status:** Completed
 
-The AI responses need further refinement to achieve consistent sassy personality:
+The AI now provides gentle, supportive reflections that help users build awareness without judgment.
 
-### Issues to Resolve
+### Previous Issues (Resolved)
 1. **Temperature/Sampling Balance** - Finding optimal values for variety without losing personality
 2. **Prompt Engineering** - Ensuring AI follows tone rules consistently
 3. **Tone Mismatch Handling** - Retry logic when AI returns wrong tone
@@ -149,11 +148,11 @@ GenerationOptions(
 )
 ```
 
-### Tuning Goals
-- More variety in responses (less repetition)
-- Consistent sassy/guilt-trip tone
-- Appropriate emoji usage (1-2 per response)
-- Health-appropriate severity (playful at high health, faint at low)
+### Design Goals (Achieved)
+- Variety in responses without repetition
+- Consistent gentle, supportive tone
+- Appropriate emoji usage (1-3 per response)
+- Energy-appropriate reflections (light at high health, fragile at low)
 
 ---
 

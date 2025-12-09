@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFAudio
 import ComposableArchitecture
 
 struct TimelineView: View {
@@ -225,7 +226,7 @@ struct TimelineItemView: View {
                         .offset(y: 5)
                 }
             }
-            .frame(width: 310, height: 129)
+            .frame(width: 310, height: 145)
             
             Spacer()
         }
@@ -250,4 +251,8 @@ struct TimelineItemView: View {
         }
         return aiMessage
     }
+}
+
+#Preview{
+    TimelineItemView(event: .init(timestamp: .distantPast, appName: "aa", healthBefore: 10, healthAfter: 10, cooldownStarted: .distantFuture, eventType: .aiGenerated))
 }

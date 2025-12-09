@@ -37,11 +37,12 @@ extension TimelineManager {
             // Load current health first
             let healthData = await catHealth.loadHealth()
 
-            // Trigger at 11 PM OR when health reaches 0
-            let isElevenPM = hour == 23
+            // Trigger in evening window (9 PM - 1 AM) OR when health reaches 0
+            // This allows users to tap the 11 PM notification even after midnight
+            let isEveningWindow = hour >= 21 || hour <= 1
             let isZeroHealth = healthData.health == 0
 
-            guard isElevenPM || isZeroHealth else {
+            guard isEveningWindow || isZeroHealth else {
                 logger.debug("Summary not triggered (hour: \(hour), health: \(healthData.health))")
                 return nil
             }
@@ -74,21 +75,15 @@ extension TimelineManager {
             // Count today's stats
             let bypassCount = todayEvents.filter { $0.eventType == .shieldBypassed }.count
 
-            // Count health band drops by checking actual health transitions
-            // (not just events with AI messages, since some may not have been processed yet)
-            let healthDropsToday = todayEvents.filter { event in
-                // Either already marked as healthBandDrop trigger
-                if event.trigger == TimelineEntryTrigger.healthBandDrop.rawValue {
-                    return true
-                }
-                // Or is a bypass that crossed a health band
-                if event.eventType == .shieldBypassed {
-                    let previousBand = TimelineAIContext.healthBand(event.healthBefore)
-                    let currentBand = TimelineAIContext.healthBand(event.healthAfter)
-                    return previousBand != currentBand
-                }
-                return false
+            // Count health band drops (only processed events with healthBandDrop trigger)
+            // This avoids double-counting and ensures consistency
+            let healthDropsToday = todayEvents.filter {
+                $0.trigger == TimelineEntryTrigger.healthBandDrop.rawValue
             }.count
+
+            // Calculate starting health from first event of the day (or 100 if no events)
+            let startingHealth = todayEvents.first?.healthBefore ?? 100
+            let startingHealthBand = TimelineAIContext.healthBand(startingHealth)
 
             let context = TimelineAIContext(
                 trigger: .dailySummary,
@@ -100,7 +95,7 @@ extension TimelineManager {
                 healthBefore: nil,
                 healthAfter: nil,
                 currentHealthBand: TimelineAIContext.healthBand(healthData.health),
-                previousHealthBand: 100,
+                previousHealthBand: startingHealthBand,
                 totalShieldDismissalsToday: bypassCount,
                 totalHealthDropsToday: healthDropsToday
             )
@@ -201,6 +196,7 @@ extension TimelineManager {
             // Load current health (should be 100 after reset, but could vary)
             let healthData = await catHealth.loadHealth()
             let catState = CatState.from(health: healthData.health)
+            let currentBand = TimelineAIContext.healthBand(healthData.health)
 
             let context = TimelineAIContext(
                 trigger: .dailyWelcome,
@@ -211,8 +207,8 @@ extension TimelineManager {
                 appName: nil,
                 healthBefore: nil,
                 healthAfter: nil,
-                currentHealthBand: 100,
-                previousHealthBand: 100,
+                currentHealthBand: currentBand,
+                previousHealthBand: currentBand, // Same at start of day
                 totalShieldDismissalsToday: 0,
                 totalHealthDropsToday: 0
             )

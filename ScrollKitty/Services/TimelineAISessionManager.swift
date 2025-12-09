@@ -38,6 +38,22 @@ actor TimelineAISessionManager {
         return session!
     }
 
+    /// Wait for session to be ready (not currently responding)
+    func waitForSession() async -> LanguageModelSession {
+        let session = getSession()
+
+        // Wait if session is currently responding
+        if session.isResponding {
+            print("[TimelineAI] ⏳ Session busy, waiting...")
+            while session.isResponding {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            print("[TimelineAI] ✅ Session now available")
+        }
+
+        return session
+    }
+
     func prewarm() async {
         let session = getSession()
         await session.prewarm()

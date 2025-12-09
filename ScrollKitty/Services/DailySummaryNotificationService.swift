@@ -60,7 +60,7 @@ actor DailySummaryNotificationService {
         // Create notification content
         let content = UNMutableNotificationContent()
         content.title = "ScrollKitty"
-        content.body = "Time to see how I survived today..."
+        content.body = "Time for today's reflection..."
         content.sound = .default
         content.categoryIdentifier = "DAILY_SUMMARY"
 

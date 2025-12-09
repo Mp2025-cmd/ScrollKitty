@@ -2,6 +2,7 @@ import ComposableArchitecture
 import SwiftUI
 
 enum ShieldIntervalOption: String, Equatable, CaseIterable {
+    case fiveMinutes = "5 minutes"
     case tenMinutes = "10 minutes"
     case twentyMinutes = "20 minutes"      // Default
     case thirtyMinutes = "30 minutes"
@@ -10,6 +11,7 @@ enum ShieldIntervalOption: String, Equatable, CaseIterable {
 
     var minutes: Int {
         switch self {
+        case .fiveMinutes: return 5
         case .tenMinutes: return 10
         case .twentyMinutes: return 20
         case .thirtyMinutes: return 30

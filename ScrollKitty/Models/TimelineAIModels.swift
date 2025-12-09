@@ -10,16 +10,13 @@ import FoundationModels
 
 // MARK: - AI Output Schema
 
-@Generable(description: "A short, emotionally-aware diary entry from Scroll Kitty's perspective")
+@Generable(description: "A gentle cat's diary entry about energy levels")
 struct CatTimelineMessage {
-    @Guide(description: "Must match TONE_LEVEL: playful, concerned, strained, or faint")
+    @Guide(description: "Must match requested tone: playful, concerned, strained, or faint")
     var tone: CatMessageTone
 
-    @Guide(description: "1-2 sentence diary note using 'we/us' language")
+    @Guide(description: "2 short sentences max, 20 words total, about your energy and feelings")
     var message: String
-
-    @Guide(description: "1-3 emojis matching the tone")
-    var emojis: String
 }
 
 @Generable
@@ -80,16 +77,17 @@ enum AIAvailability: Sendable {
 // MARK: - Health Band Helper
 
 extension TimelineAIContext {
-    /// Calculates sparse health bands for reduced trigger frequency (max 5-6 triggers per day)
-    /// Silent from 100-81, then triggers at 80, 60, 40, 20, 10
+    /// Calculates health bands at 20-point intervals starting at 80 HP
+    /// Triggers at: 80, 60, 40, 20, 10 (max 5 messages per day)
+    /// Each trigger represents ~2 bypasses, providing meaningful check-ins without overwhelming
     static func healthBand(_ health: Int) -> Int {
         switch health {
-        case 81...:   return 100   // Silent until 80
-        case 66...80: return 80
-        case 46...65: return 60
-        case 26...45: return 40
-        case 11...25: return 20
-        case 1...10:  return 10
+        case 81...:   return 100  // 81-100 = "100 band" (silent until 80)
+        case 61...80: return 80   // First message zone
+        case 41...60: return 60   // Concerned zone
+        case 21...40: return 40   // Strained zone
+        case 11...20: return 20   // Faint zone
+        case 1...10:  return 10   // Critical zone
         default:      return 0
         }
     }

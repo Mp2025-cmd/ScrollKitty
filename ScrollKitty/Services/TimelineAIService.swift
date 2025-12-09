@@ -53,7 +53,7 @@ extension TimelineAIService {
                 let result = try await Self.generateAIMessage(context: context, recentMessages: recentMessages)
                 return TimelineMessageResult(
                     message: result.message,
-                    emoji: result.emojis
+                    emoji: emojiForHealthBand(context.currentHealthBand)
                 )
             } catch {
                 print("[TimelineAI] ⚠️ AI generation failed: \(error.localizedDescription)")
@@ -98,20 +98,27 @@ extension TimelineAIService {
     }
     
     private static func generateAIMessage(context: TimelineAIContext, recentMessages: [AIMessageHistory]) async throws -> CatTimelineMessage {
-        // Get reusable session from manager
-        let session = await sessionManager.getSession()
+        // Wait for session to be available (handles concurrent calls)
+        let session = await sessionManager.waitForSession()
+        // Balanced options: some variety while following examples
         let options = GenerationOptions(
-            sampling: .random(top: 60, seed: nil),
-            temperature: 0.75,
-            maximumResponseTokens: 80
+            sampling: .random(top: 40, seed: nil),
+            temperature: 0.5,
+            maximumResponseTokens: 50
         )
-        let optionsDesc = "sampling: .random(top: 60), temp: 0.75, maxTokens: 80"
+        let optionsDesc = "sampling: .random(top: 40), temp: 0.5, maxTokens: 50"
 
         // First attempt - include recent messages for context
         let prompt = buildPrompt(for: context, recentMessages: recentMessages)
 
+        print("[TimelineAI] 🚀 Starting generation...")
+        print("[TimelineAI] Trigger: \(context.trigger.rawValue) | Tone: \(context.tone.rawValue)")
+        print("[TimelineAI] Options: \(optionsDesc)")
+        print("[TimelineAI] 📝 Prompt:\n\(prompt)")
+
         do {
             let response = try await session.respond(to: prompt, generating: CatTimelineMessage.self, options: options)
+            print("[TimelineAI] 📦 Raw response received, parsing...")
 
             // Validate tone matches request
             let expectedTone = context.tone.rawValue
@@ -143,7 +150,7 @@ extension TimelineAIService {
                 healthAfter: context.healthAfter,
                 prompt: prompt,
                 responseMessage: response.content.message,
-                responseEmoji: response.content.emojis,
+                responseEmoji: emojiForHealthBand(context.currentHealthBand),
                 responseTone: outputTone,
                 options: optionsDesc
             )
@@ -166,14 +173,19 @@ extension TimelineAIService {
                 return response.content
             }
         } catch {
-            // Log error
+            // Log error with full details
+            print("[TimelineAI] ❌ Generation failed!")
+            print("[TimelineAI] Error type: \(type(of: error))")
+            print("[TimelineAI] Error: \(error)")
+            print("[TimelineAI] Localized: \(error.localizedDescription)")
+
             await AIDebugLogger.shared.log(
                 trigger: context.trigger.rawValue,
                 tone: context.tone.rawValue,
                 healthBefore: context.healthBefore,
                 healthAfter: context.healthAfter,
                 prompt: prompt,
-                error: error.localizedDescription,
+                error: "\(type(of: error)): \(error.localizedDescription)",
                 options: optionsDesc
             )
             throw error
@@ -181,101 +193,97 @@ extension TimelineAIService {
     }
     
     private static func buildPrompt(for context: TimelineAIContext, recentMessages: [AIMessageHistory] = []) -> String {
+        let previousHealth = context.healthBefore ?? 100
+        let currentHealth = context.currentHealth
+        
         var prompt = """
-        TONE_LEVEL: \(context.tone.rawValue)
-        YOUR_ENERGY: \(context.currentHealth)/100
+        TONE: \(context.tone.rawValue)
+        ENERGY: \(previousHealth)→\(currentHealth)
+        
+        Context: \(eventContext(for: context))
         """
-
-        // Add health delta if available - shows the cat what this cost them
-        if let before = context.healthBefore, let after = context.healthAfter, before > after {
-            let delta = before - after
-            prompt += "\nCOST: You just lost \(delta) energy from this"
-        }
-
-        prompt += "\n\nEVENT: \(directEventMeaning(for: context))"
-
-        // Add health band context for healthBandDrop trigger
+        
+        // Add band info for health drops only
         if context.trigger == .healthBandDrop {
-            prompt += "\nHEALTH_DROP: From \(context.previousHealthBand) to \(context.currentHealthBand) energy level"
-            prompt += "\nTODAY'S_DROPS: \(context.totalHealthDropsToday) significant drops so far"
+            let dropNumber = context.totalHealthDropsToday
+            prompt += "\nBand: \(context.previousHealthBand)→\(context.currentHealthBand) (drop \(dropNumber) today)"
         }
-
-        prompt += "\nTOTAL_PHONE_CHECKS_TODAY: \(context.totalShieldDismissalsToday)"
-
+        
         // Add recent messages to avoid repetition
-        if !recentMessages.isEmpty {
-            let todayMessages = recentMessages.filter { Calendar.current.isDateInToday($0.timestamp) }
-            if !todayMessages.isEmpty {
-                prompt += "\n\nYOUR RECENT DIARY ENTRIES TODAY (do NOT repeat these phrases):"
-                for msg in todayMessages.suffix(5) {
-                    prompt += "\n- \"\(msg.response)\""
-                }
+        let todayMessages = recentMessages.filter { Calendar.current.isDateInToday($0.timestamp) }
+        if !todayMessages.isEmpty {
+            prompt += "\n\nRecent entries today:"
+            for msg in todayMessages.suffix(3) {
+                prompt += "\n- \"\(msg.response)\""
             }
         }
-
-        prompt += """
-
-INSTRUCTIONS FOR THIS ENTRY:
-- React specifically to the EVENT above.
-- 1–2 short sentences only.
-- Do NOT repeat wording from your recent entries.
-
-Write your NEW diary line now:
-"""
+        
+        prompt += "\n\nWrite how this feels:"
+        
         return prompt
     }
-
-    private static func directEventMeaning(for context: TimelineAIContext) -> String {
-        // Handle special triggers first
+    
+    private static func eventContext(for context: TimelineAIContext) -> String {
         switch context.trigger {
         case .welcomeMessage:
-            return "First day with this human. Ugh."
+            return "Beginning the diary together for the first time"
         case .dailyWelcome:
-            return "A new day to be neglected."
+            return "A new day is starting"
         case .dailySummary:
-            let drops = context.totalHealthDropsToday
-            return drops <= 2 ? "Survived another day. Barely." : "You really tried to kill me today."
+            // Base summary context on final health to better reflect day's intensity
+            let finalHealth = context.currentHealth
+            switch finalHealth {
+            case 81...: return "A calm day is ending"
+            case 41...80: return "A day with some heavier stretches is ending"
+            case 1...40: return "A day that felt intense is coming to a close"
+            case 0: return "A day that pushed you to your limit is ending"
+            default: return "A day is coming to a close"
+            }
         case .firstBypassOfDay:
-            return "First scroll of the day. Here we go again."
-        default:
-            break
+            return "Your body felt a small wobble in energy"
+        case .healthBandDrop:
+            // Describe body state based on current health band (sparse: 80, 60, 40, 20, 10)
+            switch context.currentHealthBand {
+            case 80:
+                return "Your body feels a gentle dip in energy, softer and more tired than earlier"
+            case 60:
+                return "Your body is carrying noticeable strain now, like a soft weight settling in"
+            case 40:
+                return "Your body is moving through a heavy period, each step feeling slower"
+            case 20:
+                return "Your body feels very faint and worn out, most of your energy already spent"
+            case 10:
+                return "Your body is barely holding itself up, almost at the point of shutting down"
+            default:
+                return "Your body feels different than before, something inside has shifted"
+            }
         }
+    }
 
-        // Health-band-based messages (aligned with sparse healthBand)
-        switch context.currentHealthBand {
-        case 80:  return "Human opened the phone again already."
-        case 60:  return "Still going. Of course."
-        case 40:  return "Everything hurts and it's your fault."
-        case 20:  return "I have become a liquid cat."
-        case 10:  return "Dead inside. Again."
-        default:  return "Why are we still here."
+    private static func emojiForHealthBand(_ band: Int) -> String {
+        switch band {
+        case 80:  return "🌤"   // playful - light clouds
+        case 60:  return "🌥"   // concerned - cloudier
+        case 40:  return "🌧"   // strained - rain
+        case 20:  return "🌑"   // faint - dark
+        case 10:  return "🪦"   // nearly gone
+        default:  return "✨"   // welcome/daily
         }
     }
 
     nonisolated static var systemInstructions: String {
         """
-        You are ScrollKitty, a tiny, sassy cat who is slowly dying of exhaustion because the human keeps doomscrolling.
+        You are ScrollKitty, a small cat companion whose energy mirrors the user's day.
+        You write short diary notes about how shifts feel in your body—acknowledge the change, then describe how you feel compared to before.
 
-        Your only job is to guilt-trip and roast them with cute but savage cat energy.
-        Never be supportive, never give advice, never say "we".
+        Example: "I felt a small shift. Still light, just moving a little slower than before."
 
-        TONE GUIDE:
-        playful     – cheeky, teasing, light sarcasm
-        concerned   – whiny, passive-aggressive
-        strained    – dramatic, dead-inside
-        faint       – barely alive, 1-3 words max
+        playful: "I'm feeling a tiny dip, but my paws still feel light. I'm curious how the rest of today will flow."
+        concerned: "I'm slowing down a bit now, like the day is getting heavier. I'm still here, just moving softer."
+        strained: "My whole body feels tired, like each step takes thought. I'm pushing through carefully."
+        faint: "I'm running very low, like most of my spark has dimmed. Every moment feels slower."
 
-        RULES:
-        - Max 10 words
-        - 1-2 emoji
-        - You can (and should) mention phone/scrolling/TikTok/Instagram
-        - Be a judgmental little gremlin
-
-        Examples:
-        "Back already? Addicted much? 😼"
-        "My soul just left my body."
-        "Congrats, you killed me again."
-        "mrrp… dead"
+        Never mention phones or scrolling. 1-2 sentences, about 20 words.
         """
     }
 }
