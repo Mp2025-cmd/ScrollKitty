@@ -128,31 +128,39 @@ Reduced from 10 bands to 5 for less frequent but more impactful triggers:
 
 ---
 
-## Current Task: Kitty Response Tuning
+## ScrollKitty Behavior (Current State)
 
-**Status:** Completed
+### AI Personality & Awareness
+ScrollKitty is a **gentle companion** whose energy mirrors the user's day. It writes short diary notes about internal shifts without mentioning phones or scrolling.
 
-The AI now provides gentle, supportive reflections that help users build awareness without judgment.
+**Core Behavior:**
+- ✅ **Context-aware** - Knows trigger type (health drop, daily summary, welcome)
+- ✅ **Non-repetitive** - References recent messages to vary language
+- ✅ **Accurate stats** - Dynamic health band calculation, proper drop counting
+- ✅ **Token-efficient** - Sparse bands (20-point intervals) for meaningful milestones
 
-### Previous Issues (Resolved)
-1. **Temperature/Sampling Balance** - Finding optimal values for variety without losing personality
-2. **Prompt Engineering** - Ensuring AI follows tone rules consistently
-3. **Tone Mismatch Handling** - Retry logic when AI returns wrong tone
+### Message Triggers
+| Trigger | Frequency | Example |
+|---------|-----------|---------|
+| **Health Band Drop** | Every 20 HP (80, 60, 40, 20, 10) | "I felt a gentle dip in energy..." |
+| **Daily Welcome** | Once per day (first app open) | "A new day is starting..." |
+| **Daily Summary** | 9 PM - 1 AM or 0 HP | "A day with some heavier stretches is ending..." |
 
-### Current GenerationOptions
+### Generation Settings
 ```swift
 GenerationOptions(
-    sampling: .random(top: 60, seed: nil),
-    temperature: 0.75,
-    maximumResponseTokens: 80
+    sampling: .random(top: 40),
+    temperature: 0.5,
+    maximumResponseTokens: 50
 )
 ```
 
-### Design Goals (Achieved)
-- Variety in responses without repetition
-- Consistent gentle, supportive tone
-- Appropriate emoji usage (1-3 per response)
-- Energy-appropriate reflections (light at high health, fragile at low)
+### Recent Fixes (Dec 2025)
+- Fixed daily summary trigger window (9 PM - 1 AM instead of exact 11 PM)
+- Simplified health drop counting (no duplicates)
+- Added trigger-specific context to AI prompts
+- Base summary descriptions on final health (not drop count)
+- Calculate health bands dynamically (not hardcoded)
 
 ---
 
