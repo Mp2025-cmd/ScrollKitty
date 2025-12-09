@@ -5,7 +5,6 @@ import FamilyControls
 // Make FamilyActivitySelection conform to Equatable
 extension FamilyActivitySelection {
     public static func == (lhs: FamilyActivitySelection, rhs: FamilyActivitySelection) -> Bool {
-        // Compare by encoding to data
         let encoder = JSONEncoder()
         guard let lhsData = try? encoder.encode(lhs),
               let rhsData = try? encoder.encode(rhs) else {
@@ -20,10 +19,12 @@ struct AppSelectionFeature {
     @ObservableState
     struct State: Equatable {
         var selectedApps: FamilyActivitySelection = FamilyActivitySelection()
+        var isPickerPresented: Bool = false
     }
 
     enum Action: BindableAction, Equatable {
         case binding(BindingAction<State>)
+        case selectAppsTapped
         case nextTapped
         case backTapped
         case delegate(Delegate)
@@ -40,6 +41,10 @@ struct AppSelectionFeature {
         Reduce { state, action in
             switch action {
             case .binding:
+                return .none
+
+            case .selectAppsTapped:
+                state.isPickerPresented = true
                 return .none
 
             case .nextTapped:
@@ -59,6 +64,10 @@ struct AppSelectionFeature {
 
 struct AppSelectionView: View {
     @Bindable var store: StoreOf<AppSelectionFeature>
+    
+    private var selectionCount: Int {
+        store.selectedApps.applicationTokens.count + store.selectedApps.categoryTokens.count
+    }
 
     var body: some View {
         ZStack {
@@ -86,10 +95,28 @@ struct AppSelectionView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
 
-                // Family Activity Picker - using proper TCA binding
-                FamilyActivityPicker(selection: $store.selectedApps)
-                .frame(maxHeight: .infinity)
-                .padding(.horizontal, 16)
+                // Select Apps Button
+                Button(action: { store.isPickerPresented = true }) {
+                    HStack {
+                        Text("Select Apps")
+                            .font(.custom("Sofia Pro-Medium", size: 18))
+                            .foregroundColor(DesignSystem.Colors.primaryText)
+                        
+                        Spacer()
+                        
+                        Text(selectionCount > 0 ? "\(selectionCount) selected" : "None")
+                            .font(.custom("Sofia Pro-Regular", size: 16))
+                            .foregroundColor(DesignSystem.Colors.textGray)
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(DesignSystem.Colors.textGray)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .background(DesignSystem.Colors.selectionBackground)
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal, 25)
 
                 Spacer()
 
@@ -97,6 +124,20 @@ struct AppSelectionView: View {
                 PrimaryButton(title: "Next") {
                     store.send(.nextTapped)
                 }
+            }
+        }
+        .sheet(isPresented: $store.isPickerPresented) {
+            NavigationView {
+                FamilyActivityPicker(selection: $store.selectedApps)
+                    .navigationTitle("Select Apps")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                store.isPickerPresented = false
+                            }
+                        }
+                    }
             }
         }
     }
@@ -110,4 +151,3 @@ struct AppSelectionView: View {
         )
     )
 }
-

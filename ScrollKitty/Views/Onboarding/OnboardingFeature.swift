@@ -52,7 +52,7 @@ struct OnboardingFeature {
         case appSelection(AppSelectionFeature)
         case dailyLimit(DailyLimitFeature)
         case shieldFrequency(ShieldFrequencyFeature)
-        case focusWindow(FocusWindowFeature)
+        //case focusWindow(FocusWindowFeature)
         case characterIntro(CharacterIntroFeature)
         case scrollKittyLifecycle(ScrollKittyLifecycleFeature)
         case commitment(CommitmentFeature)
@@ -231,18 +231,21 @@ struct OnboardingFeature {
             case .path(.element(id: let id, action: .shieldFrequency(.delegate(.completeWithSelection(let selection))))):
                 guard id == state.path.ids.last else { return .none }
                 state.selectedInterval = selection
-                state.path.append(.focusWindow(FocusWindowFeature.State()))
+                // Skip FocusWindow for now - go directly to CharacterIntro
+                // state.path.append(.focusWindow(FocusWindowFeature.State()))
+                state.path.append(.characterIntro(CharacterIntroFeature.State()))
                 return .run { [userSettings] _ in
                     await userSettings.saveShieldInterval(selection.minutes)
                 }
 
-            case .path(.element(id: let id, action: .focusWindow(.delegate(.completeWithSelection(let data))))):
-                guard id == state.path.ids.last else { return .none }
-                state.selectedFocusWindow = data
-                state.path.append(.characterIntro(CharacterIntroFeature.State()))
-                return .run { [userSettings] _ in
-                    await userSettings.saveFocusWindow(data)
-                }
+            // FocusWindow skipped - commented out
+            // case .path(.element(id: let id, action: .focusWindow(.delegate(.completeWithSelection(let data))))):
+            //     guard id == state.path.ids.last else { return .none }
+            //     state.selectedFocusWindow = data
+            //     state.path.append(.characterIntro(CharacterIntroFeature.State()))
+            //     return .run { [userSettings] _ in
+            //         await userSettings.saveFocusWindow(data)
+            //     }
 
             case let .path(.element(id: id, action: .characterIntro(.delegate(.showNextScreen)))):
                 guard id == state.path.ids.last else { return .none }
@@ -307,7 +310,8 @@ struct OnboardingFeature {
                  .path(.element(id: let id, action: .appSelection(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .dailyLimit(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .shieldFrequency(.delegate(.goBack)))),
-                 .path(.element(id: let id, action: .focusWindow(.delegate(.goBack)))),
+                 // FocusWindow skipped - commented out
+                 // .path(.element(id: let id, action: .focusWindow(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .characterIntro(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .scrollKittyLifecycle(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .commitment(.delegate(.goBack)))):

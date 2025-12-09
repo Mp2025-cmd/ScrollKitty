@@ -60,7 +60,7 @@ struct ShieldFrequencyFeature {
 
             case .delegate:
                 return .none
-            }
+            }                
         }
     }
 }
@@ -89,6 +89,7 @@ struct ShieldFrequencyView: View {
                     Text("How often should Scroll Kitty stop you?")
                         .largeTitleStyle()
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Text("Choose how often the shield appears when opening a distracting app.")
                         .font(.custom("Sofia Pro-Regular", size: 16))

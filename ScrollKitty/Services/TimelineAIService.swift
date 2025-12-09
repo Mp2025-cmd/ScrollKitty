@@ -108,10 +108,10 @@ extension TimelineAIService {
         // Balanced options: some variety while maintaining personality
         let options = GenerationOptions(
             sampling: .random(top: 40, seed: nil),
-            temperature: 0.6,
+            temperature: 0.5,
             maximumResponseTokens: 50
         )
-        let optionsDesc = "sampling: .random(top: 40), temp: 0.6, maxTokens: 50"
+        let optionsDesc = "sampling: .random(top: 40), temp: 0.5, maxTokens: 50"
 
         // First attempt - include recent messages for context
         let prompt = buildPrompt(for: context, recentMessages: recentMessages)

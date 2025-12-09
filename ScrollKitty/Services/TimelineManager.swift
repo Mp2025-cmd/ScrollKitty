@@ -70,6 +70,14 @@ extension TimelineManager {
                 return nil
             }
 
+            let currentHealthBand = TimelineAIContext.healthBand(healthData.health)
+            
+            // Skip AI generation if health is in 100 band (81-100 HP) - only pre-written messages allowed
+            guard currentHealthBand != 100 else {
+                logger.info("Daily summary skipped - health in 100 band (81-100 HP), only pre-written messages allowed")
+                return nil
+            }
+            
             let catState = CatState.from(health: healthData.health)
 
             // Count today's stats
@@ -94,7 +102,7 @@ extension TimelineManager {
                 appName: nil,
                 healthBefore: nil,
                 healthAfter: nil,
-                currentHealthBand: TimelineAIContext.healthBand(healthData.health),
+                currentHealthBand: currentHealthBand,
                 previousHealthBand: startingHealthBand,
                 totalShieldDismissalsToday: bypassCount,
                 totalHealthDropsToday: healthDropsToday
@@ -195,8 +203,15 @@ extension TimelineManager {
 
             // Load current health (should be 100 after reset, but could vary)
             let healthData = await catHealth.loadHealth()
-            let catState = CatState.from(health: healthData.health)
             let currentBand = TimelineAIContext.healthBand(healthData.health)
+            
+            // Skip AI generation if health is in 100 band (81-100 HP) - only pre-written messages allowed
+            guard currentBand != 100 else {
+                logger.info("Daily welcome skipped - health in 100 band (81-100 HP), only pre-written messages allowed")
+                return nil
+            }
+            
+            let catState = CatState.from(health: healthData.health)
 
             let context = TimelineAIContext(
                 trigger: .dailyWelcome,

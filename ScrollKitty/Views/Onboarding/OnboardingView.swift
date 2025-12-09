@@ -94,9 +94,10 @@ struct OnboardingView: View {
                     .toolbarRole(.editor)
                     .navigationBarBackButtonHidden(true)
 
-            case let .focusWindow(store):
-                FocusWindowView(store: store)
-                    .toolbarRole(.editor)
+            // FocusWindow skipped - commented out
+            // case let .focusWindow(store):
+            //     FocusWindowView(store: store)
+            //         .toolbarRole(.editor)
                     .navigationBarBackButtonHidden(true)
 
             case let .characterIntro(store):
@@ -113,6 +114,7 @@ struct OnboardingView: View {
                 CommitmentView(store: store)
                     .toolbarRole(.editor)
                     .navigationBarBackButtonHidden(true)
+           
             }
         }
         .onAppear {
