@@ -150,7 +150,7 @@ ScrollKitty is a **gentle companion** whose energy mirrors the user's day. It wr
 ```swift
 GenerationOptions(
     sampling: .random(top: 40),
-    temperature: 0.5,
+    temperature: 0.6,
     maximumResponseTokens: 50
 )
 ```
@@ -161,6 +161,63 @@ GenerationOptions(
 - Added trigger-specific context to AI prompts
 - Base summary descriptions on final health (not drop count)
 - Calculate health bands dynamically (not hardcoded)
+- Fixed AI message repetition issues (see below)
+
+---
+
+## AI Repetition Fix (Dec 2025)
+
+### Problem
+Debug logs revealed three critical issues with AI message generation:
+
+1. **Repeated Messages**: Same exact phrase "I'm running very low, like most of my spark has dimmed. Every moment feels slower." generated for multiple health drops (25→20, 15→10, 5→0)
+2. **Duplicate Entries**: Same event processed twice, generating identical messages at the same timestamp
+3. **Session Concurrency Error**: Daily summary failed with error "Attempted to call respond(to:) a second time before the model finished responding" when triggered immediately after a health drop
+
+### Root Causes
+
+1. **System Prompt Examples**: The system instructions contained verbatim example phrases (lines 279-284 in `TimelineAIService.swift`) that the AI was copying directly:
+   ```swift
+   faint: "I'm running very low, like most of my spark has dimmed. Every moment feels slower."
+   ```
+
+2. **Temperature Too Low**: Temperature 0.5 was too deterministic, causing the AI to converge on the same phrases, especially at faint tone
+
+3. **Passive Anti-Repetition**: Prompt showed "Recent entries today:" but didn't explicitly instruct the AI to avoid them
+
+4. **Race Condition**: `waitForSession()` checked `isResponding` but two concurrent calls could both see `false` before either started generating, leading to simultaneous `respond()` calls
+
+### Solution
+
+**1. Removed Example Phrases from System Instructions**
+- Removed all verbatim example messages
+- Kept tone descriptions (playful, concerned, strained, faint) without examples
+- Added explicit rule: "Never repeat previous entries"
+
+**2. Increased Temperature to 0.6**
+- Changed from 0.5 to 0.6 for more variety while maintaining personality
+- Balances creativity with consistency
+
+**3. Explicit Anti-Repetition Instruction**
+- Changed prompt from "Recent entries today:" to "DO NOT repeat these phrases:"
+- Makes it explicit that the AI should avoid repeating, not just reference
+
+**4. Fixed Session Concurrency with Task Tracking**
+- Added `currentTask: Task<Void, Never>?` to `TimelineAISessionManager`
+- `waitForSession()` now waits for `currentTask?.value` to complete
+- Generation wrapped in Task and tracked before execution
+- Ensures only one generation happens at a time
+
+### Files Modified
+- `ScrollKitty/Services/TimelineAIService.swift`: Removed examples, increased temp, explicit anti-repetition
+- `ScrollKitty/Services/TimelineAISessionManager.swift`: Added task tracking for concurrency control
+
+### Expected Results
+- ✅ More varied messages (temperature 0.6)
+- ✅ No verbatim copying of example phrases
+- ✅ Explicit avoidance of recent messages
+- ✅ No concurrent session errors
+- ✅ Personality maintained (gentle, supportive tone)
 
 ---
 

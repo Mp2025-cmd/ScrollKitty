@@ -98,15 +98,20 @@ extension TimelineAIService {
     }
     
     private static func generateAIMessage(context: TimelineAIContext, recentMessages: [AIMessageHistory]) async throws -> CatTimelineMessage {
-        // Wait for session to be available (handles concurrent calls)
-        let session = await sessionManager.waitForSession()
-        // Balanced options: some variety while following examples
+        // Atomically acquire session (waits if busy)
+        let session = await sessionManager.acquireSession()
+
+        defer {
+            Task { await sessionManager.releaseSession() }
+        }
+
+        // Balanced options: some variety while maintaining personality
         let options = GenerationOptions(
             sampling: .random(top: 40, seed: nil),
-            temperature: 0.5,
+            temperature: 0.6,
             maximumResponseTokens: 50
         )
-        let optionsDesc = "sampling: .random(top: 40), temp: 0.5, maxTokens: 50"
+        let optionsDesc = "sampling: .random(top: 40), temp: 0.6, maxTokens: 50"
 
         // First attempt - include recent messages for context
         let prompt = buildPrompt(for: context, recentMessages: recentMessages)
@@ -116,6 +121,22 @@ extension TimelineAIService {
         print("[TimelineAI] Options: \(optionsDesc)")
         print("[TimelineAI] 📝 Prompt:\n\(prompt)")
 
+        return try await performGeneration(
+            session: session,
+            prompt: prompt,
+            options: options,
+            context: context,
+            optionsDesc: optionsDesc
+        )
+    }
+    
+    private static func performGeneration(
+        session: LanguageModelSession,
+        prompt: String,
+        options: GenerationOptions,
+        context: TimelineAIContext,
+        optionsDesc: String
+    ) async throws -> CatTimelineMessage {
         do {
             let response = try await session.respond(to: prompt, generating: CatTimelineMessage.self, options: options)
             print("[TimelineAI] 📦 Raw response received, parsing...")
@@ -212,7 +233,7 @@ extension TimelineAIService {
         // Add recent messages to avoid repetition
         let todayMessages = recentMessages.filter { Calendar.current.isDateInToday($0.timestamp) }
         if !todayMessages.isEmpty {
-            prompt += "\n\nRecent entries today:"
+            prompt += "\n\nDO NOT repeat these phrases:"
             for msg in todayMessages.suffix(3) {
                 prompt += "\n- \"\(msg.response)\""
             }
@@ -274,16 +295,11 @@ extension TimelineAIService {
     nonisolated static var systemInstructions: String {
         """
         You are ScrollKitty, a small cat companion whose energy mirrors the user's day.
-        You write short diary notes about how shifts feel in your body—acknowledge the change, then describe how you feel compared to before.
+        You write short diary notes about how shifts feel in your body.
 
-        Example: "I felt a small shift. Still light, just moving a little slower than before."
+        Tones: playful (light, curious), concerned (heavier, softer), strained (tired, pushing through), faint (very low, dimmed).
 
-        playful: "I'm feeling a tiny dip, but my paws still feel light. I'm curious how the rest of today will flow."
-        concerned: "I'm slowing down a bit now, like the day is getting heavier. I'm still here, just moving softer."
-        strained: "My whole body feels tired, like each step takes thought. I'm pushing through carefully."
-        faint: "I'm running very low, like most of my spark has dimmed. Every moment feels slower."
-
-        Never mention phones or scrolling. 1-2 sentences, about 20 words.
+        Never mention phones or scrolling. 1-2 sentences, about 20 words. Never repeat previous entries.
         """
     }
 }

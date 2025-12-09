@@ -12,6 +12,7 @@ actor TimelineAISessionManager {
     private var session: LanguageModelSession?
     private var sessionDate: Date?
     private let systemInstructions: String
+    private var isGenerating = false
 
     private let summarizationPrompt = """
     Summarize this cat's diary entries into a brief paragraph.
@@ -38,20 +39,19 @@ actor TimelineAISessionManager {
         return session!
     }
 
-    /// Wait for session to be ready (not currently responding)
-    func waitForSession() async -> LanguageModelSession {
-        let session = getSession()
-
-        // Wait if session is currently responding
-        if session.isResponding {
-            print("[TimelineAI] ⏳ Session busy, waiting...")
-            while session.isResponding {
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-            print("[TimelineAI] ✅ Session now available")
+    /// Atomically wait for availability and acquire the session
+    func acquireSession() async -> LanguageModelSession {
+        // Spin-wait if another generation is in progress
+        while isGenerating {
+            try? await Task.sleep(for: .milliseconds(50))
         }
+        isGenerating = true
+        return getSession()
+    }
 
-        return session
+    /// Release the session for the next caller
+    func releaseSession() {
+        isGenerating = false
     }
 
     func prewarm() async {
