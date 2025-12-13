@@ -114,7 +114,7 @@ struct ShieldFrequencyView: View {
                 Spacer()
 
                 // Next Button
-                PrimaryButton(title: "Next") {
+                PrimaryButton(title: "Next", isEnabled: store.selectedInterval != nil) {
                     store.send(.nextTapped)
                 }
             }

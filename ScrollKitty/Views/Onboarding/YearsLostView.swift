@@ -108,19 +108,11 @@ struct YearsLostView: View {
                 
                 Spacer()
                 
-                // Cat Image with Shadow
-                ZStack(alignment: .bottom) {
-                    VStack {
-                        CatState.tired.image
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 280)
-                            
-                    }
-
-                    CatShadow(width: 390, height: 11, opacity: 0.65)
-                        .offset(y: -10)
-                }
+                // Cat Image
+                CatState.tired.image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 280)
                 
                 Spacer()
                 

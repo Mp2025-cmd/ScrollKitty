@@ -89,7 +89,7 @@ struct WithoutPhoneView: View {
                 Spacer()
 
                 // Next Button
-                PrimaryButton(title: "Next") {
+                PrimaryButton(title: "Next", isEnabled: store.selectedOption != nil) {
                     store.send(.nextTapped)
                 }
                 

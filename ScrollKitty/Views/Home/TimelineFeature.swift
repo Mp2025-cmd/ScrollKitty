@@ -2,7 +2,7 @@
 //  TimelineFeature.swift
 //  ScrollKitty
 //
-//  TCA Feature for Timeline with AI-powered messages
+//  TCA Feature for Timeline with template-based messages
 //
 
 import ComposableArchitecture
@@ -88,11 +88,14 @@ struct TimelineFeature {
                     // Sort events chronologically to ensure proper first-bypass detection
                     let sortedEvents = events.sorted { $0.timestamp < $1.timestamp }
 
+                    // Deduplicate events with same health transition within 3-second window
+                    let deduplicatedEvents = deduplicateTimelineEvents(sortedEvents)
+
                     var updatedEvents: [TimelineEvent] = []
                     var hasChanges = false
 
                     // Count today's stats from ALL events (processed and unprocessed)
-                    let todayEvents = sortedEvents.filter { Calendar.current.isDateInToday($0.timestamp) }
+                    let todayEvents = deduplicatedEvents.filter { Calendar.current.isDateInToday($0.timestamp) }
                     let todayBypasses = todayEvents.filter { $0.eventType == .shieldBypassed }
                     let totalDismissalsToday = todayBypasses.count
 
@@ -103,7 +106,7 @@ struct TimelineFeature {
                     }.count
                     var healthDropsToday = existingHealthDrops
 
-                    for event in sortedEvents {
+                    for event in deduplicatedEvents {
                         // Skip events that already have AI messages
                         if event.aiMessage != nil {
                             updatedEvents.append(event)
@@ -158,10 +161,12 @@ struct TimelineFeature {
                             totalHealthDropsToday: healthDropsToday
                         )
 
-                        // Generate AI message with recent history for context
-                        guard let result = await timelineAI.generateMessage(context, recentAIMessages) else {
-                            // AI unavailable - skip adding AI message to this event
-                            print("[TimelineFeature] ⚠️ AI unavailable for event: \(event.id) - keeping event without AI message")
+                        // Generate template message with recent history for anti-repetition
+                        let result = await timelineAI.generateMessage(context, recentAIMessages)
+
+                        // Templates always return - guard for safety only
+                        guard let result = result else {
+                            print("[TimelineFeature] Template selection failed for event: \(event.id)")
                             updatedEvents.append(event)
                             continue
                         }
@@ -191,7 +196,7 @@ struct TimelineFeature {
                         )
                         updatedEvents.append(enrichedEvent)
                         hasChanges = true
-                        print("[TimelineFeature] ✨ Generated AI message for event: \(event.id) (trigger: \(trigger.rawValue), band: \(previousBand)→\(currentBand))")
+                        print("[TimelineFeature] Selected template for event: \(event.id) (trigger: \(trigger.rawValue), band: \(previousBand)→\(currentBand))")
                     }
 
                     // Check if any event reached 0 health (triggers daily summary)
@@ -278,5 +283,22 @@ struct TimelineFeature {
                 return .none
             }
         }
+    }
+}
+
+// MARK: - Helpers
+
+/// Deduplicate timeline events with same health transition within 3-second window
+private func deduplicateTimelineEvents(_ events: [TimelineEvent]) -> [TimelineEvent] {
+    var seen: Set<String> = []
+    return events.filter { event in
+        // Create key from health transition + rounded timestamp (3-second window)
+        let timeWindow = Int(event.timestamp.timeIntervalSince1970 / 3)
+        let key = "\(event.healthBefore)-\(event.healthAfter)-\(timeWindow)"
+        if seen.contains(key) {
+            return false
+        }
+        seen.insert(key)
+        return true
     }
 }

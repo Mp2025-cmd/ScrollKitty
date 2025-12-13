@@ -10,21 +10,10 @@ import FoundationModels
 
 // MARK: - AI Output Schema
 
-@Generable(description: "A gentle cat's diary entry about energy levels")
+@Generable(description: "A cat's brief diary moment")
 struct CatTimelineMessage {
-    @Guide(description: "Must match requested tone: playful, concerned, strained, or faint")
-    var tone: CatMessageTone
-
-    @Guide(description: "2 short sentences max, 20 words total, about your energy and feelings")
+    @Guide(description: "Two short sentences about your inner state, 15-25 words")
     var message: String
-}
-
-@Generable
-enum CatMessageTone: String {
-    case playful
-    case concerned
-    case strained
-    case faint
 }
 
 // MARK: - Tone Levels
@@ -42,7 +31,6 @@ enum CatTone: String, Sendable {
 enum TimelineEntryTrigger: String, Codable, Equatable, Sendable {
     case welcomeMessage       // First-time timeline after install (static)
     case dailyWelcome         // AI-generated daily welcome after midnight reset
-    case firstBypassOfDay     // First bypass of the day (always triggers)
     case healthBandDrop       // Health crossed a 10-point boundary (100→90, 90→80, etc.)
     case dailySummary         // 11 PM or health reached 0
 }

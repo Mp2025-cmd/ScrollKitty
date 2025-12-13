@@ -253,17 +253,10 @@ struct HomeView: View {
             Spacer()
             
             // Cat Image based on health state
-            ZStack(alignment: .bottom) {
-                VStack {
-                    (store.catHealth?.catState ?? .healthy).image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 280)
-                }
-                
-                CatShadow(width: 250, height: 8, opacity: 0.65)
-                    .offset(y: -24)
-            }
+            (store.catHealth?.catState ?? .healthy).image
+                .resizable()
+                .scaledToFit()
+                .frame(height: 280)
             
             VStack(spacing: 16) {
                 // Health Percentage

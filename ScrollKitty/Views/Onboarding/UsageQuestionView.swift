@@ -92,7 +92,7 @@ struct UsageQuestionView: View {
                 
                 Spacer()
                 
-                 PrimaryButton(title: "Next") {
+                 PrimaryButton(title: "Next", isEnabled: store.selectedOption != nil) {
                     store.send(.nextTapped)
                 }
                 

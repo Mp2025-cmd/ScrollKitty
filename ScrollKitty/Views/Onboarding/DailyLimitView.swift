@@ -107,7 +107,7 @@ struct DailyLimitView: View {
                 Spacer()
 
                 // Next Button
-                PrimaryButton(title: "Next") {
+                PrimaryButton(title: "Next", isEnabled: store.selectedLimit != nil) {
                     store.send(.nextTapped)
                 }
             }

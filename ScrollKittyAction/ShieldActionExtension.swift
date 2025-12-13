@@ -237,10 +237,23 @@ class ShieldActionExtension: ShieldActionDelegate {
            let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
             events = decoded
         }
-        
+
+        // Check for recent duplicate (same health transition within 3 seconds)
+        let now = Date()
+        let recentDuplicate = events.contains { event in
+            event.healthBefore == healthBefore &&
+            event.healthAfter == healthAfter &&
+            now.timeIntervalSince(event.timestamp) < 3.0
+        }
+
+        if recentDuplicate {
+            print("[ShieldAction] ⚠️ Skipping duplicate event (same health transition within 3s)")
+            return
+        }
+
         // Append new event
         let event = TimelineEvent(
-            timestamp: Date(),
+            timestamp: now,
             appName: appName,
             healthBefore: healthBefore,
             healthAfter: healthAfter,

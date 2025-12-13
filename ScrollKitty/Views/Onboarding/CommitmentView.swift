@@ -88,18 +88,11 @@ struct CommitmentView: View {
                 
                  
                 
-                // Cat Image with Shadow
-                ZStack(alignment: .bottom) {
-                    VStack {
-                        CatState.healthy.image
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 280)
-                    }
-                    
-                    CatShadow(width: 250, height: 5, opacity: 0.65)
-                        .offset(y: -24)
-                }
+                // Cat Image
+                CatState.healthy.image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 280)
 
                 VStack(spacing: 8) {
                     Text("Ready to take back control?")
@@ -160,11 +153,9 @@ struct CommitmentView: View {
                         .padding(.horizontal, 16)
                         .opacity(store.isCommitted ? 1 : 0)
                     
-                    PrimaryButton(title: "Continue") {
+                    PrimaryButton(title: "Continue", isEnabled: store.isCommitted) {
                         store.send(.continueTapped)
                     }
-                    .opacity(store.isCommitted ? 1 : 0)
-                    .disabled(!store.isCommitted)
                     .padding(.bottom, 32)
                 }
             }

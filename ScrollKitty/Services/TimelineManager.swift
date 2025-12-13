@@ -26,120 +26,10 @@ struct TimelineManager: Sendable {
 extension TimelineManager {
     static let liveValue = TimelineManager(
         checkForDailySummary: {
-            @Dependency(\.userSettings) var userSettings: UserSettingsManager
-            @Dependency(\.timelineAI) var timelineAI: TimelineAIService
-            @Dependency(\.catHealth) var catHealth: CatHealthManager
-
-            let now = Date()
-            let calendar = Calendar.current
-            let hour = calendar.component(.hour, from: now)
-
-            // Load current health first
-            let healthData = await catHealth.loadHealth()
-
-            // Trigger in evening window (9 PM - 1 AM) OR when health reaches 0
-            // This allows users to tap the 11 PM notification even after midnight
-            let isEveningWindow = hour >= 21 || hour <= 1
-            let isZeroHealth = healthData.health == 0
-
-            guard isEveningWindow || isZeroHealth else {
-                logger.debug("Summary not triggered (hour: \(hour), health: \(healthData.health))")
-                return nil
-            }
-
-            // Atomic duplicate prevention using date-based key
-            let defaults = UserDefaults.appGroup
-            let todayKey = "dailySummaryDate_\(calendar.component(.year, from: now))_\(calendar.component(.dayOfYear, from: now))"
-
-            // Check-and-set atomically
-            if defaults.bool(forKey: todayKey) {
-                logger.info("Daily summary already generated today (atomic check)")
-                return nil
-            }
-
-            // Set flag immediately to prevent race conditions
-            defaults.set(true, forKey: todayKey)
-
-            // Also verify against existing events (belt-and-suspenders)
-            let existingEvents = await userSettings.loadTimelineEvents()
-            let todayEvents = existingEvents.filter { Calendar.current.isDateInToday($0.timestamp) }
-            let hasDailySummary = todayEvents.contains { $0.trigger == TimelineEntryTrigger.dailySummary.rawValue }
-
-            guard !hasDailySummary else {
-                logger.info("Daily summary already exists for today")
-                return nil
-            }
-
-            let currentHealthBand = TimelineAIContext.healthBand(healthData.health)
-            
-            // Skip AI generation if health is in 100 band (81-100 HP) - only pre-written messages allowed
-            guard currentHealthBand != 100 else {
-                logger.info("Daily summary skipped - health in 100 band (81-100 HP), only pre-written messages allowed")
-                return nil
-            }
-            
-            let catState = CatState.from(health: healthData.health)
-
-            // Count today's stats
-            let bypassCount = todayEvents.filter { $0.eventType == .shieldBypassed }.count
-
-            // Count health band drops (only processed events with healthBandDrop trigger)
-            // This avoids double-counting and ensures consistency
-            let healthDropsToday = todayEvents.filter {
-                $0.trigger == TimelineEntryTrigger.healthBandDrop.rawValue
-            }.count
-
-            // Calculate starting health from first event of the day (or 100 if no events)
-            let startingHealth = todayEvents.first?.healthBefore ?? 100
-            let startingHealthBand = TimelineAIContext.healthBand(startingHealth)
-
-            let context = TimelineAIContext(
-                trigger: .dailySummary,
-                tone: CatTone.from(catState: catState),
-                currentHealth: healthData.health,
-                profile: await userSettings.loadOnboardingProfile(),
-                timestamp: now,
-                appName: nil,
-                healthBefore: nil,
-                healthAfter: nil,
-                currentHealthBand: currentHealthBand,
-                previousHealthBand: startingHealthBand,
-                totalShieldDismissalsToday: bypassCount,
-                totalHealthDropsToday: healthDropsToday
-            )
-
-            // Load recent AI messages for context
-            let recentMessages = await userSettings.loadRecentAIMessages(1)
-            guard let result = await timelineAI.generateMessage(context, recentMessages) else {
-                logger.warning("AI unavailable for daily summary - no entry created")
-                return nil
-            }
-
-            // Save to AI message history
-            let historyEntry = AIMessageHistory(
-                timestamp: now,
-                trigger: TimelineEntryTrigger.dailySummary.rawValue,
-                healthBand: TimelineAIContext.healthBand(healthData.health),
-                response: result.message,
-                emoji: result.emoji
-            )
-            await userSettings.appendAIMessageHistory(historyEntry)
-
-            let summaryEvent = TimelineEvent(
-                id: UUID(),
-                timestamp: now,
-                appName: "Daily Summary",
-                healthBefore: healthData.health,
-                healthAfter: healthData.health,
-                cooldownStarted: now,
-                eventType: .aiGenerated,
-                aiMessage: result.message,
-                aiEmoji: result.emoji,
-                trigger: TimelineEntryTrigger.dailySummary.rawValue
-            )
-
-            logger.info("Generated daily summary")
-            return summaryEvent
+            // Daily summary message generation removed - notification still triggers app open
+            // but no timeline message is created
+            logger.debug("Daily summary check called - message generation disabled")
+            return nil
         },
         
         getWelcomeMessage: {
@@ -204,13 +94,6 @@ extension TimelineManager {
             // Load current health (should be 100 after reset, but could vary)
             let healthData = await catHealth.loadHealth()
             let currentBand = TimelineAIContext.healthBand(healthData.health)
-            
-            // Skip AI generation if health is in 100 band (81-100 HP) - only pre-written messages allowed
-            guard currentBand != 100 else {
-                logger.info("Daily welcome skipped - health in 100 band (81-100 HP), only pre-written messages allowed")
-                return nil
-            }
-            
             let catState = CatState.from(health: healthData.health)
 
             let context = TimelineAIContext(
@@ -228,14 +111,17 @@ extension TimelineManager {
                 totalHealthDropsToday: 0
             )
 
-            // Load recent AI messages for context (can include yesterday's for continuity)
+            // Load recent messages for anti-repetition
             let recentMessages = await userSettings.loadRecentAIMessages(2)
-            guard let result = await timelineAI.generateMessage(context, recentMessages) else {
-                logger.warning("AI unavailable for daily welcome - no entry created")
+            let result = await timelineAI.generateMessage(context, recentMessages)
+
+            // Templates always return a message
+            guard let result = result else {
+                logger.warning("Template selection failed for daily welcome")
                 return nil
             }
 
-            // Save to AI message history
+            // Save to message history for anti-repetition
             let historyEntry = AIMessageHistory(
                 timestamp: now,
                 trigger: TimelineEntryTrigger.dailyWelcome.rawValue,
@@ -258,29 +144,17 @@ extension TimelineManager {
                 trigger: TimelineEntryTrigger.dailyWelcome.rawValue
             )
 
-            logger.info("Generated AI daily welcome")
+            logger.info("Generated daily welcome from template")
             return dailyWelcomeEvent
         },
         
         shouldShowAIUnavailableNotice: {
-            @Dependency(\.timelineAI) var timelineAI: TimelineAIService
-            
-            let availability = await timelineAI.checkAvailability()
-            
-            switch availability {
-            case .permanentlyUnavailable:
-                let defaults = UserDefaults.appGroup
-                let hasShown = defaults.bool(forKey: "hasShownAIUnavailableNotice")
-                return !hasShown
-            default:
-                return false
-            }
+            // Templates always available - no need to show AI unavailable notice
+            return false
         },
-        
+
         markAIUnavailableNoticeShown: {
-            let defaults = UserDefaults.appGroup
-            defaults.set(true, forKey: "hasShownAIUnavailableNotice")
-            logger.info("AI unavailable notice marked as shown")
+            // No-op - templates always available
         }
     )
 }

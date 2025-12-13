@@ -12,7 +12,6 @@ actor TimelineAISessionManager {
     private var session: LanguageModelSession?
     private var sessionDate: Date?
     private let systemInstructions: String
-    private var isGenerating = false
 
     private let summarizationPrompt = """
     Summarize this cat's diary entries into a brief paragraph.
@@ -39,19 +38,18 @@ actor TimelineAISessionManager {
         return session!
     }
 
-    /// Atomically wait for availability and acquire the session
-    func acquireSession() async -> LanguageModelSession {
-        // Spin-wait if another generation is in progress
-        while isGenerating {
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        isGenerating = true
-        return getSession()
-    }
-
-    /// Release the session for the next caller
-    func releaseSession() {
-        isGenerating = false
+    /// Generate a message - actor serializes access automatically
+    func generate(
+        prompt: String,
+        options: GenerationOptions
+    ) async throws -> CatTimelineMessage {
+        let session = getSession()
+        let response = try await session.respond(
+            to: prompt,
+            generating: CatTimelineMessage.self,
+            options: options
+        )
+        return response.content
     }
 
     func prewarm() async {

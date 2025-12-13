@@ -10,7 +10,7 @@ import Foundation
 struct AIMessageHistory: Codable, Equatable, Sendable {
     let id: UUID
     let timestamp: Date
-    let trigger: String           // "firstBypassOfDay", "healthBandDrop", "dailySummary", etc.
+    let trigger: String           // "healthBandDrop", "dailySummary", "dailyWelcome", etc.
     let healthBand: Int           // 100, 90, 80... at time of generation
     let response: String          // What the cat said
     let emoji: String?
