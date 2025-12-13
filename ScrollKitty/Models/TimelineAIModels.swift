@@ -33,6 +33,8 @@ enum TimelineEntryTrigger: String, Codable, Equatable, Sendable {
     case dailyWelcome         // AI-generated daily welcome after midnight reset
     case healthBandDrop       // Health crossed a 10-point boundary (100→90, 90→80, etc.)
     case dailySummary         // 11 PM or health reached 0
+    case terminal             // Health reached 0 - stark, final closing message
+    case nightly              // 11 PM reflection (22:55-23:05 window)
 }
 
 // MARK: - AI Context
