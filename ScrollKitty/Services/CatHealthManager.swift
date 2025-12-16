@@ -55,6 +55,12 @@ extension CatHealthManager: DependencyKey {
                     // Clear timeline events for new day
                     defaults?.removeObject(forKey: "timelineEvents")
 
+                    // Clear session tracking keys for AI summaries
+                    defaults?.removeObject(forKey: "sessionStartTime")
+                    defaults?.removeObject(forKey: "cumulativePhoneUseSeconds")
+                    defaults?.removeObject(forKey: "firstBypassTime")
+                    defaults?.removeObject(forKey: "lastBypassTime")
+
                     // Mark reset as done for today
                     defaults?.set(Date(), forKey: "lastResetDate")
 
@@ -62,7 +68,7 @@ extension CatHealthManager: DependencyKey {
                     defaults?.synchronize()
                 }
 
-                print("[CatHealthManager] ✅ Reset complete: Health=100, Cooldown cleared, Timeline cleared")
+                print("[CatHealthManager] ✅ Reset complete: Health=100, Cooldown cleared, Timeline cleared, Session tracking cleared")
             }
             
             // STEP 3: Read current health (potentially just-reset)

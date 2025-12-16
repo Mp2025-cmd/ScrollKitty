@@ -131,8 +131,11 @@ class ShieldActionExtension: ShieldActionDelegate {
         // Save new health
         defaults.set(healthAfter, forKey: "catHealth")
         
-        // Log timeline event
+        // SESSION TRACKING: Track bypass times and start session
         let now = Date()
+        trackSessionStart(defaults: defaults, now: now)
+        
+        // Log timeline event
         logTimelineEvent(
             defaults: defaults,
             appName: appName,
@@ -145,6 +148,24 @@ class ShieldActionExtension: ShieldActionDelegate {
         print("[ShieldAction] 📉 Health: \(healthBefore) → \(healthAfter) (-5 HP)")
         
         completion()
+    }
+    
+    // MARK: - Session Tracking
+    
+    /// Tracks session start time and bypass times for AI summaries
+    private func trackSessionStart(defaults: UserDefaults, now: Date) {
+        // Track first bypass time (only set if nil)
+        if defaults.object(forKey: "firstBypassTime") == nil {
+            defaults.set(now, forKey: "firstBypassTime")
+            print("[ShieldAction] 📍 First bypass time: \(now)")
+        }
+        
+        // Always update last bypass time
+        defaults.set(now, forKey: "lastBypassTime")
+        
+        // Start session timer (will be accumulated when shield next appears)
+        defaults.set(now, forKey: "sessionStartTime")
+        print("[ShieldAction] ⏱️ Session started at: \(now)")
     }
     
     // MARK: - Global Cooldown

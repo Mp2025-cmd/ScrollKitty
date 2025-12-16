@@ -56,6 +56,10 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     private func applyShields() {
         let defaults = UserDefaults(suiteName: appGroupID)
+        
+        // SESSION TRACKING: Accumulate time before re-shielding
+        accumulateSessionTime(defaults: defaults)
+        
         guard let data = defaults?.data(forKey: "selectedApps"),
               let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
             print("[ScrollKittyMonitor] ⚠️ No apps to shield")
@@ -66,5 +70,28 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         store.shield.applicationCategories = .specific(selection.categoryTokens)
 
         print("[ScrollKittyMonitor] 🛡️ Shields ACTIVATED (\(selection.applicationTokens.count) apps)")
+    }
+    
+    // MARK: - Session Tracking
+    
+    /// Accumulates elapsed session time when shield reappears
+    private func accumulateSessionTime(defaults: UserDefaults?) {
+        guard let defaults = defaults,
+              let sessionStart = defaults.object(forKey: "sessionStartTime") as? Date else {
+            return // No active session
+        }
+        
+        // Calculate elapsed time since bypass
+        let elapsed = Date().timeIntervalSince(sessionStart)
+        
+        // Add to cumulative total
+        let currentTotal = defaults.double(forKey: "cumulativePhoneUseSeconds")
+        let newTotal = currentTotal + elapsed
+        defaults.set(newTotal, forKey: "cumulativePhoneUseSeconds")
+        
+        // Clear session start (session ended)
+        defaults.removeObject(forKey: "sessionStartTime")
+        
+        print("[ScrollKittyMonitor] ⏱️ Session ended. Elapsed: \(Int(elapsed))s, Total: \(Int(newTotal))s")
     }
 }

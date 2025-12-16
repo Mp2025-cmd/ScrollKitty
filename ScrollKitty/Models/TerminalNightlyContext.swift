@@ -12,20 +12,40 @@ struct TerminalNightlyContext: Sendable {
         case terminal
         case nightly
     }
-
-    enum DataCompleteness: String, Sendable {
-        case low
-        case medium
-        case high
+    
+    enum LimitStatus: String, Sendable {
+        case within
+        case past
+        case unknown
+    }
+    
+    enum DayPart: String, Sendable {
+        case morning
+        case afternoon
+        case evening
+        case night
+        case unknown
     }
 
-    // Minimal payload for AI
     let trigger: Trigger
     let currentHealthBand: Int
-    let totalShieldDismissalsToday: Int
-    let totalHealthDropsToday: Int
+
+    // Raw inputs
     let screenTimeGoalLabel: String?
     let goalMet: Bool?
-    let goalMetReason: String?
-    let dataCompleteness: DataCompleteness
+    let firstUseTime: String?
+    let lastUseTime: String?
+    let phoneUseHours: Double?
+    let comparedToBaseline: String?
+
+    // Terminal-only (safe to keep on the struct; we won't include in Nightly prompt)
+    let terminalAtLocalTime: String?
+    let dayPart: DayPart
+    let variationSeed: Int
+
+    // Derived
+    let goalHours: Double?
+    let limitStatus: LimitStatus
+    let overByHours: Double?
+    let underByHours: Double?
 }

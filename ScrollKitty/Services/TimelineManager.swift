@@ -67,45 +67,43 @@ extension TimelineManager {
 
             guard let finalTrigger = trigger else { return nil }
 
-            // 5. Build context
-            let existingEvents = await userSettings.loadTimelineEvents()
-            let todayEvents = existingEvents.filter { calendar.isDateInToday($0.timestamp) }
-
-            let bypassCount = todayEvents.filter { $0.eventType == .shieldBypassed }.count
-            let healthDropsToday = todayEvents.filter {
-                $0.trigger == TimelineEntryTrigger.healthBandDrop.rawValue
-            }.count
-
-            // Get daily limit goal
+            // 5. Get daily limit goal (use float division to preserve fractions like 1.5 hours)
             let dailyLimitMinutes = await userSettings.loadDailyLimit()
-            let goalLabel = dailyLimitMinutes.map { "\($0 / 60) hours" }
+            let goalLabel = dailyLimitMinutes.map { minutes -> String in
+                let hours = Double(minutes) / 60.0
+                // Format cleanly: "2 hours" not "2.0 hours", but keep "1.5 hours"
+                if hours.truncatingRemainder(dividingBy: 1) == 0 {
+                    return "\(Int(hours)) hours"
+                } else {
+                    return "\(hours) hours"
+                }
+            }
 
             // Compute goalMet heuristic
-            let (goalMet, goalMetReason) = computeGoalMet(health: healthData.health)
+            let (goalMet, _) = computeGoalMet(health: healthData.health)
 
-            let context = TerminalNightlyContext(
+            // 6. Build enriched context with session tracking data
+            let context = ContextBuilder.make(
                 trigger: finalTrigger,
-                currentHealthBand: TimelineAIContext.healthBand(healthData.health),
-                totalShieldDismissalsToday: bypassCount,
-                totalHealthDropsToday: healthDropsToday,
-                screenTimeGoalLabel: goalLabel,
+                healthBand: TimelineAIContext.healthBand(healthData.health),
+                goalLabel: goalLabel,
                 goalMet: goalMet,
-                goalMetReason: goalMetReason,
-                dataCompleteness: .medium
+                baselineCmp: nil
             )
 
-            // 6. Generate AI message
+            // 7. Generate AI message (route to correct service)
             do {
-                let sessionManager = TimelineAISessionManager(systemInstructions: "")
-                let message = try await TerminalNightlyAIService.generate(
-                    context: context,
-                    sessionManager: sessionManager
-                )
+                let message: String
+                if finalTrigger == .terminal {
+                    message = try await TerminalAI.generate(context: context)
+                } else {
+                    message = try await NightlyAI.generate(context: context)
+                }
 
-                // 7. Mark as generated today
+                // 8. Mark as generated today
                 defaults.set(true, forKey: todayKey)
 
-                // 8. Create timeline event
+                // 9. Create timeline event
                 let event = TimelineEvent(
                     id: UUID(),
                     timestamp: now,
@@ -119,7 +117,7 @@ extension TimelineManager {
                     trigger: finalTrigger == .terminal ? TimelineEntryTrigger.terminal.rawValue : TimelineEntryTrigger.nightly.rawValue
                 )
 
-                logger.info("Generated \(finalTrigger.rawValue) message")
+                logger.info("Generated \(finalTrigger.rawValue) message: \(message)")
                 return event
             } catch {
                 logger.error("Failed to generate closing message: \(error.localizedDescription)")
