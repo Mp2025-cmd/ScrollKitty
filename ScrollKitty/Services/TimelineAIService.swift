@@ -35,9 +35,6 @@ extension TimelineAIService {
                 avoiding: recentMessages
             )
 
-            print("[TimelineAI] Selected template for band \(context.currentHealthBand), trigger: \(context.trigger.rawValue)")
-            print("[TimelineAI] Message: \(message)")
-
             // Return result (emoji already embedded in template messages)
             return TimelineMessageResult(message: message, emoji: nil)
         },

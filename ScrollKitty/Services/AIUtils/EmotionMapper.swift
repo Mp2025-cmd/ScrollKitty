@@ -2,34 +2,28 @@
 //  EmotionMapper.swift
 //  ScrollKitty
 //
-//  Maps health bands to pre-defined emotion descriptions
-//  Pre-computed so the AI model doesn't have to interpret health values
-//
 
 import Foundation
 
 enum EmotionMapper {
-    
-    /// Maps health band to a cat emotion description for nightly summaries
     static func nightlyEmotion(for healthBand: Int) -> String {
         switch healthBand {
-        case 80...100:
-            return "relieved and content"
-        case 60..<80:
-            return "okay but a little tired"
-        case 40..<60:
+        case 95...100:
+            return "great and energized"
+        case 85..<95:
+            return "pretty good and solid"
+        case 70..<85:
+            return "okay but a bit tired"
+        case 50..<70:
             return "worn out and exhausted"
-        case 20..<40:
-            return "really drained, barely holding on"
+        case 25..<50:
+            return "really drained and weak"
         default:
-            return "completely wiped and empty"
+            return "completely wiped out"
         }
     }
-    
-    /// Maps health band to a terminal emotion description (stark, minimal)
+
     static func terminalEmotion(for healthBand: Int) -> String {
-        // Terminal is always at HP=0, but we still map for consistency
         return "completely drained and done"
     }
 }
-

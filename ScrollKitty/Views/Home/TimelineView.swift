@@ -94,20 +94,20 @@ struct DateHeaderView: View {
     let date: Date
     
     var body: some View {
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(DesignSystem.Colors.timelineIndicator)
-                                    .frame(width: 10, height: 10)
-                                
+        HStack(spacing: 8) {
+            Circle()
+                .fill(DesignSystem.Colors.timelineIndicator)
+                .frame(width: 10, height: 10)
+            
             Text(formattedDate())
-                                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                                    .foregroundColor(DesignSystem.Colors.primaryText)
-                                
+                .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                .foregroundColor(DesignSystem.Colors.primaryText)
+            
             Text("• \(formattedDayOfWeek())")
-                                    .font(.custom("Sofia Pro-Regular", size: 16))
-                                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-                                Spacer()
-                            }
+                .font(.custom("Sofia Pro-Regular", size: 16))
+                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+            Spacer()
+        }
     }
     
     private func formattedDate() -> String {
@@ -210,6 +210,7 @@ struct TimelineItemView: View {
                             .foregroundColor(DesignSystem.Colors.white)
                             .tracking(DesignSystem.Typography.timelineMessageTracking)
                             .lineSpacing(DesignSystem.Typography.timelineMessageLineSpacing)
+                            .fixedSize(horizontal: false, vertical: true) // Allow text to expand vertically
                         }
                     }
                     .padding(.leading, 13)

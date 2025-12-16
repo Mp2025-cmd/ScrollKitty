@@ -2,13 +2,10 @@
 //  DayPartDeriver.swift
 //  ScrollKitty
 //
-//  Converts time strings to DayPart enum
-//
 
 import Foundation
 
 enum DayPartDeriver {
-    /// Derives DayPart from a time string like "11:30 AM" or "7:12 PM"
     static func from(timeString: String?) -> TerminalNightlyContext.DayPart {
         guard let raw = timeString?.trimmingCharacters(in: .whitespacesAndNewlines),
               !raw.isEmpty
@@ -31,5 +28,3 @@ enum DayPartDeriver {
         return .evening
     }
 }
-
-

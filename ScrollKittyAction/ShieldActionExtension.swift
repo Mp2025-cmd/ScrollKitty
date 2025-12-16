@@ -4,8 +4,6 @@ import Foundation
 import FamilyControls
 import DeviceActivity
 
-// MARK: - Timeline Event (Duplicated for Extension - Extensions can't share code with main app)
-
 private struct TimelineEvent: Codable {
     let id: String  // UUID string
     let timestamp: Date
@@ -43,36 +41,26 @@ private struct TimelineEvent: Codable {
     }
 }
 
-// MARK: - Shield Action Extension
-
 class ShieldActionExtension: ShieldActionDelegate {
 
     private let store = ManagedSettingsStore()
     private let activityCenter = DeviceActivityCenter()
     private let appGroupID = "group.com.scrollkitty.app"
 
-    // MARK: - Applications
-    
     override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
         switch action {
         case .primaryButtonPressed:
-            // "Step Back" (alive) or "Close App" (dead)
             completionHandler(.close)
-            
         case .secondaryButtonPressed:
-            // "Continue / Bypass" - Only available when alive
             handleBypass(appName: "App") {
                 self.startGlobalCooldown()
                 completionHandler(.none)
             }
-            
         @unknown default:
             completionHandler(.close)
         }
     }
-    
-    // MARK: - Web Domains
-    
+
     override func handle(action: ShieldAction, for webDomain: WebDomainToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
         switch action {
         case .primaryButtonPressed:
@@ -86,9 +74,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             completionHandler(.close)
         }
     }
-    
-    // MARK: - Categories
-    
+
     override func handle(action: ShieldAction, for category: ActivityCategoryToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
         switch action {
         case .primaryButtonPressed:
@@ -102,40 +88,28 @@ class ShieldActionExtension: ShieldActionDelegate {
             completionHandler(.close)
         }
     }
-    
-    // MARK: - Core Bypass Logic
-    
+
     private func handleBypass(appName: String, completion: () -> Void) {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
-            print("[ShieldAction] ❌ Failed to access App Group")
             completion()
             return
         }
-        
-        // Read current health (check raw value first to detect dead state)
+
         let currentHealth = defaults.integer(forKey: "catHealth")
-        
-        // If health is 0, cat is dead - don't allow bypass
-        // (This shouldn't happen as shield config hides the button, but safety check)
+
         if currentHealth == 0 && defaults.object(forKey: "catHealth") != nil {
-            print("[ShieldAction] ⚠️ Cat is dead - bypass blocked")
             return
         }
-        
-        // If key doesn't exist (first launch), default to 100
+
         let healthBefore = currentHealth > 0 ? currentHealth : 100
-        
-        // Subtract 5 HP (fixed cost)
+
         let healthAfter = max(0, healthBefore - 5)
-        
-        // Save new health
+
         defaults.set(healthAfter, forKey: "catHealth")
-        
-        // SESSION TRACKING: Track bypass times and start session
+
         let now = Date()
         trackSessionStart(defaults: defaults, now: now)
-        
-        // Log timeline event
+
         logTimelineEvent(
             defaults: defaults,
             appName: appName,
@@ -144,106 +118,72 @@ class ShieldActionExtension: ShieldActionDelegate {
             cooldownStarted: now,
             eventType: "shieldBypassed"
         )
-        
-        print("[ShieldAction] 📉 Health: \(healthBefore) → \(healthAfter) (-5 HP)")
-        
+
         completion()
     }
-    
-    // MARK: - Session Tracking
-    
-    /// Tracks session start time and bypass times for AI summaries
+
     private func trackSessionStart(defaults: UserDefaults, now: Date) {
-        // Track first bypass time (only set if nil)
         if defaults.object(forKey: "firstBypassTime") == nil {
             defaults.set(now, forKey: "firstBypassTime")
-            print("[ShieldAction] 📍 First bypass time: \(now)")
         }
-        
-        // Always update last bypass time
+
         defaults.set(now, forKey: "lastBypassTime")
-        
-        // Start session timer (will be accumulated when shield next appears)
+
         defaults.set(now, forKey: "sessionStartTime")
-        print("[ShieldAction] ⏱️ Session started at: \(now)")
     }
-    
-    // MARK: - Global Cooldown
 
     private func startGlobalCooldown() {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
-            print("[ShieldAction] ❌ Failed to access App Group for cooldown")
             return
         }
 
-        // Get cooldown duration (default: 20 minutes)
         let cooldownMinutes = defaults.integer(forKey: "shieldInterval")
         let duration = cooldownMinutes > 0 ? cooldownMinutes : 20
 
-        // Atomic operation: Write cooldown end time and force synchronize before clearing shields
         autoreleasepool {
             let cooldownEnd = Date().addingTimeInterval(Double(duration * 60))
             defaults.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
 
-            // Force synchronize to ensure UserDefaults write completes before ManagedSettings changes
-            let syncSuccess = defaults.synchronize()
-            if !syncSuccess {
-                print("[ShieldAction] ⚠️ UserDefaults sync warning for cooldown")
-            }
+            _ = defaults.synchronize()
         }
 
-        // GLOBAL COOLDOWN: Clear ALL shields (not just the bypassed app)
-        // Only proceed if UserDefaults write succeeded
         store.shield.applications = nil
         store.shield.applicationCategories = nil
         store.shield.webDomains = nil
 
-        print("[ShieldAction] ⏱️ Global cooldown started: \(duration) minutes - ALL shields cleared")
-
-        // Schedule re-shield when cooldown ends
         scheduleReshield(cooldownMinutes: duration)
     }
-    
-    // MARK: - Re-shield Scheduling
-    
+
     private func scheduleReshield(cooldownMinutes: Int) {
         let calendar = Calendar.current
         let now = Date()
-        
-        // Calculate end time
+
         let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: now)!
         let endComponents = calendar.dateComponents([.hour, .minute], from: endTime)
-        
-        // DeviceActivitySchedule requires minimum 15-minute interval
-        // If cooldown < 15 min, shift start backwards to create valid interval
+
         var startTime = now
         if cooldownMinutes < 15 {
             let shiftBack = 15 - cooldownMinutes
             startTime = calendar.date(byAdding: .minute, value: -shiftBack, to: now)!
         }
         let startComponents = calendar.dateComponents([.hour, .minute], from: startTime)
-        
+
         let schedule = DeviceActivitySchedule(
             intervalStart: DateComponents(hour: startComponents.hour, minute: startComponents.minute),
             intervalEnd: DateComponents(hour: endComponents.hour, minute: endComponents.minute),
             repeats: false
         )
-        
+
         let activityName = DeviceActivityName("reshield_cooldown")
-        
-        // Stop any existing schedule
+
         activityCenter.stopMonitoring([activityName])
-        
+
         do {
             try activityCenter.startMonitoring(activityName, during: schedule)
-            print("[ShieldAction] ⏰ Re-shield scheduled for \(endComponents.hour ?? 0):\(String(format: "%02d", endComponents.minute ?? 0))")
         } catch {
-            print("[ShieldAction] ❌ Failed to schedule re-shield: \(error)")
         }
     }
-    
-    // MARK: - Timeline Logging
-    
+
     private func logTimelineEvent(
         defaults: UserDefaults,
         appName: String,
@@ -252,14 +192,12 @@ class ShieldActionExtension: ShieldActionDelegate {
         cooldownStarted: Date,
         eventType: String
     ) {
-        // Load existing events
         var events: [TimelineEvent] = []
         if let data = defaults.data(forKey: "timelineEvents"),
            let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
             events = decoded
         }
 
-        // Check for recent duplicate (same health transition within 3 seconds)
         let now = Date()
         let recentDuplicate = events.contains { event in
             event.healthBefore == healthBefore &&
@@ -268,11 +206,9 @@ class ShieldActionExtension: ShieldActionDelegate {
         }
 
         if recentDuplicate {
-            print("[ShieldAction] ⚠️ Skipping duplicate event (same health transition within 3s)")
             return
         }
 
-        // Append new event
         let event = TimelineEvent(
             timestamp: now,
             appName: appName,
@@ -282,13 +218,11 @@ class ShieldActionExtension: ShieldActionDelegate {
             eventType: eventType
         )
         events.append(event)
-        
-        // Keep only last 100 events
+
         if events.count > 100 {
             events = Array(events.suffix(100))
         }
-        
-        // Save
+
         if let encoded = try? JSONEncoder().encode(events) {
             defaults.set(encoded, forKey: "timelineEvents")
         }

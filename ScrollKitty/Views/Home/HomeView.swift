@@ -38,31 +38,24 @@ struct HomeFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                print("[HomeFeature] onAppear - loading health (lazy reset if needed)")
                 return .send(.loadCatHealth)
 
             case .onDisappear:
-                print("[HomeFeature] onDisappear")
                 return .none
                 
             case .appBecameActive:
-                // Load health first (may trigger lazy midnight reset that clears timeline)
-                // Timeline processing happens in catHealthLoaded AFTER reset completes
-                print("[HomeFeature] App became active - loading health (lazy reset if needed)")
+                
                 return .send(.loadCatHealth)
 
             case .loadCatHealth:
                 // Lazy reset happens automatically inside loadHealth()
-                print("[HomeFeature] loadCatHealth")
                 state.isLoading = true
                 return .run { send in
                     let healthData = await catHealth.loadHealth()
-                    print("[HomeFeature] Health loaded: \(healthData.health)% State: \(healthData.catState)")
                     await send(.catHealthLoaded(healthData))
                 }
 
             case .catHealthLoaded(let healthData):
-                print("[HomeFeature] catHealthLoaded - Health: \(healthData.health)%")
                 state.isLoading = false
                 state.catHealth = healthData
                 // Sequential to ensure proper dependency chain:
@@ -86,6 +79,7 @@ struct HomeFeature {
                 
             case .binding:
                 return .none
+                
             }
         }
         ._printChanges()
@@ -185,9 +179,6 @@ struct HomeView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .dailySummaryNotificationTapped)) { _ in
-            // User tapped 11 PM notification - route through appBecameActive to ensure
-            // lazy midnight reset completes BEFORE daily summary is triggered
-            print("[HomeView] Received daily summary notification tap - routing through appBecameActive")
             store.send(.appBecameActive)
         }
     }
@@ -219,9 +210,6 @@ struct HomeView: View {
         }
     }
     
-    @State private var showDebugSheet = false
-    @State private var debugLogText = ""
-
     @ViewBuilder
     private var dashboardContent: some View {
         VStack(spacing: 0) {
@@ -232,21 +220,6 @@ struct HomeView: View {
                     .tracking(-1)
                     .foregroundColor(DesignSystem.Colors.primaryText)
                 Spacer()
-
-                // Debug export button (dev only)
-                #if DEBUG
-                Button {
-                    Task {
-                        debugLogText = await AIDebugLogger.shared.exportLogsAsText()
-                        showDebugSheet = true
-                    }
-                } label: {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 18))
-                        .foregroundColor(DesignSystem.Colors.secondaryText)
-                }
-                .padding(.trailing, 16)
-                #endif
             }
             .padding(.top, 16)
             
@@ -281,32 +254,6 @@ struct HomeView: View {
             
             Spacer()
         }
-        #if DEBUG
-        .sheet(isPresented: $showDebugSheet) {
-            NavigationView {
-                ScrollView {
-                    Text(debugLogText)
-                        .font(.system(.caption, design: .monospaced))
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .navigationTitle("AI Debug Log")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Close") {
-                            showDebugSheet = false
-                        }
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        ShareLink(item: debugLogText) {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                    }
-                }
-            }
-        }
-        #endif
     }
 
     private func healthBarColor(for health: Int) -> Color {

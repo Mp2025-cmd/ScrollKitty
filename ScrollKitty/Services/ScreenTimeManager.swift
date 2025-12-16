@@ -133,7 +133,6 @@ extension ScreenTimeManager: DependencyKey {
                         results.append(data)
                     }
                 } catch {
-                    print("Error fetching data for \(currentDate): \(error)")
                 }
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
             }
@@ -211,15 +210,13 @@ extension DependencyValues {
         
         // 3. Start Monitoring (No Events needed for active shielding)
         let activityName = DeviceActivityName("daily_monitor")
-        
+
         try center.startMonitoring(activityName, during: schedule)
-        print("[ScreenTime] ✅ Active Shielding Monitoring Started")
     }
     
     private func stopDeviceActivityMonitoring() async {
         let center = DeviceActivityCenter()
         center.stopMonitoring([DeviceActivityName("daily_monitor")])
-        print("[ScreenTime] 🛑 Monitoring Stopped")
     }
 
     private func applyShieldsToSelectedApps() async {
@@ -228,13 +225,11 @@ extension DependencyValues {
 
         guard let data = defaults?.data(forKey: "selectedApps"),
               let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
-            print("[ScreenTime] ⚠️ No apps to shield")
             return
         }
 
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
-        print("[ScreenTime] 🛡️ Shields applied immediately to \(selection.applicationTokens.count) apps")
     }
 
 // MARK: - Private Parsing Helper

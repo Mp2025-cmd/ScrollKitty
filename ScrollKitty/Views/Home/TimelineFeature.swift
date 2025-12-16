@@ -166,7 +166,6 @@ struct TimelineFeature {
 
                         // Templates always return - guard for safety only
                         guard let result = result else {
-                            print("[TimelineFeature] Template selection failed for event: \(event.id)")
                             updatedEvents.append(event)
                             continue
                         }
@@ -196,7 +195,6 @@ struct TimelineFeature {
                         )
                         updatedEvents.append(enrichedEvent)
                         hasChanges = true
-                        print("[TimelineFeature] Selected template for event: \(event.id) (trigger: \(trigger.rawValue), band: \(previousBand)→\(currentBand))")
                     }
 
                     // Check if any event reached 0 health (triggers daily summary)
@@ -217,7 +215,6 @@ struct TimelineFeature {
                 // Save all updated events back to UserDefaults atomically, then reload
                 return .run { [userSettings] send in
                     await userSettings.saveTimelineEvents(updatedEvents)
-                    print("[TimelineFeature] 💾 Saved \(updatedEvents.count) events with AI messages")
                     // Reload timeline to show AI-enriched messages
                     await send(.loadTimeline)
                 }

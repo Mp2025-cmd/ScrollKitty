@@ -405,7 +405,6 @@ ScrollKitty/
 │   ├── DailySummaryNotificationService.swift
 │   ├── UserSettingsManager.swift
 │   ├── CatHealthManager.swift
-│   ├── AIDebugLogger.swift
 │   └── AIUtils/
 │       ├── SentenceUtils.swift
 │       ├── TimeParsing.swift
@@ -440,7 +439,6 @@ ScrollKitty/
 - **TimelineTemplateMessages** - Service storing 120 prebuilt messages organized by health band and trigger
 - **AIMessageHistory** - Tracks recent messages for repetition avoidance
 - **TimelineAISessionManager** - (Deprecated) Previously managed AI sessions
-- **AIDebugLogger** - (Optional) For debugging message selection
 
 ---
 

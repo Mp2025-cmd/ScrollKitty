@@ -1,27 +1,15 @@
-//
-//  TimelineManager.swift
-//  ScrollKitty
-//
-//  Manages timeline entry triggers, cluster detection, and AI message generation
-//
-
 import Foundation
 import ComposableArchitecture
 import os.log
-
 private let logger = Logger(subsystem: "com.scrollkitty.app", category: "TimelineManager")
-
-// MARK: - TimelineManager (TCA Dependency)
 
 struct TimelineManager: Sendable {
     var checkForDailySummary: @Sendable () async -> TimelineEvent?
-    var getWelcomeMessage: @Sendable () async -> TimelineEvent?      // First-ever install only (static)
-    var getDailyWelcome: @Sendable () async -> TimelineEvent?        // Daily AI-generated welcome
+    var getWelcomeMessage: @Sendable () async -> TimelineEvent?
+    var getDailyWelcome: @Sendable () async -> TimelineEvent?
     var shouldShowAIUnavailableNotice: @Sendable () async -> Bool
     var markAIUnavailableNoticeShown: @Sendable () async -> Void
 }
-
-// MARK: - Live Implementation
 
 extension TimelineManager {
     static let liveValue = TimelineManager(
@@ -33,25 +21,22 @@ extension TimelineManager {
             let now = Date()
             let calendar = Calendar.current
 
-            // 1. Check AI availability
             let availability = await timelineAI.checkAvailability()
             guard case .available = availability else {
                 logger.debug("AI unavailable - skipping closing message")
                 return nil
             }
 
-            // 2. Check if any closing already generated today
             let todayKey = "closingMessageDate_\(calendar.component(.year, from: now))_\(calendar.component(.dayOfYear, from: now))"
             let defaults = UserDefaults.appGroup
-            if defaults.bool(forKey: todayKey) {
+            let alreadyGenerated = defaults.bool(forKey: todayKey)
+            if alreadyGenerated {
                 logger.info("Closing message already generated today")
                 return nil
             }
 
-            // 3. Load current health
             let healthData = await catHealth.loadHealth()
 
-            // 4. Determine trigger type
             let isTerminal = healthData.health == 0
             let isIn11PMWindow = isWithin11PMWindow(now)
 
@@ -67,11 +52,11 @@ extension TimelineManager {
 
             guard let finalTrigger = trigger else { return nil }
 
-            // 5. Get daily limit goal (use float division to preserve fractions like 1.5 hours)
+            defaults.set(true, forKey: todayKey)
+
             let dailyLimitMinutes = await userSettings.loadDailyLimit()
             let goalLabel = dailyLimitMinutes.map { minutes -> String in
                 let hours = Double(minutes) / 60.0
-                // Format cleanly: "2 hours" not "2.0 hours", but keep "1.5 hours"
                 if hours.truncatingRemainder(dividingBy: 1) == 0 {
                     return "\(Int(hours)) hours"
                 } else {
@@ -79,10 +64,8 @@ extension TimelineManager {
                 }
             }
 
-            // Compute goalMet heuristic
             let (goalMet, _) = computeGoalMet(health: healthData.health)
 
-            // 6. Build enriched context with session tracking data
             let context = ContextBuilder.make(
                 trigger: finalTrigger,
                 healthBand: TimelineAIContext.healthBand(healthData.health),
@@ -91,7 +74,6 @@ extension TimelineManager {
                 baselineCmp: nil
             )
 
-            // 7. Generate AI message (route to correct service)
             do {
                 let message: String
                 if finalTrigger == .terminal {
@@ -100,10 +82,6 @@ extension TimelineManager {
                     message = try await NightlyAI.generate(context: context)
                 }
 
-                // 8. Mark as generated today
-                defaults.set(true, forKey: todayKey)
-
-                // 9. Create timeline event
                 let event = TimelineEvent(
                     id: UUID(),
                     timestamp: now,
@@ -126,17 +104,13 @@ extension TimelineManager {
         },
         
         getWelcomeMessage: {
-            // First-ever install welcome (static message, only once ever)
             let defaults = UserDefaults.appGroup
             let hasSeenFirstWelcome = defaults.bool(forKey: "hasSeenFirstWelcome")
 
-            // Only show if user has NEVER seen the first welcome
             guard !hasSeenFirstWelcome else { return nil }
 
-            // Mark as seen permanently
             defaults.set(true, forKey: "hasSeenFirstWelcome")
 
-            // Static welcome message for first-ever app open
             let welcomeMessage = "We're just starting our journey together. I'll jot little notes here as our day unfolds 😸"
 
             let welcomeEvent = TimelineEvent(
@@ -164,7 +138,6 @@ extension TimelineManager {
             let now = Date()
             let existingEvents = await userSettings.loadTimelineEvents()
 
-            // Skip if welcomeMessage was shown today (first install day)
             let hasWelcomeMessageToday = existingEvents.contains {
                 $0.trigger == TimelineEntryTrigger.welcomeMessage.rawValue &&
                 Calendar.current.isDateInToday($0.timestamp)
@@ -174,7 +147,6 @@ extension TimelineManager {
                 return nil
             }
 
-            // Check if we already have a dailyWelcome for today
             let hasDailyWelcome = existingEvents.contains {
                 $0.trigger == TimelineEntryTrigger.dailyWelcome.rawValue &&
                 Calendar.current.isDateInToday($0.timestamp)
@@ -184,7 +156,6 @@ extension TimelineManager {
                 return nil
             }
 
-            // Load current health (should be 100 after reset, but could vary)
             let healthData = await catHealth.loadHealth()
             let currentBand = TimelineAIContext.healthBand(healthData.health)
             let catState = CatState.from(health: healthData.health)
@@ -199,22 +170,19 @@ extension TimelineManager {
                 healthBefore: nil,
                 healthAfter: nil,
                 currentHealthBand: currentBand,
-                previousHealthBand: currentBand, // Same at start of day
+                previousHealthBand: currentBand,
                 totalShieldDismissalsToday: 0,
                 totalHealthDropsToday: 0
             )
 
-            // Load recent messages for anti-repetition
             let recentMessages = await userSettings.loadRecentAIMessages(2)
             let result = await timelineAI.generateMessage(context, recentMessages)
 
-            // Templates always return a message
             guard let result = result else {
                 logger.warning("Template selection failed for daily welcome")
                 return nil
             }
 
-            // Save to message history for anti-repetition
             let historyEntry = AIMessageHistory(
                 timestamp: now,
                 trigger: TimelineEntryTrigger.dailyWelcome.rawValue,
@@ -240,21 +208,22 @@ extension TimelineManager {
             logger.info("Generated daily welcome from template")
             return dailyWelcomeEvent
         },
-        
+
         shouldShowAIUnavailableNotice: {
-            // Templates always available - no need to show AI unavailable notice
             return false
         },
 
-        markAIUnavailableNoticeShown: {
-            // No-op - templates always available
-        }
+        markAIUnavailableNoticeShown: {}
     )
 
-    // MARK: - Helper Functions
-
-    /// Check if current time is within the 11 PM window (22:55-23:05)
     private static func isWithin11PMWindow(_ date: Date) -> Bool {
+        #if DEBUG
+        if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app"),
+           defaults.bool(forKey: "debug_force11PMWindow") {
+            return true
+        }
+        #endif
+
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: date)
 
@@ -262,7 +231,6 @@ extension TimelineManager {
             return false
         }
 
-        // 22:55-23:05 (10-minute deterministic window)
         if hour == 22 && minute >= 55 {
             return true
         }
@@ -272,19 +240,16 @@ extension TimelineManager {
         return false
     }
 
-    /// Compute goalMet heuristic based on health (proxy for actual usage)
     private static func computeGoalMet(health: Int) -> (met: Bool?, reason: String?) {
         if health >= 80 {
             return (true, "stayed strong all day")
         } else if health >= 40 {
-            return (nil, nil)  // Inconclusive
+            return (nil, nil)
         } else {
             return (false, "pushed too far today")
         }
     }
 }
-
-// MARK: - Test Implementation
 
 extension TimelineManager {
     static let testValue = TimelineManager(
@@ -296,25 +261,19 @@ extension TimelineManager {
     )
 }
 
-// MARK: - CatTone Extension
-
 extension CatTone {
     nonisolated static func from(catState: CatState) -> CatTone {
         switch catState {
-        case .healthy: return .playful      // 80-100 HP
-        case .concerned: return .concerned  // 60-79 HP
-        case .tired: return .strained       // 40-59 HP
-        case .weak: return .faint           // 1-39 HP
-        case .dead: return .faint           // 0 HP - use faint (AI doesn't recognize "dead" as valid tone)
+        case .healthy: return .playful
+        case .concerned: return .concerned
+        case .tired: return .strained
+        case .weak: return .faint
+        case .dead: return .faint
         }
     }
 }
 
-// MARK: - TCA Dependency Registration
-
-extension TimelineManager: DependencyKey {
-    // liveValue is already defined in the extension above
-}
+extension TimelineManager: DependencyKey {}
 
 extension DependencyValues {
     var timelineManager: TimelineManager {

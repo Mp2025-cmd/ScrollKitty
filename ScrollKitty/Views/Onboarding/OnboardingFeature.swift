@@ -207,15 +207,11 @@ struct OnboardingFeature {
 
                     // Initialize cat health to 100 (single init point)
                     await userSettings.initializeHealth()
-                    print("[OnboardingFeature] 💚 Health initialized to 100")
 
-                    print("[OnboardingFeature] Apps saved - applying shields immediately...")
                     await screenTimeManager.applyShields()
                     do {
                         try await screenTimeManager.startMonitoring()
-                        print("[OnboardingFeature] ✅ Monitoring started (for re-shield only)")
                     } catch {
-                        print("[OnboardingFeature] ⚠️ Monitoring setup failed: \(error)")
                     }
                 }
 
@@ -266,7 +262,7 @@ struct OnboardingFeature {
                        let sleepSelection = state.sleepSelection,
                        let idleCheckSelection = state.idleCheckSelection,
                        let ageSelection = state.ageSelection {
-                        
+
                         let profile = UserOnboardingProfile(
                             dailyUsageHours: hourSelection.dailyHours,
                             sleepImpact: sleepSelection.profileValue,
@@ -274,22 +270,16 @@ struct OnboardingFeature {
                             idleCheckFrequency: idleCheckSelection.profileValue
                         )
                         await userSettings.saveOnboardingProfile(profile)
-                        print("[OnboardingFeature] 👤 Onboarding profile saved")
                     }
-                    
+
                     let defaults = UserDefaults.appGroup
 
                     if defaults.data(forKey: "selectedApps") != nil {
-                        print("[OnboardingFeature] Apps selected - applying shields...")
                         await screenTimeManager.applyShields()
                         do {
                             try await screenTimeManager.startMonitoring()
-                            print("[OnboardingFeature] ✅ Monitoring started successfully")
                         } catch {
-                            print("[OnboardingFeature] ❌ Monitoring failed: \(error)")
                         }
-                    } else {
-                        print("[OnboardingFeature] ⚠️ No apps selected - monitoring will start after app selection")
                     }
 
                     await send(.delegate(.onboardingComplete))

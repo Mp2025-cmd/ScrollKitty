@@ -32,7 +32,6 @@ actor TimelineAISessionManager {
         if session == nil || sessionDate != today {
             session = LanguageModelSession(instructions: systemInstructions)
             sessionDate = today
-            print("[TimelineAI] 🆕 Created new session for today")
         }
 
         return session!
@@ -55,13 +54,11 @@ actor TimelineAISessionManager {
     func prewarm() async {
         let session = getSession()
         await session.prewarm()
-        print("[TimelineAI] ✅ Session prewarmed and retained")
     }
 
     func resetSession() {
         session = nil
         sessionDate = nil
-        print("[TimelineAI] 🔄 Session reset")
     }
 
     // MARK: - Context Management
@@ -78,8 +75,6 @@ actor TimelineAISessionManager {
         // Only summarize if we're at ~70% capacity (2800 of 4096 tokens)
         guard estimatedTokens > 2800 else { return nil }
 
-        print("[TimelineAI] ⚠️ Context at \(estimatedTokens) tokens (~\(estimatedTokens * 100 / 4096)%) - summarizing...")
-
         // Create summarizer session
         let summarizer = LanguageModelSession(instructions: summarizationPrompt)
         let summaryResponse = try await summarizer.respond(to: transcriptText)
@@ -92,7 +87,6 @@ actor TimelineAISessionManager {
         // Prime the new session with the summary context
         _ = try? await self.session?.respond(to: "Previous diary summary for context: \(summary)")
 
-        print("[TimelineAI] ✅ Context summarized and session reset")
         return summary
     }
 

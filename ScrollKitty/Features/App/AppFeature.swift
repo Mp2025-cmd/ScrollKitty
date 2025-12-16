@@ -37,7 +37,6 @@ struct AppFeature {
                 // Mark onboarding as complete via @Shared (automatically persists to UserDefaults)
                 // Use withLock for thread-safe modification
                 state.$hasCompletedOnboarding.withLock { $0 = true }
-                print("[AppFeature] ✅ Onboarding complete")
                 return .none
 
             case .onboarding:

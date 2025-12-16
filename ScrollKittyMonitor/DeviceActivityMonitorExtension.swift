@@ -3,11 +3,6 @@ import Foundation
 import ManagedSettings
 import FamilyControls
 
-// SIMPLIFIED ACTIVE SHIELDING MONITOR
-// Role: ONLY handles intervalDidEnd for re-shielding after cooldown.
-// Initial shielding is done by main app (ScreenTimeManager.applyShields).
-// Health/unlocking logic is handled by ScrollKittyAction.
-
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     let store = ManagedSettingsStore()
@@ -15,83 +10,57 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        // NO-OP: Main app handles initial shielding.
-        print("[ScrollKittyMonitor] intervalDidStart(\(activity.rawValue)) - ignored")
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
 
         if activity.rawValue == "reshield_cooldown" {
-            // Cooldown expired - re-apply shields!
-            print("[ScrollKittyMonitor] ⏰ Cooldown expired - Re-shielding!")
             handleReshieldCooldown()
         } else if activity.rawValue == "daily_monitor" {
-            print("[ScrollKittyMonitor] 🔴 Daily Interval Ended")
         }
     }
 
-    // MARK: - Reshield After Cooldown
-
     private func handleReshieldCooldown() {
         let defaults = UserDefaults(suiteName: appGroupID)
-        
-        // Clear cooldown timestamp
+
         defaults?.removeObject(forKey: "cooldownEnd")
-        
-        // Check if cat is dead - if so, don't re-shield (let dead config handle it)
+
         let health = defaults?.integer(forKey: "catHealth") ?? 100
         if health <= 0 {
-            print("[ScrollKittyMonitor] 💀 Cat is dead - keeping full lock until midnight")
-            // Re-apply shields so dead config shows
             applyShields()
             return
         }
 
-        // Re-apply shields for alive cat
         applyShields()
     }
 
-    // MARK: - Apply Shields
-
     private func applyShields() {
         let defaults = UserDefaults(suiteName: appGroupID)
-        
-        // SESSION TRACKING: Accumulate time before re-shielding
+
         accumulateSessionTime(defaults: defaults)
-        
+
         guard let data = defaults?.data(forKey: "selectedApps"),
               let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
-            print("[ScrollKittyMonitor] ⚠️ No apps to shield")
             return
         }
 
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
-
-        print("[ScrollKittyMonitor] 🛡️ Shields ACTIVATED (\(selection.applicationTokens.count) apps)")
     }
-    
-    // MARK: - Session Tracking
-    
-    /// Accumulates elapsed session time when shield reappears
+
     private func accumulateSessionTime(defaults: UserDefaults?) {
         guard let defaults = defaults,
               let sessionStart = defaults.object(forKey: "sessionStartTime") as? Date else {
-            return // No active session
+            return
         }
-        
-        // Calculate elapsed time since bypass
+
         let elapsed = Date().timeIntervalSince(sessionStart)
-        
-        // Add to cumulative total
+
         let currentTotal = defaults.double(forKey: "cumulativePhoneUseSeconds")
         let newTotal = currentTotal + elapsed
         defaults.set(newTotal, forKey: "cumulativePhoneUseSeconds")
-        
-        // Clear session start (session ended)
+
         defaults.removeObject(forKey: "sessionStartTime")
-        
-        print("[ScrollKittyMonitor] ⏱️ Session ended. Elapsed: \(Int(elapsed))s, Total: \(Int(newTotal))s")
     }
 }

@@ -2,13 +2,10 @@
 //  TimeParsing.swift
 //  ScrollKitty
 //
-//  Time and limit parsing utilities
-//
 
 import Foundation
 
 enum TimeParsing {
-    /// Extracts hours from a label like "3 hours" or "2.5 hours"
     static func parseHours(from label: String?) -> Double? {
         guard let label else { return nil }
         let pattern = #"(\d+(\.\d+)?)"#
@@ -20,13 +17,11 @@ enum TimeParsing {
         return Double(label[r])
     }
 
-    /// Computes derived fields: goalHours, limitStatus, overByHours, underByHours
     static func makeDerived(
         goalLabel: String?,
         phoneUseHours: Double?,
         goalMet: Bool?
     ) -> (goalHours: Double?, status: TerminalNightlyContext.LimitStatus, over: Double?, under: Double?) {
-
         let goalHours = parseHours(from: goalLabel)
 
         let status: TerminalNightlyContext.LimitStatus = {
@@ -48,5 +43,3 @@ enum TimeParsing {
         return (goalHours, status, over, under)
     }
 }
-
-

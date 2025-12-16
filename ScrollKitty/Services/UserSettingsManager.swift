@@ -107,9 +107,6 @@ extension UserSettingsManager: DependencyKey {
             let defaults = UserDefaults(suiteName: appGroupID)
             if let encoded = try? JSONEncoder().encode(selection) {
                 defaults?.set(encoded, forKey: "selectedApps")
-                print("[UserSettings] ✅ Saved \(selection.applicationTokens.count) apps, \(selection.categoryTokens.count) categories")
-            } else {
-                print("[UserSettings] ❌ Failed to encode selection")
             }
         }
 
@@ -117,10 +114,8 @@ extension UserSettingsManager: DependencyKey {
             let defaults = UserDefaults(suiteName: appGroupID)
             guard let data = defaults?.data(forKey: "selectedApps"),
                   let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
-                print("[UserSettings] No saved app selection found")
                 return nil
             }
-            print("[UserSettings] ✅ Loaded \(decoded.applicationTokens.count) apps, \(decoded.categoryTokens.count) categories")
             return decoded
         }
         
@@ -143,7 +138,6 @@ extension UserSettingsManager: DependencyKey {
             saveShieldInterval: { minutes in
                 let defaults = UserDefaults(suiteName: appGroupID)
                 defaults?.set(minutes, forKey: "shieldInterval")
-                print("[UserSettings] ✅ Saved shield interval: \(minutes) minutes")
             },
             loadShieldInterval: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -172,7 +166,6 @@ extension UserSettingsManager: DependencyKey {
                 let defaults = UserDefaults(suiteName: appGroupID)
                 let clamped = max(0, min(100, health))
                 defaults?.set(clamped, forKey: "catHealth")
-                print("[UserSettings] 💚 Health saved: \(clamped)")
             },
             loadGlobalHealth: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -185,14 +178,12 @@ extension UserSettingsManager: DependencyKey {
                 defaults?.set(100, forKey: "catHealth")
                 // Set lastResetDate so midnight reset logic works correctly on subsequent days
                 defaults?.set(Date(), forKey: "lastResetDate")
-                print("[UserSettings] 💚 Health initialized to 100, lastResetDate set")
             },
             
             // Global Cooldown
             saveCooldownEnd: { date in
                 let defaults = UserDefaults(suiteName: appGroupID)
                 defaults?.set(date.timeIntervalSince1970, forKey: "cooldownEnd")
-                print("[UserSettings] ⏱️ Cooldown set until: \(date)")
             },
             loadCooldownEnd: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -203,7 +194,6 @@ extension UserSettingsManager: DependencyKey {
             clearCooldown: {
                 let defaults = UserDefaults(suiteName: appGroupID)
                 defaults?.removeObject(forKey: "cooldownEnd")
-                print("[UserSettings] ⏱️ Cooldown cleared")
             },
             
             // Timeline Events
@@ -218,7 +208,6 @@ extension UserSettingsManager: DependencyKey {
                 if let encoded = try? JSONEncoder().encode(events) {
                     defaults?.set(encoded, forKey: "timelineEvents")
                 }
-                print("[UserSettings] 📝 Timeline event logged: \(event.eventType.rawValue)")
             },
             loadTimelineEvents: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -227,7 +216,6 @@ extension UserSettingsManager: DependencyKey {
             clearTimelineEvents: {
                 let defaults = UserDefaults(suiteName: appGroupID)
                 defaults?.removeObject(forKey: "timelineEvents")
-                print("[UserSettings] 📝 Timeline cleared")
             },
             saveTimelineEvents: { events in
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -236,7 +224,6 @@ extension UserSettingsManager: DependencyKey {
                 if let encoded = try? JSONEncoder().encode(eventsToSave) {
                     defaults?.set(encoded, forKey: "timelineEvents")
                 }
-                print("[UserSettings] 📝 Timeline saved: \(eventsToSave.count) events")
             },
             
             // Onboarding Profile
@@ -244,7 +231,6 @@ extension UserSettingsManager: DependencyKey {
                 let defaults = UserDefaults(suiteName: appGroupID)
                 if let encoded = try? JSONEncoder().encode(profile) {
                     defaults?.set(encoded, forKey: "onboardingProfile")
-                    print("[UserSettings] 👤 Onboarding profile saved")
                 }
             },
             loadOnboardingProfile: {
@@ -269,7 +255,6 @@ extension UserSettingsManager: DependencyKey {
                 if let encoded = try? JSONEncoder().encode(history) {
                     defaults?.set(encoded, forKey: "aiMessageHistory")
                 }
-                print("[UserSettings] 🧠 AI message history saved: \(history.count) messages")
             },
             loadAIMessageHistory: {
                 let defaults = UserDefaults(suiteName: appGroupID)

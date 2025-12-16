@@ -14,6 +14,5 @@ struct BackButton: View {
 
 #Preview {
     BackButton {
-        print("Back tapped")
     }
 }
