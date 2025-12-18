@@ -58,20 +58,6 @@ struct MonthCalendarView: View {
             }
             .padding(.horizontal, 12)
             
-            // Dropdown month/year picker (conditionally shown)
-            if showingMonthPicker {
-                MonthYearPickerView(currentMonth: $currentMonth, onDismiss: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showingMonthPicker = false
-                    }
-                    onMonthChanged(currentMonth)
-                })
-                .transition(.asymmetric(
-                    insertion: .move(edge: .top).combined(with: .opacity),
-                    removal: .move(edge: .top).combined(with: .opacity)
-                ))
-            }
-            
             // Day of week headers
             HStack(spacing: 0) {
                 ForEach(daysOfWeek, id: \.self) { day in
@@ -103,6 +89,28 @@ struct MonthCalendarView: View {
         .background(DesignSystem.Colors.white)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+        .overlay(alignment: .top) {
+            if showingMonthPicker {
+                // Semi-transparent background overlay with tap-to-dismiss
+                Color.black.opacity(0.2)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showingMonthPicker = false
+                        }
+                    }
+                
+                // Month/year picker
+                MonthYearPickerView(currentMonth: $currentMonth, onDismiss: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingMonthPicker = false
+                    }
+                    onMonthChanged(currentMonth)
+                })
+                .padding(.top, 60)
+                .transition(.scale(scale: 0.95, anchor: .top).combined(with: .opacity))
+            }
+        }
     }
     
     // MARK: - Computed Properties

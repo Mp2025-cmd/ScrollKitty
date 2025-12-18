@@ -15,6 +15,7 @@ struct NightlyTerminalTemplatesTests {
     // MARK: - Test 1: Good Day - User stayed under goal
     // Tests against specific template: goodDay[7]
 
+    @MainActor
     @Test func goodDay_DisplaysDataAndEmoji() async throws {
         let elevenPM = createDate(hour: 23, minute: 0)
 
@@ -38,7 +39,7 @@ struct NightlyTerminalTemplatesTests {
         // Expected interpolated message
         let expectedMessage = "You began 9:30 AM and ended 5:45 PM. You clocked 3 hours 30 minutes under goal, leaving me elite at 90. Good stuff—fresh start tomorrow to keep it going. 😼"
 
-        let event = await TimelineEvent(
+        let event = TimelineEvent(
             id: UUID(),
             timestamp: elevenPM,
             appName: "Nightly",
@@ -75,6 +76,7 @@ struct NightlyTerminalTemplatesTests {
     // MARK: - Test 2: Mixed Day - User went over goal
     // Tests against specific template: mixedDay[11]
 
+    @MainActor
     @Test func mixedDay_DisplaysDataAndEmoji() async throws {
         let elevenPM = createDate(hour: 23, minute: 0)
 
@@ -111,7 +113,7 @@ struct NightlyTerminalTemplatesTests {
             trigger: "nightly"
         )
 
-        let store = TestStore(initialState: TimelineFeature.State()) {
+        let store = await TestStore(initialState: TimelineFeature.State()) {
             TimelineFeature()
         } withDependencies: {
             $0.date.now = elevenPM
@@ -134,16 +136,17 @@ struct NightlyTerminalTemplatesTests {
     
     // MARK: - Test 3: Outside 11 PM window - No event generated
     
+    @MainActor
     @Test func outside11PMWindow_NoEvent() async throws {
         let afternoon = createDate(hour: 14, minute: 30)
-        
-        let store = TestStore(initialState: TimelineFeature.State()) {
+
+        let store = await TestStore(initialState: TimelineFeature.State()) {
             TimelineFeature()
         } withDependencies: {
             $0.date.now = afternoon
             $0.timelineManager.checkForDailySummary = { nil }
         }
-        
+
         await store.send(.checkForDailySummary)
         await store.receive(\.dailySummaryGenerated, nil)
         #expect(store.state.timelineEvents.isEmpty, "No event outside 11 PM window")
@@ -152,6 +155,7 @@ struct NightlyTerminalTemplatesTests {
     // MARK: - Test 4: Anti-duplicate - Same day returns nil
     // Tests against specific template: goodDay[4]
 
+    @MainActor
     @Test func antiDuplicate_SecondCallReturnsNil() async throws {
         let elevenPM = createDate(hour: 23, minute: 0)
 
@@ -190,7 +194,7 @@ struct NightlyTerminalTemplatesTests {
 
         var callCount = 0
 
-        let store = TestStore(initialState: TimelineFeature.State()) {
+        let store = await TestStore(initialState: TimelineFeature.State()) {
             TimelineFeature()
         } withDependencies: {
             $0.date.now = elevenPM
@@ -226,6 +230,7 @@ struct NightlyTerminalTemplatesTests {
     // MARK: - Test 5: Natural language hours - No decimals shown to user
     // Tests multiple scenarios with deterministic template selection
 
+    @MainActor
     @Test func naturalLanguageHours_NoDecimals() async throws {
         let scenarios = [
             ("3 hours 30 minutes", "30 minutes", 0),

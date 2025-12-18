@@ -11,6 +11,8 @@ struct TimelineFeature {
         var timelineEvents: [TimelineEvent] = []
         var isLoading = false
         var selectedDate: Date = Date()
+        var currentMonth: Date = Date()
+        var showingCalendar = false
     }
     @Dependency(\.userSettings) var userSettings
     @Dependency(\.timelineManager) var timelineManager
@@ -31,6 +33,8 @@ struct TimelineFeature {
         case checkForDailySummary
         case dailySummaryGenerated(TimelineEvent?)
         case dateSelected(Date)
+        case toggleCalendar
+        case monthChanged(Date)
     }
     
 
@@ -45,6 +49,15 @@ struct TimelineFeature {
                 
             case .dateSelected(let date):
                 state.selectedDate = date
+                state.showingCalendar = false
+                return .none
+                
+            case .toggleCalendar:
+                state.showingCalendar.toggle()
+                return .none
+                
+            case .monthChanged(let month):
+                state.currentMonth = month
                 return .none
                 
             case .processRawEvents:
@@ -168,9 +181,13 @@ struct TimelineView: View {
                             // Timeline items grouped by date
                         VStack(spacing: 0) {
                                 ForEach(groupedEvents(), id: \.date) { group in
-                                    DateHeaderView(date: group.date)
-                                        .padding(.leading, 35)
-                                        .padding(.bottom, 20)
+                                    DateHeaderView(
+                                        date: group.date,
+                                        isExpanded: store.showingCalendar,
+                                        onToggle: { store.send(.toggleCalendar) }
+                                    )
+                                    .padding(.leading, 35)
+                                    .padding(.bottom, 20)
                                     
                                     ForEach(group.events, id: \.id) { event in
                                         TimelineItemView(event: event)
@@ -183,9 +200,56 @@ struct TimelineView: View {
                 }
             }
         }
+        .overlay(alignment: .top) {
+            if store.showingCalendar {
+                // Semi-transparent background
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            store.send(.toggleCalendar)
+                        }
+                    }
+                
+                // Calendar component
+                MonthCalendarView(
+                    selectedDate: $store.selectedDate,
+                    currentMonth: $store.currentMonth,
+                    dateHealthStates: generateHealthStatesFromEvents(),
+                    onDateSelected: { date in
+                        store.send(.dateSelected(date))
+                    },
+                    onMonthChanged: { month in
+                        store.send(.monthChanged(month))
+                    }
+                )
+                .padding(.top, 120)
+                .padding(.horizontal, 16)
+                .transition(.scale(scale: 0.95, anchor: .top).combined(with: .opacity))
+            }
+        }
         .onAppear {
             store.send(.onAppear)
         }
+    }
+    
+    private func generateHealthStatesFromEvents() -> [Date: Int] {
+        let calendar = Calendar.current
+        var healthStates: [Date: Int] = [:]
+        
+        // Group events by date and get the final health for each day
+        let grouped = Dictionary(grouping: store.timelineEvents) { event in
+            calendar.startOfDay(for: event.timestamp)
+        }
+        
+        for (date, events) in grouped {
+            // Get the last event of the day (most recent health)
+            if let lastEvent = events.sorted(by: { $0.timestamp < $1.timestamp }).last {
+                healthStates[date] = lastEvent.healthAfter
+            }
+        }
+        
+        return healthStates
     }
     
     private func groupedEvents() -> [(date: Date, events: [TimelineEvent])] {
@@ -205,22 +269,44 @@ struct TimelineView: View {
 // MARK: - Date Header View
 struct DateHeaderView: View {
     let date: Date
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(date)
+    }
     
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(DesignSystem.Colors.timelineIndicator)
-                .frame(width: 10, height: 10)
-            
-            Text(TimelineFeature.State.formattedDate(for: date))
-                .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                .foregroundColor(DesignSystem.Colors.primaryText)
-            
-            Text("• \(TimelineFeature.State.formattedDayOfWeek(for: date))")
-                .font(.custom("Sofia Pro-Regular", size: 16))
-                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-            Spacer()
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                onToggle()
+            }
+        }) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(DesignSystem.Colors.timelineIndicator)
+                    .frame(width: 10, height: 10)
+                
+                Text(isToday ? "Today" : TimelineFeature.State.formattedDate(for: date))
+                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                    .foregroundColor(DesignSystem.Colors.primaryText)
+                
+                if !isToday {
+                    Text("• \(TimelineFeature.State.formattedDayOfWeek(for: date))")
+                        .font(.custom("Sofia Pro-Regular", size: 16))
+                        .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.primaryBlue)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isExpanded)
+            }
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
