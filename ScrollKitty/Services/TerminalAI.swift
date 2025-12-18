@@ -1,3 +1,11 @@
+//
+//  TerminalAI.swift
+//  ScrollKitty
+//
+//  PRESERVED: AI infrastructure for future shield dialogue feature.
+//  Currently unused for Terminal summaries (replaced with templates in NightlyTerminalTemplates.swift).
+//
+
 import Foundation
 import FoundationModels
 
@@ -37,9 +45,10 @@ struct TerminalAI {
     )
 
     static func buildPrompt(context: TerminalNightlyContext) -> String {
-        let phoneUseHours = formatHours(context.phoneUseHours)
+        // Convert formatted strings back to numbers for AI prompt (preserved for future use)
+        let phoneUseHours = formatHoursFromString(context.phoneUseHours)
         let limitHours = formatHours(context.goalHours)
-        let overByHours = formatHours(context.overByHours)
+        let overByHours = formatHoursFromString(context.overByHours)
 
         let closerOptions = [
             "I'm completely drained and couldn't go on.",
@@ -52,9 +61,9 @@ struct TerminalAI {
             "I gave everything I had and it wasn't enough."
         ]
 
-        // Add variation seed to break caching (changes each second)
+        // Add variation hint for diversity (using timestamp for randomness)
         let hints = ["vary structure", "be creative", "use different phrasing", "change it up", "new approach"]
-        let variationHint = hints[abs(context.variationSeed) % hints.count]
+        let variationHint = hints[Int(Date().timeIntervalSince1970) % hints.count]
         
         return """
         [DATA]
@@ -76,31 +85,32 @@ struct TerminalAI {
             return String(format: "%.1f", h)
         }
     }
+    
+    private static func formatHoursFromString(_ hoursString: String?) -> String {
+        // For preserved AI code: convert formatted string back to simple number format
+        // This is a simplified parser - assumes format like "3 hours 30 minutes" or "1 hour"
+        guard let str = hoursString, str != "unknown" else { return "unknown" }
+        // Extract first number as hours (simplified - for future AI use)
+        if let match = str.range(of: #"(\d+)\s*hour"#, options: .regularExpression) {
+            let hourStr = String(str[match])
+            if let hour = Int(hourStr.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()) {
+                return "\(hour)"
+            }
+        }
+        return str
+    }
 
     static func generate(
-        context: TerminalNightlyContext, 
+        context: TerminalNightlyContext,
         overrideOptions: GenerationOptions? = nil
     ) async throws -> String {
         let opt = overrideOptions ?? options
-        let maxRetries = 3
-        var lastError: Error?
-        
-        for attempt in 1...maxRetries {
-            let session = LanguageModelSession(instructions: prompt)
+        let session = LanguageModelSession(instructions: prompt)
 
-            let timestamp = Date().timeIntervalSince1970
-            let dataPrompt = buildPrompt(context: context) + "\nGenerationID: \(Int(timestamp))_attempt\(attempt)"
+        let timestamp = Date().timeIntervalSince1970
+        let dataPrompt = buildPrompt(context: context) + "\nGenerationID: \(Int(timestamp))"
 
-            do {
-                let response = try await session.respond(to: dataPrompt, generating: TerminalAIResponse.self, options: opt)
-                let cleaned = CatMessage(from: response.content.message).message
-                try OutputValidator.validateTerminal(cleaned, context: context)
-                return cleaned
-            } catch {
-                lastError = error
-            }
-        }
-
-        throw lastError ?? ValidationError.missingRequiredNumbers(missing: ["unknown"])
+        let response = try await session.respond(to: dataPrompt, generating: TerminalAIResponse.self, options: opt)
+        return response.content.message
     }
 }

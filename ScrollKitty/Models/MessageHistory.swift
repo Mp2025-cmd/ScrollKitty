@@ -1,13 +1,13 @@
 //
-//  AIMessageHistory.swift
+//  MessageHistory.swift
 //  ScrollKitty
 //
-//  Persisted record of AI-generated messages for context and history
+//  Persisted record of template messages for anti-repetition logic
 //
 
 import Foundation
 
-struct AIMessageHistory: Codable, Equatable, Sendable {
+struct MessageHistory: Codable, Equatable, Sendable {
     let id: UUID
     let timestamp: Date
     let trigger: String           // "healthBandDrop", "dailySummary", "dailyWelcome", etc.

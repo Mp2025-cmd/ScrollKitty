@@ -13,8 +13,7 @@ enum ContextBuilder {
         trigger: TerminalNightlyContext.Trigger,
         healthBand: Int,
         goalLabel: String?,
-        goalMet: Bool?,
-        baselineCmp: String? = nil
+        goalMet: Bool?
     ) -> TerminalNightlyContext {
         
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
@@ -25,7 +24,7 @@ enum ContextBuilder {
         let firstBypass = defaults.object(forKey: "firstBypassTime") as? Date
         let lastBypass = defaults.object(forKey: "lastBypassTime") as? Date
 
-        let phoneUseHours = cumulativeSeconds > 0 ? cumulativeSeconds / 3600.0 : nil
+        let phoneUseHoursRaw = cumulativeSeconds > 0 ? cumulativeSeconds / 3600.0 : nil
 
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "h:mm a"
@@ -37,7 +36,7 @@ enum ContextBuilder {
 
         let derived = TimeParsing.makeDerived(
             goalLabel: goalLabel,
-            phoneUseHours: phoneUseHours,
+            phoneUseHours: phoneUseHoursRaw,
             goalMet: goalMet
         )
 
@@ -46,25 +45,23 @@ enum ContextBuilder {
             return DayPartDeriver.from(timeString: terminalAtLocalTime)
         }()
 
-        let seedString = "\(trigger.rawValue)|hb=\(healthBand)|use=\(Format.hours(phoneUseHours) ?? "na")|goal=\(goalLabel ?? "na")|over=\(Format.hours(derived.over) ?? "na")|t=\(terminalAtLocalTime ?? "na")"
-        let seed = StableHash.hash(seedString)
+        // Format hour values as natural language strings
+        let phoneUseHours = Format.hours(phoneUseHoursRaw)
+        let overByHours = Format.hours(derived.over)
+        let underByHours = Format.hours(derived.under)
 
         return TerminalNightlyContext(
             trigger: trigger,
             currentHealthBand: healthBand,
-            screenTimeGoalLabel: goalLabel,
-            goalMet: goalMet,
             firstUseTime: firstUseTime,
             lastUseTime: lastUseTime,
             phoneUseHours: phoneUseHours,
-            comparedToBaseline: baselineCmp,
             terminalAtLocalTime: terminalAtLocalTime,
             dayPart: dayPart,
-            variationSeed: seed,
             goalHours: derived.goalHours,
             limitStatus: derived.status,
-            overByHours: derived.over,
-            underByHours: derived.under
+            overByHours: overByHours,
+            underByHours: underByHours
         )
     }
 
@@ -80,22 +77,22 @@ enum ContextBuilder {
             goalMet: goalMet
         )
 
+        // Format hour values as natural language strings
+        let overByHours = Format.hours(derived.over)
+        let underByHours = Format.hours(derived.under)
+
         return TerminalNightlyContext(
             trigger: trigger,
             currentHealthBand: healthBand,
-            screenTimeGoalLabel: goalLabel,
-            goalMet: goalMet,
             firstUseTime: nil,
             lastUseTime: nil,
             phoneUseHours: nil,
-            comparedToBaseline: nil,
             terminalAtLocalTime: nil,
             dayPart: .unknown,
-            variationSeed: 0,
             goalHours: derived.goalHours,
             limitStatus: derived.status,
-            overByHours: derived.over,
-            underByHours: derived.under
+            overByHours: overByHours,
+            underByHours: underByHours
         )
     }
 }

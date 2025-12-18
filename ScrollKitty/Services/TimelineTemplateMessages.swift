@@ -178,12 +178,12 @@ struct TimelineTemplateMessages {
     /// - Parameters:
     ///   - band: The current health band (80, 60, 40, 20, 10, or 0)
     ///   - trigger: The trigger type (healthBandDrop or dailyWelcome)
-    ///   - recentMessages: Recent messages to avoid (from AIMessageHistory)
+    ///   - recentMessages: Recent messages to avoid (from MessageHistory)
     /// - Returns: A selected message string
     static func selectMessage(
         forHealthBand band: Int,
         trigger: TimelineEntryTrigger,
-        avoiding recentMessages: [AIMessageHistory]
+        avoiding recentMessages: [MessageHistory]
     ) -> String {
         let pool = getPool(for: band, trigger: trigger)
         let recentTexts = Set(recentMessages.map { $0.response })

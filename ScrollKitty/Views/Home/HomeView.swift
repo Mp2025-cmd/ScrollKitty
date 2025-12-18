@@ -59,12 +59,10 @@ struct HomeFeature {
                 state.isLoading = false
                 state.catHealth = healthData
                 // Sequential to ensure proper dependency chain:
-                // 1. Prewarm AI session first
-                // 2. Check for welcome message (creates first event if needed)
-                // 3. Process raw events (reads timeline after welcome is created)
-                // 4. Check for daily summary (after lazy reset and events are processed)
+                // 1. Check for welcome message (creates first event if needed)
+                // 2. Process raw events (reads timeline after welcome is created)
+                // 3. Check for daily summary (after lazy reset and events are processed)
                 return .run { send in
-                    await send(.timeline(.prewarmAI))
                     await send(.timeline(.checkForWelcomeMessage))
                     await send(.timeline(.processRawEvents))
                     await send(.timeline(.checkForDailySummary))

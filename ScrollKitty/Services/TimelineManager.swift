@@ -7,25 +7,17 @@ struct TimelineManager: Sendable {
     var checkForDailySummary: @Sendable () async -> TimelineEvent?
     var getWelcomeMessage: @Sendable () async -> TimelineEvent?
     var getDailyWelcome: @Sendable () async -> TimelineEvent?
-    var shouldShowAIUnavailableNotice: @Sendable () async -> Bool
-    var markAIUnavailableNoticeShown: @Sendable () async -> Void
+    var selectTemplateMessage: @Sendable (TimelineAIContext, [MessageHistory]) async -> TimelineMessageResult?
 }
 
 extension TimelineManager {
     static let liveValue = TimelineManager(
         checkForDailySummary: {
             @Dependency(\.userSettings) var userSettings: UserSettingsManager
-            @Dependency(\.timelineAI) var timelineAI: TimelineAIService
             @Dependency(\.catHealth) var catHealth: CatHealthManager
 
             let now = Date()
             let calendar = Calendar.current
-
-            let availability = await timelineAI.checkAvailability()
-            guard case .available = availability else {
-                logger.debug("AI unavailable - skipping closing message")
-                return nil
-            }
 
             let todayKey = "closingMessageDate_\(calendar.component(.year, from: now))_\(calendar.component(.dayOfYear, from: now))"
             let defaults = UserDefaults.appGroup
@@ -70,37 +62,45 @@ extension TimelineManager {
                 trigger: finalTrigger,
                 healthBand: TimelineAIContext.healthBand(healthData.health),
                 goalLabel: goalLabel,
-                goalMet: goalMet,
-                baselineCmp: nil
+                goalMet: goalMet
             )
 
-            do {
-                let message: String
-                if finalTrigger == .terminal {
-                    message = try await TerminalAI.generate(context: context)
-                } else {
-                    message = try await NightlyAI.generate(context: context)
-                }
+            // Load recent messages to avoid repetition
+            let recentMessages = await userSettings.loadRecentMessages(5)
 
-                let event = TimelineEvent(
-                    id: UUID(),
-                    timestamp: now,
-                    appName: finalTrigger == .terminal ? "Terminal" : "Nightly",
-                    healthBefore: healthData.health,
-                    healthAfter: healthData.health,
-                    cooldownStarted: now,
-                    eventType: .aiGenerated,
-                    aiMessage: message,
-                    aiEmoji: nil,
-                    trigger: finalTrigger == .terminal ? TimelineEntryTrigger.terminal.rawValue : TimelineEntryTrigger.nightly.rawValue
-                )
-
-                logger.info("Generated \(finalTrigger.rawValue) message: \(message)")
-                return event
-            } catch {
-                logger.error("Failed to generate closing message: \(error.localizedDescription)")
-                return nil
+            // Select template based on trigger type
+            let message: String
+            if finalTrigger == .terminal {
+                message = NightlyTerminalTemplates.selectTerminal(context: context, recentMessages: recentMessages)
+            } else {
+                message = NightlyTerminalTemplates.selectNightly(context: context, recentMessages: recentMessages)
             }
+
+            // Save to history for anti-repetition
+            let historyEntry = MessageHistory(
+                timestamp: now,
+                trigger: finalTrigger == .terminal ? TimelineEntryTrigger.terminal.rawValue : TimelineEntryTrigger.nightly.rawValue,
+                healthBand: healthData.health,
+                response: message,
+                emoji: nil
+            )
+            await userSettings.appendMessageHistory(historyEntry)
+
+            let event = TimelineEvent(
+                id: UUID(),
+                timestamp: now,
+                appName: finalTrigger == .terminal ? "Terminal" : "Nightly",
+                healthBefore: healthData.health,
+                healthAfter: healthData.health,
+                cooldownStarted: now,
+                eventType: .templateGenerated,
+                message: message,
+                emoji: nil,
+                trigger: finalTrigger == .terminal ? TimelineEntryTrigger.terminal.rawValue : TimelineEntryTrigger.nightly.rawValue
+            )
+
+            logger.info("Generated \(finalTrigger.rawValue) message: \(message)")
+            return event
         },
         
         getWelcomeMessage: {
@@ -120,9 +120,9 @@ extension TimelineManager {
                 healthBefore: 100,
                 healthAfter: 100,
                 cooldownStarted: Date(),
-                eventType: .aiGenerated,
-                aiMessage: welcomeMessage,
-                aiEmoji: nil,
+                eventType: .templateGenerated,
+                message: welcomeMessage,
+                emoji: nil,
                 trigger: TimelineEntryTrigger.welcomeMessage.rawValue
             )
 
@@ -132,7 +132,6 @@ extension TimelineManager {
 
         getDailyWelcome: {
             @Dependency(\.userSettings) var userSettings: UserSettingsManager
-            @Dependency(\.timelineAI) var timelineAI: TimelineAIService
             @Dependency(\.catHealth) var catHealth: CatHealthManager
 
             let now = Date()
@@ -175,22 +174,24 @@ extension TimelineManager {
                 totalHealthDropsToday: 0
             )
 
-            let recentMessages = await userSettings.loadRecentAIMessages(2)
-            let result = await timelineAI.generateMessage(context, recentMessages)
+            let recentMessages = await userSettings.loadRecentMessages(2)
+            
+            // Select template message directly
+            let message = TimelineTemplateMessages.selectMessage(
+                forHealthBand: context.currentHealthBand,
+                trigger: context.trigger,
+                avoiding: recentMessages
+            )
+            let result = TimelineMessageResult(message: message, emoji: nil)
 
-            guard let result = result else {
-                logger.warning("Template selection failed for daily welcome")
-                return nil
-            }
-
-            let historyEntry = AIMessageHistory(
+            let historyEntry = MessageHistory(
                 timestamp: now,
                 trigger: TimelineEntryTrigger.dailyWelcome.rawValue,
                 healthBand: 100,
                 response: result.message,
                 emoji: result.emoji
             )
-            await userSettings.appendAIMessageHistory(historyEntry)
+            await userSettings.appendMessageHistory(historyEntry)
 
             let dailyWelcomeEvent = TimelineEvent(
                 id: UUID(),
@@ -199,21 +200,25 @@ extension TimelineManager {
                 healthBefore: healthData.health,
                 healthAfter: healthData.health,
                 cooldownStarted: now,
-                eventType: .aiGenerated,
-                aiMessage: result.message,
-                aiEmoji: result.emoji,
+                eventType: .templateGenerated,
+                message: result.message,
+                emoji: result.emoji,
                 trigger: TimelineEntryTrigger.dailyWelcome.rawValue
             )
 
             logger.info("Generated daily welcome from template")
             return dailyWelcomeEvent
         },
-
-        shouldShowAIUnavailableNotice: {
-            return false
-        },
-
-        markAIUnavailableNoticeShown: {}
+        
+        selectTemplateMessage: { context, recentMessages in
+            // Select template message based on health band and trigger
+            let message = TimelineTemplateMessages.selectMessage(
+                forHealthBand: context.currentHealthBand,
+                trigger: context.trigger,
+                avoiding: recentMessages
+            )
+            return TimelineMessageResult(message: message, emoji: nil)
+        }
     )
 
     private static func isWithin11PMWindow(_ date: Date) -> Bool {
@@ -256,8 +261,14 @@ extension TimelineManager {
         checkForDailySummary: { nil },
         getWelcomeMessage: { nil },
         getDailyWelcome: { nil },
-        shouldShowAIUnavailableNotice: { false },
-        markAIUnavailableNoticeShown: {}
+        selectTemplateMessage: { context, _ in
+            let message = TimelineTemplateMessages.selectMessage(
+                forHealthBand: context.currentHealthBand,
+                trigger: context.trigger,
+                avoiding: []
+            )
+            return TimelineMessageResult(message: message, emoji: nil)
+        }
     )
 }
 

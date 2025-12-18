@@ -55,23 +55,31 @@ All onboarding screens managed by `OnboardingFeature` using stack-based navigati
 
 #### 4. Timeline View (Template Messages)
 - Vertical timeline with blue line and cat icons, date-grouped
-- Prebuilt template messages (120 curated messages)
+- Template-based summaries (120 curated messages)
 - Gentle, supportive companion personality that reflects daily patterns
 - Event triggers: health band drops, daily summary, daily welcome
 - Tone system: Playful -> Concerned -> Strained -> Faint -> Dead (based on energy level)
 - Smart selection avoids repetition within same day
 
-#### 5. Daily Summary Notification System
+#### 5. Terminal & Nightly Summary System
+- **Terminal Messages** - 40 supportive templates for HP=0 (collaborative "we" language)
+- **Nightly Messages** - 80 templates (40 good day, 40 mixed day) for 11 PM reflections
+- **Session Tracking** - Records shield dismissal → re-application time
+- **Data Interpolation** - Real usage data (times, hours, limits) inserted into templates
+- **Anti-Repetition** - Core structure matching prevents consecutive duplicates
+- **AI Infrastructure Preserved** - `@Generable` types kept for future shield dialogue feature
+
+#### 6. Daily Summary Notification System
 - 11 PM local notification triggers daily summary
 - Timezone-aware scheduling with explicit `TimeZone.current`
 - Atomic duplicate prevention using date-based UserDefaults keys
 - Proper actor isolation with `nonisolated` methods where appropriate
 - Permission denial feedback via `NotificationCenter`
 
-#### 6. AI Debug Logger
-- Logs all AI prompts, responses, errors, and generation options
-- Exportable as text for debugging
-- Debug UI button in Dashboard (DEBUG builds only)
+#### 7. AI Debug Tools (DEBUG builds only)
+- `AIDebugLogger` - Logs all AI prompts, responses, errors, generation options
+- `TerminalDebugHelper` - Test scenarios for rapid AI testing
+- Exportable logs for debugging
 
 ---
 
@@ -279,73 +287,86 @@ Debug logs revealed three critical issues with AI message generation:
 
 ---
 
-## AI Summary System Refactor (Dec 2025)
+## Terminal & Nightly Summary System (Dec 2025) ✅ Production Ready
 
 ### Overview
-Implemented modular AI architecture for phone activity summaries using Apple Foundation Models with `@Generable` structured output and post-processing validation.
+Template-based message system for Terminal (HP=0) and Nightly (11 PM) summaries. Provides consistent, supportive messages with real usage data interpolation. AI infrastructure preserved for future shield dialogue feature.
 
-### Architecture Changes
+### Architecture
 
-**Two AI Generators:**
-- **NightlyAI** - Emotional reflections at 11 PM (temp 0.5, top-25 sampling)
-- **TerminalAI** - Stark messages when HP reaches 0 (temp 0.0, deterministic)
+**Template Pools:**
+- **Terminal (HP=0)**: 40 supportive messages with collaborative "we" language
+- **Nightly Good Day (HP ≥40)**: 40 positive templates for within/under limit
+- **Nightly Mixed Day (HP 20-39)**: 40 tired-tone templates for over limit
 
-**Session Tracking (4 new UserDefaults keys):**
-- `sessionStartTime` - When user first bypassed shield
-- `cumulativePhoneUseSeconds` - Total phone usage accumulated
-- `firstBypassTime` - First bypass of the day
-- `lastBypassTime` - Most recent bypass
+**Session Tracking System:**
+- **ShieldActionExtension** records `sessionStartTime` on each shield bypass
+- **DeviceActivityMonitorExtension** calculates elapsed time when shield re-applies
+- **Accumulates** total usage in `cumulativePhoneUseSeconds` throughout the day
+- **Tracks** `firstBypassTime` and `lastBypassTime` for context
+- **Resets** all session data at midnight via `CatHealthManager`
 
-**Hybrid Validation Approach:**
-- `@Generable` for type-safe structured output
-- `ContextBuilder` enriches context with session data
-- `CatMessage` enforces exactly 2 sentences
-- `OutputValidator` prevents advice, banned words, contradictions
+**Template Selection:**
+- Routes by health band and limit status
+- Anti-repetition via core structure matching
+- Random selection from available pool
+- Falls back to full pool if all recently used
 
-### New Files Created (11 total)
+### Implementation
 
 **Core Services:**
-- `NightlyAI.swift` - 11 PM emotional summaries
-- `TerminalAI.swift` - HP=0 terminal messages
-- `ContextBuilder.swift` - Enriched context builder
-- `OutputValidator.swift` - Strict output validation
+- `NightlyTerminalTemplates.swift` - 120 curated templates with interpolation
+- `ContextBuilder.swift` - Enriched context with session data, limit status, day part
+- `TerminalNightlyContext.swift` - Data model with `LimitStatus`, `DayPart` enums
 
-**Models:**
-- `CatMessage.swift` - 2-sentence enforcement
-- `TerminalNightlyContext.swift` - Extended with LimitStatus, DayPart enums
-
-**AIUtils (6 helpers):**
-- `SentenceUtils.swift` - Sentence splitting/cleanup
-- `TimeParsing.swift` - Hours parsing, limit calculations
+**AIUtils (5 helpers):**
 - `DayPartDeriver.swift` - Time → DayPart conversion
-- `EmotionMapper.swift` - Health band → emotion descriptions
+- `EmotionMapper.swift` - Health band → emotion descriptions (for health drops)
 - `HoursFormatter.swift` - Natural language time formatting
-- `TerminalVariations.swift` - Phrase variations for terminal messages
-- `StableHash.swift` - Deterministic hashing for seeds
+- `StableHash.swift` - Deterministic hashing for variation seeds
 - `Format.swift` - Clean number formatting
 
-### Key Features
+**AI Infrastructure (Preserved for Future):**
+- `NightlyAI.swift` - Marked PRESERVED for shield dialogue
+- `TerminalAI.swift` - Marked PRESERVED for shield dialogue
+- `TimelineAIModels.swift` - `@Generable` types for future AI features
 
-**Output Enforcement:**
-- ✅ Exactly 2 sentences (enforced by CatMessage)
-- ✅ Natural language hours ("almost 4 hours" vs "3.8 hours")
-- ✅ No advice phrases ("you should", "try to")
-- ✅ Terminal bans (never mention "health", "HP", "zero")
-- ✅ Validates against limitStatus (no contradictions)
+**Testing:**
+- `NightlyTerminalTemplatesTests.swift` - 5 TCA integration tests using TestStore
+- Tests assert exact template messages with interpolated data
+- Deterministic template selection (`selectNightlyDeterministic`) for reproducible tests
+- Validates TCA state flow, anti-duplication, natural language formatting
 
-**Emotion Mapping:**
-- 80-100 HP: Relieved, content, happy
-- 60-79 HP: Okay but slightly drained
-- 40-59 HP: Worn out, exhausted
-- 20-39 HP: Really drained, barely holding on
-- 0-19 HP: Completely wiped, empty
+### Data Placeholders
 
-### Updated Services
+Templates interpolate real usage data:
+- `{{firstUseTime}}` - "9:30 AM"
+- `{{lastUseTime}}` - "10:45 PM"
+- `{{terminalAtLocalTime}}` - "4:15 PM" (terminal only)
+- `{{phoneUseHours}}` - "3.5"
+- `{{goalHours}}` - "4"
+- `{{overByHours}}` - "2.5"
+- `{{underByHours}}` - "0.5"
+- `{{currentHealthBand}}` - "90"
+- `{{dayPart}}` - "morning/afternoon/evening/night"
 
-- **TimelineManager** - Routes to TerminalAI or NightlyAI based on trigger
-- **ShieldActionExtension** - Tracks session start and bypass times
+### Message Examples
+
+**Terminal (HP=0):**
+> "You started scrolling at 9:30 AM and we hit my limit by 4:15 PM. You clocked 6 hours—2 past your 4 goal—and now I'm in coffin mode at 0 health in the afternoon. I felt the drain build, but it's okay—we can reflect and do better tomorrow. 😼🔄"
+
+**Good Day (HP ≥40, Within Limit):**
+> "You started scrolling at 9:30 AM and wrapped up by 5:45 PM. You kept it to just 3.5 hours—under your 4 goal by 0.5—so I'm still full energy at 90. My paws stayed light all day, no cap. 😼✨"
+
+**Mixed Day (HP 20-39, Over Limit):**
+> "You started scrolling at 8:15 AM and dragged to 10:20 PM. You went 1.5 over the 4 goal with 5.5 total, so I'm feeling the sludge at 30. My paws got heavier, but reset tomorrow—better luck next time. 😾"
+
+### Integration
+
+- **TimelineManager** - Routes to `selectTerminal()` or `selectNightly()`, prevents duplicates
+- **ShieldActionExtension** - Tracks session start times and bypass counts
 - **DeviceActivityMonitorExtension** - Accumulates phone usage time
-- **CatHealthManager** - Clears session tracking at midnight reset
+- **CatHealthManager** - Clears all session tracking keys at midnight reset
 
 ---
 
@@ -398,27 +419,25 @@ ScrollKitty/
 ├── Services/
 │   ├── TimelineAIService.swift
 │   ├── TimelineManager.swift
-│   ├── NightlyAI.swift
-│   ├── TerminalAI.swift
+│   ├── NightlyTerminalTemplates.swift
+│   ├── NightlyAI.swift (PRESERVED for future AI)
+│   ├── TerminalAI.swift (PRESERVED for future AI)
 │   ├── ContextBuilder.swift
-│   ├── OutputValidator.swift
 │   ├── DailySummaryNotificationService.swift
 │   ├── UserSettingsManager.swift
 │   ├── CatHealthManager.swift
 │   └── AIUtils/
-│       ├── SentenceUtils.swift
-│       ├── TimeParsing.swift
 │       ├── DayPartDeriver.swift
 │       ├── EmotionMapper.swift
 │       ├── HoursFormatter.swift
-│       ├── TerminalVariations.swift
 │       ├── StableHash.swift
 │       └── Format.swift
 ├── Models/
-│   ├── TimelineAIModels.swift
+│   ├── TimelineAIModels.swift (PRESERVED for future AI)
 │   ├── TimelineEvent.swift
-│   ├── CatMessage.swift
 │   └── TerminalNightlyContext.swift
+├── ScrollKittyTests/
+│   └── NightlyTerminalTemplatesTests.swift
 ├── ScrollKittyMonitor/
 │   └── DeviceActivityMonitorExtension.swift
 ├── ScrollKittyShield/
@@ -435,10 +454,11 @@ ScrollKitty/
 - **App Group sharing** - UserDefaults for main app <-> extension communication
 
 ### Message System Architecture
-- **TimelineAIService** - TCA dependency for message generation (currently using templates)
-- **TimelineTemplateMessages** - Service storing 120 prebuilt messages organized by health band and trigger
-- **AIMessageHistory** - Tracks recent messages for repetition avoidance
-- **TimelineAISessionManager** - (Deprecated) Previously managed AI sessions
+- **NightlyTerminalTemplates** - 120 curated templates (40 terminal + 80 nightly)
+- **ContextBuilder** - Enriches context with session data, limit status, day part
+- **AIMessageHistory** - Tracks recent messages for anti-repetition
+- **TimelineAIService** - (Health band drops only) Still uses AI for HP drop messages
+- **TimelineTemplateMessages** - (Legacy) Previously used for all timeline messages
 
 ---
 
@@ -448,9 +468,12 @@ ScrollKitty/
 |------|--------|
 | Core Shielding System | Complete |
 | Onboarding Flow | Complete |
-| Timeline Messages | Template system (120 prebuilt) + AI summaries (modular architecture) |
+| Timeline Messages | Template-based (120 curated messages) |
+| Terminal/Nightly Summaries | Complete (template system with data interpolation) |
+| Session Tracking | Complete (shield dismissal → re-application time accumulation) |
 | Daily Summary Notifications | Complete |
 | Structured Logging | Complete |
+| AI Infrastructure | Preserved for future shield dialogue feature |
 | Schedule Configuration | Planned |
 
 ---

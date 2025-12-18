@@ -30,7 +30,7 @@ extension TimelineFeature.State {
 
             let events = await userSettings.loadTimelineEvents()
             let profile = await userSettings.loadOnboardingProfile()
-            let recentMessages = await userSettings.loadRecentAIMessages(1)
+            let recentMessages = await userSettings.loadRecentMessages(1)
             guard let profile else {
                 return
             }
@@ -62,7 +62,7 @@ extension TimelineFeature.State {
         let todayEvents = events.filter { calendar.isDateInToday($0.timestamp) }
         let todayBypasses = todayEvents.filter { $0.eventType == .shieldBypassed }
         let existingHealthDrops = todayEvents.filter {
-            $0.trigger == TimelineEntryTrigger.healthBandDrop.rawValue && $0.aiMessage != nil
+            $0.trigger == TimelineEntryTrigger.healthBandDrop.rawValue && $0.message != nil
         }
         
         return TodayStats(
@@ -75,7 +75,7 @@ extension TimelineFeature.State {
     private func enrichEventsWithTemplateMessages(
         events: [TimelineEvent],
         profile: UserOnboardingProfile,
-        recentMessages: [AIMessageHistory],
+        recentMessages: [MessageHistory],
         todayStats: TodayStats,
         calendar: Calendar,
         timelineManager: TimelineManager,
@@ -87,7 +87,7 @@ extension TimelineFeature.State {
 
         for event in events {
             // Skip events that already have messages or aren't bypasses
-            guard event.aiMessage == nil, event.eventType == .shieldBypassed else {
+            guard event.message == nil, event.eventType == .shieldBypassed else {
                 updatedEvents.append(event)
                 continue
             }
@@ -128,7 +128,7 @@ extension TimelineFeature.State {
     private func generateTemplateMessageForEvent(
         _ event: TimelineEvent,
         profile: UserOnboardingProfile,
-        recentMessages: [AIMessageHistory],
+        recentMessages: [MessageHistory],
         previousBand: Int,
         currentBand: Int,
         totalDismissals: Int,
@@ -159,14 +159,14 @@ extension TimelineFeature.State {
         }
 
         // Save to message history for anti-repetition
-        let historyEntry = AIMessageHistory(
+        let historyEntry = MessageHistory(
             timestamp: event.timestamp,
             trigger: TimelineEntryTrigger.healthBandDrop.rawValue,
             healthBand: currentBand,
             response: result.message,
             emoji: result.emoji
         )
-        await userSettings.appendAIMessageHistory(historyEntry)
+        await userSettings.appendMessageHistory(historyEntry)
 
         return TimelineEvent(
             id: event.id,
@@ -176,8 +176,8 @@ extension TimelineFeature.State {
             healthAfter: event.healthAfter,
             cooldownStarted: event.cooldownStarted,
             eventType: event.eventType,
-            aiMessage: result.message,
-            aiEmoji: result.emoji,
+            message: result.message,
+            emoji: result.emoji,
             trigger: TimelineEntryTrigger.healthBandDrop.rawValue
         )
     }

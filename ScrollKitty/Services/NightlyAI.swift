@@ -2,6 +2,9 @@
 //  NightlyAI.swift
 //  ScrollKitty
 //
+//  PRESERVED: AI infrastructure for future shield dialogue feature.
+//  Currently unused for Nightly summaries (replaced with templates in NightlyTerminalTemplates.swift).
+//
 //  AI generator for nightly (11 PM) summary messages
 //
 
@@ -52,12 +55,13 @@ struct NightlyAI {
     )
 
     static func buildPrompt(context: TerminalNightlyContext) -> String {
-        let phoneUseHours = formatHours(context.phoneUseHours)
+        // Convert formatted strings back to numbers for AI prompt (preserved for future use)
+        let phoneUseHours = formatHoursFromString(context.phoneUseHours)
         let limitHours = formatHours(context.goalHours)
-        let overByHours = formatHours(context.overByHours)
+        let overByHours = formatHoursFromString(context.overByHours)
         let emotion = EmotionMapper.nightlyEmotion(for: context.currentHealthBand)
         
-        // Add style hints to encourage variety (rotates through options)
+        // Add style hints to encourage variety (using timestamp for randomness)
         let styleHints = [
             "Start with 'The screen...'",
             "Start with 'You clocked...'",
@@ -65,7 +69,7 @@ struct NightlyAI {
             "Start with 'You spent...'",
             "Be creative with the opening"
         ]
-        let styleHint = styleHints[abs(context.variationSeed) % styleHints.count]
+        let styleHint = styleHints[Int(Date().timeIntervalSince1970) % styleHints.count]
 
         return """
         [DATA]
@@ -85,31 +89,32 @@ struct NightlyAI {
             return String(format: "%.1f", h)
         }
     }
+    
+    private static func formatHoursFromString(_ hoursString: String?) -> String {
+        // For preserved AI code: convert formatted string back to simple number format
+        // This is a simplified parser - assumes format like "3 hours 30 minutes" or "1 hour"
+        guard let str = hoursString, str != "unknown" else { return "unknown" }
+        // Extract first number as hours (simplified - for future AI use)
+        if let match = str.range(of: #"(\d+)\s*hour"#, options: .regularExpression) {
+            let hourStr = String(str[match])
+            if let hour = Int(hourStr.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()) {
+                return "\(hour)"
+            }
+        }
+        return str
+    }
 
     static func generate(
-        context: TerminalNightlyContext, 
+        context: TerminalNightlyContext,
         overrideOptions: GenerationOptions? = nil
     ) async throws -> String {
         let opt = overrideOptions ?? options
-        let maxRetries = 3
-        var lastError: Error?
+        let session = LanguageModelSession(instructions: prompt)
 
-        for attempt in 1...maxRetries {
-            let session = LanguageModelSession(instructions: prompt)
+        let timestamp = Date().timeIntervalSince1970
+        let dataPrompt = buildPrompt(context: context) + "\nGenerationID: \(Int(timestamp))"
 
-            let timestamp = Date().timeIntervalSince1970
-            let dataPrompt = buildPrompt(context: context) + "\nGenerationID: \(Int(timestamp))_attempt\(attempt)"
-
-            do {
-                let response = try await session.respond(to: dataPrompt, generating: NightlyAIResponse.self, options: opt)
-                let cleaned = CatMessage(from: response.content.message).message
-                try OutputValidator.validateNightly(cleaned, context: context)
-                return cleaned
-            } catch {
-                lastError = error
-            }
-        }
-
-        throw lastError ?? ValidationError.notExactlyTwoSentences(found: 0)
+        let response = try await session.respond(to: dataPrompt, generating: NightlyAIResponse.self, options: opt)
+        return response.content.message
     }
 }

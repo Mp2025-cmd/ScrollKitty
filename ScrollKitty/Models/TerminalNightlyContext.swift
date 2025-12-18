@@ -27,17 +27,13 @@ struct TerminalNightlyContext: Sendable {
 
     let trigger: Trigger
     let currentHealthBand: Int
-    let screenTimeGoalLabel: String?
-    let goalMet: Bool?
     let firstUseTime: String?
     let lastUseTime: String?
-    let phoneUseHours: Double?
-    let comparedToBaseline: String?
+    let phoneUseHours: String?
     let terminalAtLocalTime: String?
     let dayPart: DayPart
-    let variationSeed: Int
     let goalHours: Double?
     let limitStatus: LimitStatus
-    let overByHours: Double?
-    let underByHours: Double?
+    let overByHours: String?
+    let underByHours: String?
 }

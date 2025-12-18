@@ -2,7 +2,14 @@
 //  TimelineAIModels.swift
 //  ScrollKitty
 //
-//  Models for AI-powered timeline message generation
+//  PRESERVED: AI infrastructure for future shield dialogue feature.
+//  Currently unused for Terminal/Nightly summaries (replaced with templates in NightlyTerminalTemplates.swift).
+//  
+//  This file contains:
+//  - @Generable macro for structured AI output (CatTimelineMessage)
+//  - CatTone enum for health-based tone mapping (may be used by health band drops)
+//  - TimelineAIContext for passing data to AI generation
+//  - AIAvailability for checking on-device AI capability
 //
 
 import Foundation

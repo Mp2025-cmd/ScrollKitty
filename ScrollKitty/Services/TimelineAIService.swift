@@ -11,7 +11,7 @@ import ComposableArchitecture
 // MARK: - TimelineAIService (TCA Dependency)
 
 struct TimelineAIService: Sendable {
-    var generateMessage: @Sendable (TimelineAIContext, [AIMessageHistory]) async -> TimelineMessageResult?
+    var generateMessage: @Sendable (TimelineAIContext, [MessageHistory]) async -> TimelineMessageResult?
     var checkAvailability: @Sendable () async -> AIAvailability
     var prewarm: @Sendable () async -> Void
 }

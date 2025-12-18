@@ -191,10 +191,10 @@ struct TimelineView: View {
     private func groupedEvents() -> [(date: Date, events: [TimelineEvent])] {
         let calendar = Calendar.current
 
-        // Only show events with AI messages
-        let aiEvents = store.timelineEvents.filter { $0.aiMessage != nil }
+        // Only show events with messages
+        let messageEvents = store.timelineEvents.filter { $0.message != nil }
 
-        let grouped = Dictionary(grouping: aiEvents) { event in
+        let grouped = Dictionary(grouping: messageEvents) { event in
             calendar.startOfDay(for: event.timestamp)
         }
         // Sort oldest first (welcome message at top, new entries at bottom)
@@ -321,11 +321,11 @@ struct TimelineItemView: View {
     }
     
     private var messageText: String {
-        guard let aiMessage = event.aiMessage else { return "" }
-        if let emoji = event.aiEmoji {
-            return "\(aiMessage) \(emoji)"
+        guard let message = event.message else { return "" }
+        if let emoji = event.emoji {
+            return "\(message) \(emoji)"
         }
-        return aiMessage
+        return message
     }
 }
 

@@ -4,7 +4,7 @@ import ComposableArchitecture
 
 // MARK: - Timeline Event Model
 
-public struct TimelineEvent: Codable, Equatable, Sendable {
+public struct TimelineEvent: Equatable, Sendable {
     let id: UUID
     let timestamp: Date
     let appName: String // Display name for timeline
@@ -13,15 +13,16 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
     let cooldownStarted: Date
     let eventType: EventType
 
-    // AI-generated message fields
-    let aiMessage: String?
-    let aiEmoji: String?
+    // Template message fields
+    let message: String?
+    let emoji: String?
     let trigger: String? // TimelineEntryTrigger.rawValue
     
     enum EventType: String, Codable, Sendable {
         case shieldShown
         case shieldBypassed
-        case aiGenerated // For AI-only entries (daily summary, welcome, etc.)
+        case templateGenerated // For template-only entries (daily summary, welcome, etc.)
+        case aiGenerated // Deprecated: kept for backward compatibility
     }
     
     init(
@@ -32,8 +33,8 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
         healthAfter: Int,
         cooldownStarted: Date,
         eventType: EventType,
-        aiMessage: String? = nil,
-        aiEmoji: String? = nil,
+        message: String? = nil,
+        emoji: String? = nil,
         trigger: String? = nil
     ) {
         self.id = id
@@ -43,9 +44,66 @@ public struct TimelineEvent: Codable, Equatable, Sendable {
         self.healthAfter = healthAfter
         self.cooldownStarted = cooldownStarted
         self.eventType = eventType
-        self.aiMessage = aiMessage
-        self.aiEmoji = aiEmoji
+        self.message = message
+        self.emoji = emoji
         self.trigger = trigger
+    }
+}
+
+// MARK: - Codable with backward compatibility
+extension TimelineEvent: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, timestamp, appName, healthBefore, healthAfter, cooldownStarted, eventType, trigger
+        case message, emoji
+        case aiMessage, aiEmoji  // Old keys for backward compatibility
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        appName = try container.decode(String.self, forKey: .appName)
+        healthBefore = try container.decode(Int.self, forKey: .healthBefore)
+        healthAfter = try container.decode(Int.self, forKey: .healthAfter)
+        cooldownStarted = try container.decode(Date.self, forKey: .cooldownStarted)
+        
+        var decodedEventType = try container.decode(EventType.self, forKey: .eventType)
+        // Migrate aiGenerated to templateGenerated
+        if decodedEventType == .aiGenerated {
+            decodedEventType = .templateGenerated
+        }
+        eventType = decodedEventType
+        
+        trigger = try container.decodeIfPresent(String.self, forKey: .trigger)
+        
+        // Try new keys first, fall back to old keys
+        if let msg = try container.decodeIfPresent(String.self, forKey: .message) {
+            message = msg
+        } else {
+            message = try container.decodeIfPresent(String.self, forKey: .aiMessage)
+        }
+        
+        if let emj = try container.decodeIfPresent(String.self, forKey: .emoji) {
+            emoji = emj
+        } else {
+            emoji = try container.decodeIfPresent(String.self, forKey: .aiEmoji)
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(appName, forKey: .appName)
+        try container.encode(healthBefore, forKey: .healthBefore)
+        try container.encode(healthAfter, forKey: .healthAfter)
+        try container.encode(cooldownStarted, forKey: .cooldownStarted)
+        try container.encode(eventType, forKey: .eventType)
+        try container.encodeIfPresent(trigger, forKey: .trigger)
+        
+        // Encode with new keys only
+        try container.encodeIfPresent(message, forKey: .message)
+        try container.encodeIfPresent(emoji, forKey: .emoji)
     }
 }
 
@@ -88,10 +146,10 @@ public struct UserSettingsManager: Sendable {
     var saveOnboardingProfile: @Sendable (UserOnboardingProfile) async -> Void
     var loadOnboardingProfile: @Sendable () async -> UserOnboardingProfile?
 
-    // AI Message History (for context preservation)
-    var appendAIMessageHistory: @Sendable (AIMessageHistory) async -> Void
-    var loadAIMessageHistory: @Sendable () async -> [AIMessageHistory]
-    var loadRecentAIMessages: @Sendable (Int) async -> [AIMessageHistory]  // Days back
+    // Message History (for anti-repetition)
+    var appendMessageHistory: @Sendable (MessageHistory) async -> Void
+    var loadMessageHistory: @Sendable () async -> [MessageHistory]
+    var loadRecentMessages: @Sendable (Int) async -> [MessageHistory]  // Days back
 
     // Legacy (for migration)
     var getTodayTotal: @Sendable () async -> Double
@@ -242,10 +300,10 @@ extension UserSettingsManager: DependencyKey {
                 return decoded
             },
 
-            // AI Message History
-            appendAIMessageHistory: { message in
+            // Message History (for anti-repetition)
+            appendMessageHistory: { message in
                 let defaults = UserDefaults(suiteName: appGroupID)
-                var history = loadAIMessageHistorySync(defaults: defaults)
+                var history = loadMessageHistorySync(defaults: defaults)
                 history.append(message)
 
                 // Prune to last 30 days
@@ -253,16 +311,16 @@ extension UserSettingsManager: DependencyKey {
                 history = history.filter { $0.timestamp > cutoff }
 
                 if let encoded = try? JSONEncoder().encode(history) {
-                    defaults?.set(encoded, forKey: "aiMessageHistory")
+                    defaults?.set(encoded, forKey: "aiMessageHistory")  // Keep old key for backward compatibility
                 }
             },
-            loadAIMessageHistory: {
+            loadMessageHistory: {
                 let defaults = UserDefaults(suiteName: appGroupID)
-                return loadAIMessageHistorySync(defaults: defaults)
+                return loadMessageHistorySync(defaults: defaults)
             },
-            loadRecentAIMessages: { daysBack in
+            loadRecentMessages: { daysBack in
                 let defaults = UserDefaults(suiteName: appGroupID)
-                let history = loadAIMessageHistorySync(defaults: defaults)
+                let history = loadMessageHistorySync(defaults: defaults)
                 let cutoff = Calendar.current.date(byAdding: .day, value: -daysBack, to: Date()) ?? Date()
                 return history.filter { $0.timestamp > cutoff }
             },
@@ -300,9 +358,9 @@ extension UserSettingsManager: DependencyKey {
             saveTimelineEvents: { _ in },
             saveOnboardingProfile: { _ in },
             loadOnboardingProfile: { nil },
-            appendAIMessageHistory: { _ in },
-            loadAIMessageHistory: { [] },
-            loadRecentAIMessages: { _ in [] },
+            appendMessageHistory: { _ in },
+            loadMessageHistory: { [] },
+            loadRecentMessages: { _ in [] },
             getTodayTotal: { 5400 }
         )
     }()
@@ -320,9 +378,9 @@ private func loadTimelineEventsSync(defaults: UserDefaults?) -> [TimelineEvent] 
     return decoded
 }
 
-private func loadAIMessageHistorySync(defaults: UserDefaults?) -> [AIMessageHistory] {
-    guard let data = defaults?.data(forKey: "aiMessageHistory"),
-          let decoded = try? JSONDecoder().decode([AIMessageHistory].self, from: data) else {
+private func loadMessageHistorySync(defaults: UserDefaults?) -> [MessageHistory] {
+    guard let data = defaults?.data(forKey: "aiMessageHistory"),  // Keep old key for backward compatibility
+          let decoded = try? JSONDecoder().decode([MessageHistory].self, from: data) else {
         return []
     }
     return decoded

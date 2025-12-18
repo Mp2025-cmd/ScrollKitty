@@ -87,8 +87,8 @@ struct AppSelectionView: View {
 
                 // Title
                 VStack(spacing: 8) {
-                    Text("Which apps drain")
-                    Text("your energy?")
+                    Text("Select up to 10 distracting")
+                    Text("apps?")
                 }
                 .largeTitleStyle()
                 .padding(.top, 40)

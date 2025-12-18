@@ -12,9 +12,16 @@ private struct TimelineEvent: Codable {
     let healthAfter: Int
     let cooldownStarted: Date
     let eventType: String  // "shieldShown" or "shieldBypassed"
-    let aiMessage: String?
-    let aiEmoji: String?
+    let message: String?
+    let emoji: String?
     let trigger: String?
+    
+    // Backward compatibility keys
+    private enum CodingKeys: String, CodingKey {
+        case id, timestamp, appName, healthBefore, healthAfter, cooldownStarted, eventType, trigger
+        case message, emoji
+        case aiMessage, aiEmoji
+    }
 
     init(
         id: String = UUID().uuidString,
@@ -24,8 +31,8 @@ private struct TimelineEvent: Codable {
         healthAfter: Int,
         cooldownStarted: Date,
         eventType: String,
-        aiMessage: String? = nil,
-        aiEmoji: String? = nil,
+        message: String? = nil,
+        emoji: String? = nil,
         trigger: String? = nil
     ) {
         self.id = id
@@ -35,9 +42,50 @@ private struct TimelineEvent: Codable {
         self.healthAfter = healthAfter
         self.cooldownStarted = cooldownStarted
         self.eventType = eventType
-        self.aiMessage = aiMessage
-        self.aiEmoji = aiEmoji
+        self.message = message
+        self.emoji = emoji
         self.trigger = trigger
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        appName = try container.decode(String.self, forKey: .appName)
+        healthBefore = try container.decode(Int.self, forKey: .healthBefore)
+        healthAfter = try container.decode(Int.self, forKey: .healthAfter)
+        cooldownStarted = try container.decode(Date.self, forKey: .cooldownStarted)
+        eventType = try container.decode(String.self, forKey: .eventType)
+        trigger = try container.decodeIfPresent(String.self, forKey: .trigger)
+        
+        // Try new keys first, fall back to old keys
+        if let msg = try container.decodeIfPresent(String.self, forKey: .message) {
+            message = msg
+        } else {
+            message = try container.decodeIfPresent(String.self, forKey: .aiMessage)
+        }
+        
+        if let emj = try container.decodeIfPresent(String.self, forKey: .emoji) {
+            emoji = emj
+        } else {
+            emoji = try container.decodeIfPresent(String.self, forKey: .aiEmoji)
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(appName, forKey: .appName)
+        try container.encode(healthBefore, forKey: .healthBefore)
+        try container.encode(healthAfter, forKey: .healthAfter)
+        try container.encode(cooldownStarted, forKey: .cooldownStarted)
+        try container.encode(eventType, forKey: .eventType)
+        try container.encodeIfPresent(trigger, forKey: .trigger)
+        
+        // Encode with new keys only
+        try container.encodeIfPresent(message, forKey: .message)
+        try container.encodeIfPresent(emoji, forKey: .emoji)
     }
 }
 
