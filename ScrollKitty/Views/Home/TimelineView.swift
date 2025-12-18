@@ -2,6 +2,128 @@ import SwiftUI
 import AVFAudio
 import ComposableArchitecture
 
+// MARK: - TimelineFeature
+@Reducer
+struct TimelineFeature {
+
+    @ObservableState
+    struct State: Equatable {
+        var timelineEvents: [TimelineEvent] = []
+        var isLoading = false
+        var selectedDate: Date = Date()
+    }
+    @Dependency(\.userSettings) var userSettings
+    @Dependency(\.timelineManager) var timelineManager
+    @Dependency(\.catHealth) var catHealth
+    @Dependency(\.date) var date
+    @Dependency(\.calendar) var calendar
+    
+    enum Action: Equatable {
+        case onAppear
+        case loadTimeline
+        case timelineLoaded([TimelineEvent])
+        case processRawEvents
+        case rawEventsProcessed([TimelineEvent])
+        case checkForWelcomeMessage
+        case welcomeMessageGenerated(TimelineEvent?)
+        case checkForDailyWelcome
+        case dailyWelcomeGenerated(TimelineEvent?)
+        case checkForDailySummary
+        case dailySummaryGenerated(TimelineEvent?)
+        case dateSelected(Date)
+    }
+    
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .onAppear:
+                return .run { send in
+                    await send(.loadTimeline)
+                    await send(.checkForDailySummary)
+                }
+                
+            case .dateSelected(let date):
+                state.selectedDate = date
+                return .none
+                
+            case .processRawEvents:
+                return state.processRawEvents()
+                
+            case .rawEventsProcessed(let updatedEvents):
+                // Save all updated events back to UserDefaults atomically, then reload
+                return .run { [userSettings] send in
+                    await userSettings.saveTimelineEvents(updatedEvents)
+                    // Reload timeline to show template messages
+                    await send(.loadTimeline)
+                }
+                
+            case .loadTimeline:
+                state.isLoading = true
+                return .run { send in
+                    let events = await userSettings.loadTimelineEvents()
+                    await send(.timelineLoaded(events))
+                }
+                
+            case .timelineLoaded(let events):
+                state.timelineEvents = events
+                state.isLoading = false
+                return .none
+                
+            case .checkForWelcomeMessage:
+                return .run { send in
+                    let welcomeEvent = await timelineManager.getWelcomeMessage()
+                    await send(.welcomeMessageGenerated(welcomeEvent))
+                }
+                
+            case .welcomeMessageGenerated(let event):
+                if let event = event {
+                    return .run { send in
+                        await userSettings.appendTimelineEvent(event)
+                        await send(.loadTimeline)
+                        await send(.checkForDailyWelcome)
+                    }
+                }
+                return .send(.checkForDailyWelcome)
+
+            case .checkForDailyWelcome:
+                return .run { send in
+                    let dailyWelcomeEvent = await timelineManager.getDailyWelcome()
+                    await send(.dailyWelcomeGenerated(dailyWelcomeEvent))
+                }
+
+            case .dailyWelcomeGenerated(let event):
+                if let event = event {
+                    // Save and reload
+                    return .run { send in
+                        await userSettings.appendTimelineEvent(event)
+                        await send(.loadTimeline)
+                    }
+                }
+                return .none
+
+            case .checkForDailySummary:
+                return .run { send in
+                    let summaryEvent = await timelineManager.checkForDailySummary()
+                    await send(.dailySummaryGenerated(summaryEvent))
+                }
+                
+            case .dailySummaryGenerated(let event):
+                if let event = event {
+                    // Save and reload
+                    return .run { send in
+                        await userSettings.appendTimelineEvent(event)
+                        await send(.loadTimeline)
+                    }
+                }
+                return .none
+            }
+        }
+    }
+}
+
+// MARK: - TimelineView
+
 struct TimelineView: View {
     @Bindable var store: StoreOf<TimelineFeature>
     
@@ -22,15 +144,6 @@ struct TimelineView: View {
                 .padding(.horizontal, 34)
                 .padding(.top, 16)
                 .padding(.bottom, 16)
-                
-                // AI Unavailable Notice (one-time)
-                if store.showAIUnavailableNotice && !store.hasShownAINotice {
-                    AIUnavailableNoticeView {
-                        store.send(.dismissAINotice)
-                    }
-                    .padding(.horizontal, 34)
-                    .padding(.bottom, 12)
-                }
                 
                 // Timeline Content
                 if store.isLoading {
@@ -99,27 +212,15 @@ struct DateHeaderView: View {
                 .fill(DesignSystem.Colors.timelineIndicator)
                 .frame(width: 10, height: 10)
             
-            Text(formattedDate())
+            Text(TimelineFeature.State.formattedDate(for: date))
                 .font(.custom("Sofia Pro-Semi_Bold", size: 16))
                 .foregroundColor(DesignSystem.Colors.primaryText)
             
-            Text("• \(formattedDayOfWeek())")
+            Text("• \(TimelineFeature.State.formattedDayOfWeek(for: date))")
                 .font(.custom("Sofia Pro-Regular", size: 16))
                 .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
             Spacer()
         }
-    }
-    
-    private func formattedDate() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return formatter.string(from: date)
-    }
-    
-    private func formattedDayOfWeek() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
     }
 }
 
@@ -141,32 +242,6 @@ struct EmptyTimelineView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(40)
-    }
-}
-
-// MARK: - AI Unavailable Notice View
-struct AIUnavailableNoticeView: View {
-    let onDismiss: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "info.circle.fill")
-                .foregroundColor(.blue)
-            
-            Text("On this device, I use my simpler built-in notes instead of my full brain.")
-                .font(.custom("Sofia Pro-Regular", size: 13))
-                .foregroundColor(DesignSystem.Colors.primaryText)
-                .lineLimit(nil)
-            
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-            }
-        }
-        .padding(12)
-        .background(Color.blue.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
