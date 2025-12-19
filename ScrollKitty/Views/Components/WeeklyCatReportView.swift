@@ -175,7 +175,7 @@ private struct ChevronButton: View {
         Button(action: action) {
             Image(systemName: direction.systemName)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(DesignSystem.Colors.primaryBlue)
+                .foregroundColor(Color(uiColor: .secondaryLabel))
                 .padding(8)
         }
         .buttonStyle(.plain)
