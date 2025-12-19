@@ -202,7 +202,7 @@ struct TimelineView: View {
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
                         let sections = groupedEvents()
-                        VStack(spacing: 32) {
+                        VStack(spacing: 16) {
                             WeeklyCatReportView(
                                 title: "Scroll Kitty Pulse",
                                 subtitle: store.state.formattedWeekRange(using: calendar),
@@ -219,8 +219,7 @@ struct TimelineView: View {
                                 onPreviousWeek: { store.send(.weekMoved(.previous)) },
                                 onNextWeek: { store.send(.weekMoved(.next)) }
                             )
-                            .padding(.horizontal, 24)
-                            .padding(.top, 8)
+                            .padding(.horizontal, 20)
                             
                             if sections.isEmpty {
                                 EmptyDayView()
@@ -230,15 +229,15 @@ struct TimelineView: View {
                                     Rectangle()
                                         .fill(DesignSystem.Colors.timelineLine)
                                         .frame(width: 3)
-                                        .padding(.leading, 39)
-                                        .padding(.top, 28)
-                                    
+                                        .padding(.leading, 38.5)
+                                        .padding(.top, 20)
+
                                     VStack(spacing: 0) {
                                         ForEach(sections, id: \.date) { group in
                                             TimelineDayHeader(date: group.date)
-                                                .padding(.leading, 35)
-                                                .padding(.bottom, 12)
-                                            
+                                                .padding(.leading, 32)
+                                                .padding(.bottom, 16)
+
                                             ForEach(group.events, id: \.id) { event in
                                                 TimelineItemView(event: event)
                                             }
@@ -330,26 +329,32 @@ struct TimelineView: View {
 // MARK: - Timeline Day Header
 struct TimelineDayHeader: View {
     let date: Date
-    
+
     private var isToday: Bool {
         Calendar.current.isDateInToday(date)
     }
-    
+
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Circle()
                 .fill(DesignSystem.Colors.timelineIndicator)
                 .frame(width: 10, height: 10)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(isToday ? "Today" : TimelineFeature.State.formattedDate(for: date))
-                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                    .foregroundColor(DesignSystem.Colors.primaryText)
-                Text(TimelineFeature.State.formattedDayOfWeek(for: date))
+
+            if isToday {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Today")
+                        .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                        .foregroundColor(DesignSystem.Colors.primaryText)
+                    Text(TimelineFeature.State.formattedDayOfWeek(for: date))
+                        .font(.custom("Sofia Pro-Regular", size: 14))
+                        .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+                }
+            } else {
+                Text("\(TimelineFeature.State.formattedDate(for: date)) • \(TimelineFeature.State.formattedDayOfWeek(for: date))")
                     .font(.custom("Sofia Pro-Regular", size: 14))
                     .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
             }
-            
+
             Spacer()
         }
     }
