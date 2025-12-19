@@ -1,12 +1,71 @@
 import Foundation
 import ComposableArchitecture
 
+extension Calendar {
+    func startOfWeek(for date: Date) -> Date {
+        if let interval = self.dateInterval(of: .weekOfYear, for: date) {
+            return interval.start
+        }
+        return self.startOfDay(for: date)
+    }
+}
+
 private struct TodayStats {
     let totalDismissals: Int
     let existingHealthDrops: Int
 }
 
 extension TimelineFeature.State {
+    func weekDays(using calendar: Calendar) -> [Date] {
+        guard let currentWeekStart else { return [] }
+        let normalizedStart = calendar.startOfDay(for: currentWeekStart)
+        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: normalizedStart) }
+    }
+
+    func formattedWeekRange(using calendar: Calendar) -> String {
+        guard let currentWeekStart else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        let normalizedStart = calendar.startOfDay(for: currentWeekStart)
+        guard let end = calendar.date(byAdding: .day, value: 6, to: normalizedStart) else {
+            return formatter.string(from: normalizedStart)
+        }
+
+        let startText = formatter.string(from: normalizedStart)
+        if calendar.isDate(normalizedStart, equalTo: end, toGranularity: .month) {
+            return "\(startText) – \(calendar.component(.day, from: end))"
+        }
+
+        return "\(startText) – \(formatter.string(from: end))"
+    }
+    
+    func earliestEventWeekStart(events: [TimelineEvent], calendar: Calendar) -> Date? {
+        guard let earliest = events.map({ calendar.startOfDay(for: $0.timestamp) }).min() else {
+            return nil
+        }
+        return calendar.startOfWeek(for: earliest)
+    }
+    
+    func canMoveToPreviousWeek(events: [TimelineEvent], calendar: Calendar) -> Bool {
+        guard let currentWeekStart else { return false }
+        guard let previousStart = calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: currentWeekStart)) else {
+            return false
+        }
+        guard let earliest = earliestEventWeekStart(events: events, calendar: calendar) else {
+            return true
+        }
+        return previousStart >= earliest
+    }
+
+    func canMoveToNextWeek(today: Date, calendar: Calendar) -> Bool {
+        guard let currentWeekStart else { return false }
+        guard let nextStart = calendar.date(byAdding: .day, value: 7, to: calendar.startOfDay(for: currentWeekStart)) else {
+            return false
+        }
+        let latestAllowed = calendar.startOfWeek(for: today)
+        return nextStart <= latestAllowed
+    }
+    
     static func formattedDate(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"

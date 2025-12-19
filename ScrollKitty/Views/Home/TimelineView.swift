@@ -10,9 +10,8 @@ struct TimelineFeature {
     struct State: Equatable {
         var timelineEvents: [TimelineEvent] = []
         var isLoading = false
-        var selectedDate: Date = Date()
-        var currentMonth: Date = Date()
-        var showingCalendar = false
+        var selectedDay: Date? = nil
+        var currentWeekStart: Date? = nil
     }
     @Dependency(\.userSettings) var userSettings
     @Dependency(\.timelineManager) var timelineManager
@@ -21,6 +20,7 @@ struct TimelineFeature {
     @Dependency(\.calendar) var calendar
     
     enum Action: BindableAction, Equatable {
+        case binding(BindingAction<State>)
         case onAppear
         case loadTimeline
         case timelineLoaded([TimelineEvent])
@@ -32,10 +32,13 @@ struct TimelineFeature {
         case dailyWelcomeGenerated(TimelineEvent?)
         case checkForDailySummary
         case dailySummaryGenerated(TimelineEvent?)
-        case dateSelected(Date)
-        case toggleCalendar
-        case monthChanged(Date)
-        case binding(BindingAction<State>)
+        case dayTapped(Date)
+        case weekMoved(WeekNavigationDirection)
+    }
+
+    enum WeekNavigationDirection: Equatable {
+        case previous
+        case next
     }
     
 
@@ -47,23 +50,15 @@ struct TimelineFeature {
                 return .none
                 
             case .onAppear:
+                let today = date.now
+                let todayStart = calendar.startOfDay(for: today)
+                state.selectedDay = todayStart
+                state.currentWeekStart = calendar.startOfWeek(for: todayStart)
+                
                 return .run { send in
                     await send(.loadTimeline)
                     await send(.checkForDailySummary)
                 }
-                
-            case .dateSelected(let date):
-                state.selectedDate = date
-                state.showingCalendar = false
-                return .none
-                
-            case .toggleCalendar:
-                state.showingCalendar.toggle()
-                return .none
-                
-            case .monthChanged(let month):
-                state.currentMonth = month
-                return .none
                 
             case .processRawEvents:
                 return state.processRawEvents()
@@ -135,6 +130,37 @@ struct TimelineFeature {
                     }
                 }
                 return .none
+
+            case .dayTapped(let date):
+                let normalized = calendar.startOfDay(for: date)
+                if let current = state.selectedDay, calendar.isDate(current, inSameDayAs: normalized) {
+                    state.selectedDay = nil
+                } else {
+                    state.selectedDay = normalized
+                }
+                return .none
+
+            case .weekMoved(let direction):
+                guard let currentWeekStart = state.currentWeekStart else {
+                    return .none
+                }
+                let delta = direction == .next ? 7 : -7
+                guard let shiftedStart = calendar.date(byAdding: .day, value: delta, to: currentWeekStart) else {
+                    return .none
+                }
+                let newWeekStart = calendar.startOfWeek(for: shiftedStart)
+                let previousWeekStart = calendar.startOfWeek(for: currentWeekStart)
+                state.currentWeekStart = newWeekStart
+
+                if let selectedDay = state.selectedDay {
+                    let normalizedSelected = calendar.startOfDay(for: selectedDay)
+                    let offset = calendar.dateComponents([.day], from: previousWeekStart, to: normalizedSelected).day ?? 0
+                    let clampedOffset = max(0, min(6, offset))
+                    if let updatedSelection = calendar.date(byAdding: .day, value: clampedOffset, to: newWeekStart) {
+                        state.selectedDay = updatedSelection
+                    }
+                }
+                return .none
             }
         }
     }
@@ -174,63 +200,56 @@ struct TimelineView: View {
                     EmptyTimelineView()
                     Spacer()
                 } else {
-                ScrollView(.vertical, showsIndicators: false) {
-                    ZStack(alignment: .topLeading) {
-                        // Vertical timeline line
-                        Rectangle()
-                            .fill(DesignSystem.Colors.timelineLine)
-                            .frame(width: 3)
-                            .padding(.leading, 39)
-                            .padding(.top, 28)
-                        
-                            // Timeline items grouped by date
-                        VStack(spacing: 0) {
-                                ForEach(groupedEvents(), id: \.date) { group in
-                                    DateHeaderView(
-                                        date: group.date,
-                                        isExpanded: store.showingCalendar,
-                                        onToggle: { store.send(.toggleCalendar) }
-                                    )
-                                    .padding(.leading, 35)
-                                    .padding(.bottom, 20)
+                    ScrollView(.vertical, showsIndicators: false) {
+                        let sections = groupedEvents()
+                        VStack(spacing: 32) {
+                            WeeklyCatReportView(
+                                title: "Scroll Kitty Pulse",
+                                subtitle: store.state.formattedWeekRange(using: calendar),
+                                days: weekDayPresentations(),
+                                canMoveBackward: store.state.canMoveToPreviousWeek(
+                                    events: store.timelineEvents,
+                                    calendar: calendar
+                                ),
+                                canMoveForward: store.state.canMoveToNextWeek(
+                                    today: Date(),
+                                    calendar: calendar
+                                ),
+                                onSelectDay: { store.send(.dayTapped($0)) },
+                                onPreviousWeek: { store.send(.weekMoved(.previous)) },
+                                onNextWeek: { store.send(.weekMoved(.next)) }
+                            )
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            
+                            if sections.isEmpty {
+                                EmptyDayView()
+                                    .padding(.horizontal, 34)
+                            } else {
+                                ZStack(alignment: .topLeading) {
+                                    Rectangle()
+                                        .fill(DesignSystem.Colors.timelineLine)
+                                        .frame(width: 3)
+                                        .padding(.leading, 39)
+                                        .padding(.top, 28)
                                     
-                                    ForEach(group.events, id: \.id) { event in
-                                        TimelineItemView(event: event)
+                                    VStack(spacing: 0) {
+                                        ForEach(sections, id: \.date) { group in
+                                            TimelineDayHeader(date: group.date)
+                                                .padding(.leading, 35)
+                                                .padding(.bottom, 12)
+                                            
+                                            ForEach(group.events, id: \.id) { event in
+                                                TimelineItemView(event: event)
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                        .padding(.bottom, 100) // Space for tab bar
+                        .padding(.bottom, 120) // Space for tab bar
                     }
                 }
-            }
-        }
-        .overlay(alignment: .top) {
-            if store.showingCalendar {
-                ZStack(alignment: .top) {
-                    // Semi-transparent background
-                    Color(red: 0, green: 0, blue: 0, opacity: 0.3)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            store.send(.toggleCalendar)
-                        }
-
-                    // Calendar component
-                    MonthCalendarView(
-                        selectedDate: $store.selectedDate,
-                        currentMonth: $store.currentMonth,
-                        dateHealthStates: generateHealthStatesFromEvents(),
-                        onDateSelected: { date in
-                            store.send(.dateSelected(date))
-                        },
-                        onMonthChanged: { month in
-                            store.send(.monthChanged(month))
-                        }
-                    )
-                    .padding(.top, 120)
-                    .padding(.horizontal, 16)
-                }
-                .transition(.scale(scale: 0.95, anchor: .top).combined(with: .opacity))
             }
         }
         .onAppear {
@@ -238,8 +257,38 @@ struct TimelineView: View {
         }
     }
     
+    private var calendar: Calendar {
+        Calendar.current
+    }
+    
+    private var todayStart: Date {
+        calendar.startOfDay(for: Date())
+    }
+    
+    private func weekDayPresentations() -> [WeeklyCatReportView.DayPresentation] {
+        let healthStates = generateHealthStatesFromEvents()
+        let weekDates = store.state.weekDays(using: calendar)
+        return weekDates.map { date in
+            let dayStart = calendar.startOfDay(for: date)
+            let health = healthStates[dayStart]
+            let catState = health.map { CatState.from(health: $0) }
+            let isSelected = store.selectedDay.map { selected in
+                calendar.isDate(selected, inSameDayAs: dayStart)
+            } ?? false
+            
+            return WeeklyCatReportView.DayPresentation(
+                date: dayStart,
+                weekdayLabel: DateFormatter.shortWeekdayFormatter.string(from: dayStart),
+                dayNumberText: DateFormatter.dayNumberFormatter.string(from: dayStart),
+                catState: catState,
+                hasData: health != nil,
+                isFuture: dayStart > todayStart,
+                isSelected: isSelected
+            )
+        }
+    }
+    
     private func generateHealthStatesFromEvents() -> [Date: Int] {
-        let calendar = Calendar.current
         var healthStates: [Date: Int] = [:]
         
         // Group events by date and get the final health for each day
@@ -258,58 +307,72 @@ struct TimelineView: View {
     }
     
     private func groupedEvents() -> [(date: Date, events: [TimelineEvent])] {
-        let calendar = Calendar.current
-
-        // Only show events with messages
         let messageEvents = store.timelineEvents.filter { $0.message != nil }
-
-        let grouped = Dictionary(grouping: messageEvents) { event in
+        var grouped = Dictionary(grouping: messageEvents) { event in
             calendar.startOfDay(for: event.timestamp)
         }
-        // Sort oldest first (welcome message at top, new entries at bottom)
-        return grouped.sorted { $0.key < $1.key }.map { (date: $0.key, events: $0.value.sorted { $0.timestamp < $1.timestamp }) }
+        
+        let weekDates = store.state.weekDays(using: calendar).map { calendar.startOfDay(for: $0) }
+        let weekSet = Set(weekDates)
+        
+        if let selectedDay = store.selectedDay {
+            grouped = grouped.filter { calendar.isDate($0.key, inSameDayAs: selectedDay) }
+        } else {
+            grouped = grouped.filter { weekSet.contains($0.key) }
+        }
+        
+        return grouped
+            .sorted { $0.key < $1.key }
+            .map { (date: $0.key, events: $0.value.sorted { $0.timestamp < $1.timestamp }) }
     }
 }
 
-// MARK: - Date Header View
-struct DateHeaderView: View {
+// MARK: - Timeline Day Header
+struct TimelineDayHeader: View {
     let date: Date
-    let isExpanded: Bool
-    let onToggle: () -> Void
     
     private var isToday: Bool {
         Calendar.current.isDateInToday(date)
     }
     
     var body: some View {
-        Button(action: {
-            onToggle()
-        }) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(DesignSystem.Colors.timelineIndicator)
-                    .frame(width: 10, height: 10)
-                
+        HStack(spacing: 10) {
+            Circle()
+                .fill(DesignSystem.Colors.timelineIndicator)
+                .frame(width: 10, height: 10)
+            
+            VStack(alignment: .leading, spacing: 2) {
                 Text(isToday ? "Today" : TimelineFeature.State.formattedDate(for: date))
                     .font(.custom("Sofia Pro-Semi_Bold", size: 16))
                     .foregroundColor(DesignSystem.Colors.primaryText)
-                
-                if !isToday {
-                    Text("• \(TimelineFeature.State.formattedDayOfWeek(for: date))")
-                        .font(.custom("Sofia Pro-Regular", size: 16))
-                        .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.primaryBlue)
-                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isExpanded)
+                Text(TimelineFeature.State.formattedDayOfWeek(for: date))
+                    .font(.custom("Sofia Pro-Regular", size: 14))
+                    .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
             }
+            
+            Spacer()
         }
-        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Empty Day View
+struct EmptyDayView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 32, weight: .medium))
+                .foregroundColor(.secondary)
+            
+            Text("No entries for this day yet")
+                .font(.custom("Sofia Pro-Semi_Bold", size: 17))
+                .foregroundColor(DesignSystem.Colors.primaryText)
+            
+            Text("Pick another day or come back later to see more Scroll Kitty moments.")
+                .font(.custom("Sofia Pro-Regular", size: 13))
+                .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.vertical, 36)
     }
 }
 
