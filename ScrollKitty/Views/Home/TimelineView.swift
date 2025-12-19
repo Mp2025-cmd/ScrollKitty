@@ -202,29 +202,32 @@ struct TimelineView: View {
         }
         .overlay(alignment: .top) {
             if store.showingCalendar {
-                // Semi-transparent background
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            store.send(.toggleCalendar)
+                ZStack(alignment: .top) {
+                    // Semi-transparent background
+                    Rectangle()
+                        .fill(Color.black.opacity(0.3))
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                store.send(.toggleCalendar)
+                            }
                         }
-                    }
-                
-                // Calendar component
-                MonthCalendarView(
-                    selectedDate: $store.selectedDate,
-                    currentMonth: $store.currentMonth,
-                    dateHealthStates: generateHealthStatesFromEvents(),
-                    onDateSelected: { date in
-                        store.send(.dateSelected(date))
-                    },
-                    onMonthChanged: { month in
-                        store.send(.monthChanged(month))
-                    }
-                )
-                .padding(.top, 120)
-                .padding(.horizontal, 16)
+
+                    // Calendar component
+                    MonthCalendarView(
+                        selectedDate: $store.selectedDate,
+                        currentMonth: $store.currentMonth,
+                        dateHealthStates: generateHealthStatesFromEvents(),
+                        onDateSelected: { date in
+                            store.send(.dateSelected(date))
+                        },
+                        onMonthChanged: { month in
+                            store.send(.monthChanged(month))
+                        }
+                    )
+                    .padding(.top, 120)
+                    .padding(.horizontal, 16)
+                }
                 .transition(.scale(scale: 0.95, anchor: .top).combined(with: .opacity))
             }
         }
