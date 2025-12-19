@@ -77,7 +77,80 @@ extension TimelineFeature.State {
         formatter.dateFormat = "EEEE"
         return formatter.string(from: date)
     }
-    
+
+    // MARK: - Timeline Display Helpers
+
+    func dailyHealthStates(from events: [TimelineEvent], using calendar: Calendar) -> [Date: Int] {
+        var healthStates: [Date: Int] = [:]
+
+        // Group events by date and get the final health for each day
+        let grouped = Dictionary(grouping: events) { event in
+            calendar.startOfDay(for: event.timestamp)
+        }
+
+        for (date, events) in grouped {
+            // Get the last event of the day (most recent health)
+            if let lastEvent = events.sorted(by: { $0.timestamp < $1.timestamp }).last {
+                healthStates[date] = lastEvent.healthAfter
+            }
+        }
+
+        return healthStates
+    }
+
+    func filteredEventsByDay(
+        from events: [TimelineEvent],
+        selectedDay: Date?,
+        currentWeekStart: Date?,
+        using calendar: Calendar
+    ) -> [(date: Date, events: [TimelineEvent])] {
+        let messageEvents = events.filter { $0.message != nil }
+        var grouped = Dictionary(grouping: messageEvents) { event in
+            calendar.startOfDay(for: event.timestamp)
+        }
+
+        let weekDates = weekDays(using: calendar).map { calendar.startOfDay(for: $0) }
+        let weekSet = Set(weekDates)
+
+        if let selectedDay = selectedDay {
+            grouped = grouped.filter { calendar.isDate($0.key, inSameDayAs: selectedDay) }
+        } else {
+            grouped = grouped.filter { weekSet.contains($0.key) }
+        }
+
+        return grouped
+            .sorted { $0.key < $1.key }
+            .map { (date: $0.key, events: $0.value.sorted { $0.timestamp < $1.timestamp }) }
+    }
+
+    func weekDayPresentations(
+        from events: [TimelineEvent],
+        selectedDay: Date?,
+        using calendar: Calendar
+    ) -> [WeeklyCatReportView.DayPresentation] {
+        let healthStates = dailyHealthStates(from: events, using: calendar)
+        let weekDates = weekDays(using: calendar)
+        let todayStart = calendar.startOfDay(for: Date())
+
+        return weekDates.map { date in
+            let dayStart = calendar.startOfDay(for: date)
+            let health = healthStates[dayStart]
+            let catState = health.map { CatState.from(health: $0) }
+            let isSelected = selectedDay.map { selected in
+                calendar.isDate(selected, inSameDayAs: dayStart)
+            } ?? false
+
+            return WeeklyCatReportView.DayPresentation(
+                date: dayStart,
+                weekdayLabel: DateFormatter.shortWeekdayFormatter.string(from: dayStart),
+                dayNumberText: DateFormatter.dayNumberFormatter.string(from: dayStart),
+                catState: catState,
+                hasData: health != nil,
+                isFuture: dayStart > todayStart,
+                isSelected: isSelected
+            )
+        }
+    }
 
     /// Process timeline events and add template messages for health band drops
     /// Only generates messages when health crosses 10-point boundaries (90→80, 80→70, etc.)

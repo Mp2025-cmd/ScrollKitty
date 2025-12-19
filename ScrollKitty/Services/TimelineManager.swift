@@ -270,6 +270,7 @@ extension TimelineManager {
             return TimelineMessageResult(message: message, emoji: nil)
         }
     )
+
 }
 
 extension CatTone {

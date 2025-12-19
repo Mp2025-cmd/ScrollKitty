@@ -13,7 +13,7 @@ extension DeviceActivityReport.Context {
 struct HomeFeature {
     @ObservableState
     struct State: Equatable {
-        var selectedTab: HomeTab = .dashboard
+        var selectedTab: HomeTab = .home
         var catHealth: CatHealthData?
         var isLoading = false
         var timeline = TimelineFeature.State()
@@ -89,8 +89,8 @@ struct HomeFeature {
 }
 
 enum HomeTab: Int, Equatable, Sendable {
-    case dashboard = 0
-    case timeline = 1
+    case home = 0
+    case history = 1
 }
 
 // MARK: - View
@@ -105,9 +105,9 @@ struct HomeView: View {
             
             // Content based on selected tab
             switch store.selectedTab {
-            case .dashboard:
+            case .home:
                 dashboardContent
-            case .timeline:
+            case .history:
                 TimelineView(store: store.scope(state: \.timeline, action: \.timeline))
             }
             
@@ -116,9 +116,9 @@ struct HomeView: View {
                 
                 // Tab Bar
                 HStack(spacing: 0) {
-                    // Dashboard Tab
+                    // Home Tab
                     Button {
-                        store.send(.tabSelected(.dashboard))
+                        store.send(.tabSelected(.home))
                     } label: {
                         VStack(spacing: 8) {
                             Image("TabBar_Dashboard")
@@ -126,20 +126,20 @@ struct HomeView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 24, height: 24)
-                                .foregroundColor(store.selectedTab == .dashboard ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
-                            
-                            Text("Dashboard")
+                                .foregroundColor(store.selectedTab == .home ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+
+                            Text("Home")
                                 .font(.custom("Sofia Pro-Regular", size: 12))
-                                .foregroundColor(store.selectedTab == .dashboard ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+                                .foregroundColor(store.selectedTab == .home ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .opacity(store.selectedTab == .dashboard ? 1 : 0.5)
+                        .opacity(store.selectedTab == .home ? 1 : 0.5)
                     }
                     
-                    // Timeline Tab
+                    // History Tab
                     Button {
-                        store.send(.tabSelected(.timeline))
+                        store.send(.tabSelected(.history))
                     } label: {
                         VStack(spacing: 8) {
                             Image("TabBar_Timeline")
@@ -147,15 +147,15 @@ struct HomeView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 24, height: 24)
-                                .foregroundColor(store.selectedTab == .timeline ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
-                            
-                            Text("Timeline")
+                                .foregroundColor(store.selectedTab == .history ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+
+                            Text("History")
                                 .font(.custom("Sofia Pro-Regular", size: 12))
-                                .foregroundColor(store.selectedTab == .timeline ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
+                                .foregroundColor(store.selectedTab == .history ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.secondaryText)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .opacity(store.selectedTab == .timeline ? 1 : 0.5)
+                        .opacity(store.selectedTab == .history ? 1 : 0.5)
                     }
                 }
                 .background(DesignSystem.Colors.background)

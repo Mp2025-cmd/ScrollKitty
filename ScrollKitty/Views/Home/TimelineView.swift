@@ -177,18 +177,6 @@ struct TimelineView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("Timeline")
-                        .font(.custom("Sofia Pro-Semi_Bold", size: 24))
-                        .foregroundColor(.black)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 34)
-                .padding(.top, 16)
-                .padding(.bottom, 16)
-                
                 // Timeline Content
                 if store.isLoading {
                     Spacer()
@@ -201,12 +189,21 @@ struct TimelineView: View {
                     Spacer()
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
-                        let sections = groupedEvents()
+                        let sections = store.state.filteredEventsByDay(
+                            from: store.timelineEvents,
+                            selectedDay: store.selectedDay,
+                            currentWeekStart: store.currentWeekStart,
+                            using: calendar
+                        )
                         VStack(spacing: 16) {
                             WeeklyCatReportView(
-                                title: "Scroll Kitty Pulse",
+                                title: "ScrollKitty Report",
                                 subtitle: store.state.formattedWeekRange(using: calendar),
-                                days: weekDayPresentations(),
+                                days: store.state.weekDayPresentations(
+                                    from: store.timelineEvents,
+                                    selectedDay: store.selectedDay,
+                                    using: calendar
+                                ),
                                 canMoveBackward: store.state.canMoveToPreviousWeek(
                                     events: store.timelineEvents,
                                     calendar: calendar
@@ -220,7 +217,7 @@ struct TimelineView: View {
                                 onNextWeek: { store.send(.weekMoved(.next)) }
                             )
                             .padding(.horizontal, 20)
-                            
+                            .padding(.bottom)
                             if sections.isEmpty {
                                 EmptyDayView()
                                     .padding(.horizontal, 34)
@@ -230,9 +227,8 @@ struct TimelineView: View {
                                         .fill(DesignSystem.Colors.timelineLine)
                                         .frame(width: 3)
                                         .padding(.leading, 38.5)
-                                        .padding(.top, 20)
-
-                                    VStack(spacing: 0) {
+                                        .padding(.top, 52)
+                                    VStack(spacing: 8) {
                                         ForEach(sections, id: \.date) { group in
                                             TimelineDayHeader(date: group.date)
                                                 .padding(.leading, 32)
@@ -240,6 +236,7 @@ struct TimelineView: View {
 
                                             ForEach(group.events, id: \.id) { event in
                                                 TimelineItemView(event: event)
+                                                    
                                             }
                                         }
                                     }
@@ -264,66 +261,6 @@ struct TimelineView: View {
         calendar.startOfDay(for: Date())
     }
     
-    private func weekDayPresentations() -> [WeeklyCatReportView.DayPresentation] {
-        let healthStates = generateHealthStatesFromEvents()
-        let weekDates = store.state.weekDays(using: calendar)
-        return weekDates.map { date in
-            let dayStart = calendar.startOfDay(for: date)
-            let health = healthStates[dayStart]
-            let catState = health.map { CatState.from(health: $0) }
-            let isSelected = store.selectedDay.map { selected in
-                calendar.isDate(selected, inSameDayAs: dayStart)
-            } ?? false
-            
-            return WeeklyCatReportView.DayPresentation(
-                date: dayStart,
-                weekdayLabel: DateFormatter.shortWeekdayFormatter.string(from: dayStart),
-                dayNumberText: DateFormatter.dayNumberFormatter.string(from: dayStart),
-                catState: catState,
-                hasData: health != nil,
-                isFuture: dayStart > todayStart,
-                isSelected: isSelected
-            )
-        }
-    }
-    
-    private func generateHealthStatesFromEvents() -> [Date: Int] {
-        var healthStates: [Date: Int] = [:]
-        
-        // Group events by date and get the final health for each day
-        let grouped = Dictionary(grouping: store.timelineEvents) { event in
-            calendar.startOfDay(for: event.timestamp)
-        }
-        
-        for (date, events) in grouped {
-            // Get the last event of the day (most recent health)
-            if let lastEvent = events.sorted(by: { $0.timestamp < $1.timestamp }).last {
-                healthStates[date] = lastEvent.healthAfter
-            }
-        }
-        
-        return healthStates
-    }
-    
-    private func groupedEvents() -> [(date: Date, events: [TimelineEvent])] {
-        let messageEvents = store.timelineEvents.filter { $0.message != nil }
-        var grouped = Dictionary(grouping: messageEvents) { event in
-            calendar.startOfDay(for: event.timestamp)
-        }
-        
-        let weekDates = store.state.weekDays(using: calendar).map { calendar.startOfDay(for: $0) }
-        let weekSet = Set(weekDates)
-        
-        if let selectedDay = store.selectedDay {
-            grouped = grouped.filter { calendar.isDate($0.key, inSameDayAs: selectedDay) }
-        } else {
-            grouped = grouped.filter { weekSet.contains($0.key) }
-        }
-        
-        return grouped
-            .sorted { $0.key < $1.key }
-            .map { (date: $0.key, events: $0.value.sorted { $0.timestamp < $1.timestamp }) }
-    }
 }
 
 // MARK: - Timeline Day Header
@@ -335,26 +272,16 @@ struct TimelineDayHeader: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(DesignSystem.Colors.timelineIndicator)
-                .frame(width: 10, height: 10)
-
+        HStack(spacing: 0) {
             if isToday {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Today")
-                        .font(.custom("Sofia Pro-Semi_Bold", size: 16))
-                        .foregroundColor(DesignSystem.Colors.primaryText)
-                    Text(TimelineFeature.State.formattedDayOfWeek(for: date))
-                        .font(.custom("Sofia Pro-Regular", size: 14))
-                        .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
-                }
+                Text("Today")
+                    .font(.custom("Sofia Pro-Semi_Bold", size: 16))
+                    .foregroundColor(DesignSystem.Colors.primaryText)
             } else {
                 Text("\(TimelineFeature.State.formattedDate(for: date)) • \(TimelineFeature.State.formattedDayOfWeek(for: date))")
                     .font(.custom("Sofia Pro-Regular", size: 14))
                     .foregroundColor(DesignSystem.Colors.timelineSecondaryText)
             }
-
             Spacer()
         }
     }
@@ -486,6 +413,85 @@ struct TimelineItemView: View {
     }
 }
 
-#Preview{
-    TimelineItemView(event: .init(timestamp: .distantPast, appName: "aa", healthBefore: 10, healthAfter: 10, cooldownStarted: .distantFuture, eventType: .aiGenerated))
+
+
+#if DEBUG
+private func makePreviewTimelineEvents(now: Date, calendar: Calendar) -> [TimelineEvent] {
+    func at(dayOffset: Int, hour: Int, minute: Int) -> Date {
+        let dayStart = calendar.startOfDay(for: calendar.date(byAdding: .day, value: dayOffset, to: now) ?? now)
+        return calendar.date(byAdding: .minute, value: hour * 60 + minute, to: dayStart) ?? dayStart
+    }
+
+    return [
+        TimelineEvent(
+            timestamp: at(dayOffset: 0, hour: 0, minute: 15),
+            appName: "Daily Welcome",
+            healthBefore: 100,
+            healthAfter: 100,
+            cooldownStarted: at(dayOffset: 0, hour: 0, minute: 15),
+            eventType: .templateGenerated,
+            message: TimelineTemplateMessages.dailyWelcome[14],
+            trigger: TimelineEntryTrigger.dailyWelcome.rawValue
+        ),
+        TimelineEvent(
+            timestamp: at(dayOffset: 0, hour: 7, minute: 3),
+            appName: "Health Drop",
+            healthBefore: 100,
+            healthAfter: 80,
+            cooldownStarted: at(dayOffset: 0, hour: 7, minute: 3),
+            eventType: .templateGenerated,
+            message: TimelineTemplateMessages.messages80HP[2],
+            trigger: TimelineEntryTrigger.healthBandDrop.rawValue
+        ),
+        TimelineEvent(
+            timestamp: at(dayOffset: 0, hour: 8, minute: 41),
+            appName: "Health Drop",
+            healthBefore: 80,
+            healthAfter: 60,
+            cooldownStarted: at(dayOffset: 0, hour: 8, minute: 41),
+            eventType: .templateGenerated,
+            message: TimelineTemplateMessages.messages60HP[19],
+            trigger: TimelineEntryTrigger.healthBandDrop.rawValue
+        ),
+        TimelineEvent(
+            timestamp: at(dayOffset: -1, hour: 22, minute: 57),
+            appName: "Nightly",
+            healthBefore: 60,
+            healthAfter: 60,
+            cooldownStarted: at(dayOffset: -1, hour: 22, minute: 57),
+            eventType: .templateGenerated,
+            message: "A quieter end to the day. I’m still here, still watching, still trying with you.",
+            trigger: TimelineEntryTrigger.nightly.rawValue
+        ),
+        TimelineEvent(
+            timestamp: at(dayOffset: -2, hour: 12, minute: 5),
+            appName: "Health Drop",
+            healthBefore: 60,
+            healthAfter: 40,
+            cooldownStarted: at(dayOffset: -2, hour: 12, minute: 5),
+            eventType: .templateGenerated,
+            message: TimelineTemplateMessages.messages40HP[0],
+            trigger: TimelineEntryTrigger.healthBandDrop.rawValue
+        )
+    ]
 }
+
+#Preview("TimelineView - Mock Timeline") {
+    let calendar = Calendar.current
+    let now = Date()
+    let events = makePreviewTimelineEvents(now: now, calendar: calendar)
+
+    let store = Store(initialState: TimelineFeature.State()) {
+        TimelineFeature()
+    } withDependencies: {
+        var userSettings = UserSettingsManager.testValue
+        userSettings.loadTimelineEvents = { events }
+        $0.userSettings = userSettings
+        $0.timelineManager = TimelineManager.testValue
+        $0.date.now = now
+        $0.calendar = calendar
+    }
+
+    return TimelineView(store: store)
+}
+#endif

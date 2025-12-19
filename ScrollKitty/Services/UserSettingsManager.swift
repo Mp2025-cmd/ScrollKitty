@@ -365,8 +365,8 @@ extension UserSettingsManager: DependencyKey {
         )
     }()
 
-    public static let previewValue = testValue
-}
+	    public static let previewValue: UserSettingsManager = testValue
+	}
 
 // MARK: - Helper Functions
 

@@ -40,6 +40,9 @@ enum DesignSystem {
         static let timelineIndicator = brightBlue
         static let timelineLine = lightBlue
         static let timelineSecondaryText = lightGray
+        static let timelineHeaderTitle = primaryText
+        static let timelineHeaderSubtitle = secondaryText
+        static let timelineHeaderChevron = primaryText
         
         // Highlight Colors (for time warnings)
         static let highlightCyan = Color(hex: "#01C9D7")    // Moderate usage

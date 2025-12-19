@@ -38,10 +38,10 @@ struct WeeklyCatReportView: View {
             VStack(spacing: 4) {
                 Text(title)
                     .font(.custom("Sofia Pro-Semi_Bold", size: 20))
-                    .foregroundColor(DesignSystem.Colors.primaryText)
+                    .foregroundColor(DesignSystem.Colors.timelineHeaderTitle)
                 Text(subtitle)
                     .font(.custom("Sofia Pro-Regular", size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.timelineHeaderSubtitle)
             }
             .frame(maxWidth: .infinity)
             
@@ -75,7 +75,7 @@ private struct DayPill: View {
                 .textCase(.uppercase)
 
             dayImage
-                .frame(width: 30, height: 30)
+                .frame(width: 36, height: 36)
 
             Text(day.dayNumberText)
                 .font(.custom("Sofia Pro-Semi_Bold", size: 13))
@@ -142,7 +142,7 @@ private struct DayPill: View {
                     .resizable()
                     .scaledToFit()
                     .foregroundColor(Color(uiColor: .secondaryLabel))
-                    .padding(8)
+                    .padding(6)
             }
         }
         .opacity(day.hasData ? 1 : 0.65)
@@ -175,7 +175,7 @@ private struct ChevronButton: View {
         Button(action: action) {
             Image(systemName: direction.systemName)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(uiColor: .secondaryLabel))
+                .foregroundColor(DesignSystem.Colors.timelineHeaderChevron)
                 .padding(8)
         }
         .buttonStyle(.plain)
