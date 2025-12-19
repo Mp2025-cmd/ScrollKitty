@@ -204,8 +204,7 @@ struct TimelineView: View {
             if store.showingCalendar {
                 ZStack(alignment: .top) {
                     // Semi-transparent background
-                    Rectangle()
-                        .fill(Color.black.opacity(0.3))
+                    Color(red: 0, green: 0, blue: 0, opacity: 0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
