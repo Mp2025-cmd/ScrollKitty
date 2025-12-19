@@ -20,7 +20,7 @@ struct TimelineFeature {
     @Dependency(\.date) var date
     @Dependency(\.calendar) var calendar
     
-    enum Action: Equatable {
+    enum Action: BindableAction, Equatable {
         case onAppear
         case loadTimeline
         case timelineLoaded([TimelineEvent])
@@ -35,12 +35,17 @@ struct TimelineFeature {
         case dateSelected(Date)
         case toggleCalendar
         case monthChanged(Date)
+        case binding(BindingAction<State>)
     }
     
 
     var body: some Reducer<State, Action> {
+        BindingReducer()
         Reduce { state, action in
             switch action {
+            case .binding:
+                return .none
+                
             case .onAppear:
                 return .run { send in
                     await send(.loadTimeline)
@@ -207,9 +212,7 @@ struct TimelineView: View {
                     Color(red: 0, green: 0, blue: 0, opacity: 0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                store.send(.toggleCalendar)
-                            }
+                            store.send(.toggleCalendar)
                         }
 
                     // Calendar component
@@ -280,9 +283,7 @@ struct DateHeaderView: View {
     
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                onToggle()
-            }
+            onToggle()
         }) {
             HStack(spacing: 8) {
                 Circle()
