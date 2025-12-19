@@ -65,12 +65,13 @@ struct WeeklyCatReportView: View {
 
 private struct DayPill: View {
     let day: WeeklyCatReportView.DayPresentation
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(spacing: 5) {
             Text(day.weekdayLabel)
                 .font(.custom("Sofia Pro-Medium", size: 10))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(textColor)
                 .textCase(.uppercase)
 
             dayImage
@@ -78,36 +79,54 @@ private struct DayPill: View {
 
             Text(day.dayNumberText)
                 .font(.custom("Sofia Pro-Semi_Bold", size: 13))
-                .foregroundColor(.white)
+                .foregroundColor(textColor)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .background(background)
+        .background(pillBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(day.isSelected ? 0.9 : 0), lineWidth: 2.5)
+                .stroke(borderColor, lineWidth: 2.5)
                 .shadow(color: day.isSelected ? Color.black.opacity(0.15) : .clear, radius: 6, y: 4)
         )
         .scaleEffect(day.isSelected ? 1.04 : 1.0)
         .opacity(dayOpacity)
     }
     
-    private var background: LinearGradient {
-        let colors = gradientColors()
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-    
-    private func gradientColors() -> [Color] {
+    private var pillBackground: Color {
         guard let catState = day.catState else {
-            let neutral = Color(uiColor: .secondarySystemBackground)
-            return [neutral, neutral.opacity(0.7)]
+            // No data - use visible grey in both modes
+            return Color(uiColor: .systemGray5)
         }
-        
+
         let base = catState.backgroundColor
-        let top = base.opacity(day.isFuture ? 0.5 : 1.0)
-        let bottom = base.opacity(day.isFuture ? 0.25 : 0.7)
-        return [top, bottom]
+        return day.isFuture ? base.opacity(0.6) : base
+    }
+
+    private var textColor: Color {
+        if day.catState != nil {
+            // Has data - use white on blue backgrounds
+            return .white
+        } else {
+            // No data - use adaptive text for grey background
+            return Color(uiColor: .label)
+        }
+    }
+
+    private var borderColor: Color {
+        if !day.isSelected {
+            return .clear
+        }
+
+        // Selected state border
+        if day.catState != nil {
+            // Has data - white border on blue
+            return .white
+        } else {
+            // No data - use brand blue border on grey
+            return DesignSystem.Colors.primaryBlue
+        }
     }
     
     private var dayImage: some View {
@@ -122,7 +141,7 @@ private struct DayPill: View {
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(Color(uiColor: .secondaryLabel))
                     .padding(8)
             }
         }
@@ -139,7 +158,7 @@ private struct ChevronButton: View {
     enum Direction {
         case left
         case right
-        
+
         var systemName: String {
             switch self {
             case .left: return "chevron.left"
@@ -147,16 +166,16 @@ private struct ChevronButton: View {
             }
         }
     }
-    
+
     let direction: Direction
     let isEnabled: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             Image(systemName: direction.systemName)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.primary)
+                .foregroundColor(DesignSystem.Colors.primaryBlue)
                 .padding(8)
         }
         .buttonStyle(.plain)
