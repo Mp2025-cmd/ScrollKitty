@@ -1,0 +1,13 @@
+{
+  "name": "tca-docc-mcp",
+  "version": "1.0.0",
+  "description": "MCP server that fetches and renders Point-Free TCA DocC docs (v1.9.0)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1"
+  }
+}
