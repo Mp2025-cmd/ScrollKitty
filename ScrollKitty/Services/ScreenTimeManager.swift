@@ -102,7 +102,9 @@ extension ScreenTimeManager: DependencyKey {
         getTodayScreenTime: {
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date())
-            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+            guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else {
+                return nil
+            }
             let interval = DateInterval(start: today, end: tomorrow)
             
             // TODO: Implement real DeviceActivity API parsing
@@ -112,7 +114,9 @@ extension ScreenTimeManager: DependencyKey {
         getScreenTimeForDate: { date in
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+                return nil
+            }
             let interval = DateInterval(start: startOfDay, end: endOfDay)
             
             return await parseScreenTimeReport(for: interval, date: date)
@@ -127,7 +131,9 @@ extension ScreenTimeManager: DependencyKey {
                 do {
                     let calendar = Calendar.current
                     let startOfDay = calendar.startOfDay(for: currentDate)
-                    let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+                    guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+                        break
+                    }
                     let interval = DateInterval(start: startOfDay, end: endOfDay)
                     
                     if let data = await parseScreenTimeReport(for: interval, date: currentDate) {
@@ -135,7 +141,10 @@ extension ScreenTimeManager: DependencyKey {
                     }
                 } catch {
                 }
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+                guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else {
+                    break
+                }
+                currentDate = nextDate
             }
             
             return results
@@ -258,19 +267,30 @@ extension DependencyValues {
         let calendar = Calendar.current
         let now = Date()
 
-        let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: now)!
+        guard let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: now) else {
+            return
+        }
         let endComponents = calendar.dateComponents([.hour, .minute], from: endTime)
 
         var startTime = now
         if cooldownMinutes < 15 {
             let shiftBack = 15 - cooldownMinutes
-            startTime = calendar.date(byAdding: .minute, value: -shiftBack, to: now)!
+            startTime = calendar.date(byAdding: .minute, value: -shiftBack, to: now) ?? now
         }
         let startComponents = calendar.dateComponents([.hour, .minute], from: startTime)
 
+        guard
+            let startHour = startComponents.hour,
+            let startMinute = startComponents.minute,
+            let endHour = endComponents.hour,
+            let endMinute = endComponents.minute
+        else {
+            return
+        }
+
         let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: startComponents.hour, minute: startComponents.minute),
-            intervalEnd: DateComponents(hour: endComponents.hour, minute: endComponents.minute),
+            intervalStart: DateComponents(hour: startHour, minute: startMinute),
+            intervalEnd: DateComponents(hour: endHour, minute: endMinute),
             repeats: false
         )
 
