@@ -17,6 +17,7 @@ struct HomeFeature {
         var catHealth: CatHealthData?
         var isLoading = false
         var timeline = TimelineFeature.State()
+        var showCatStateSheet: Bool = false
     }
     
     enum Action: BindableAction {
@@ -28,17 +29,38 @@ struct HomeFeature {
         case catHealthLoaded(CatHealthData)
         case tabSelected(HomeTab)
         case timeline(TimelineFeature.Action)
+        case showCatStateSheet
+        case dismissCatStateSheet
     }
     
     @Dependency(\.catHealth) var catHealth
-    
+    @Dependency(\.notifications) var notifications
+    @Dependency(\.screenTimeManager) var screenTimeManager
+
     var body: some Reducer<State, Action> {
         BindingReducer()
 
         Reduce { state, action in
             switch action {
             case .onAppear:
-                return .send(.loadCatHealth)
+                return .run { send in
+                    await send(.loadCatHealth)
+
+                    // Subscribe to bypass notifications
+                    await withTaskGroup(of: Void.self) { group in
+                        group.addTask {
+                            for await _ in self.notifications.bypassNotificationStream() {
+                                await send(.showCatStateSheet)
+                            }
+                        }
+
+                        group.addTask {
+                            for await _ in self.notifications.dailySummaryNotificationStream() {
+                                await send(.appBecameActive)
+                            }
+                        }
+                    }
+                }
 
             case .onDisappear:
                 return .none
@@ -74,10 +96,27 @@ struct HomeFeature {
                 
             case .timeline:
                 return .none
-                
+
+            case .showCatStateSheet:
+                state.showCatStateSheet = true
+                // Load fresh health data to ensure sheet shows current state
+                return .send(.loadCatHealth)
+
+            case .dismissCatStateSheet:
+                state.showCatStateSheet = false
+                return .run { _ in
+                    // Reset shield state to normal
+                    if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
+                        defaults.set("normal", forKey: "shieldState")
+                    }
+
+                    // Remove shields and start cooldown
+                    await screenTimeManager.removeShieldsAndStartCooldown()
+                }
+
             case .binding:
                 return .none
-                
+
             }
         }
         ._printChanges()
@@ -176,8 +215,8 @@ struct HomeView: View {
                 store.send(.appBecameActive)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .dailySummaryNotificationTapped)) { _ in
-            store.send(.appBecameActive)
+        .sheet(isPresented: $store.showCatStateSheet) {
+            catStateSheet
         }
     }
 
@@ -220,38 +259,73 @@ struct HomeView: View {
                 Spacer()
             }
             .padding(.top, 16)
-            
+
             Spacer()
-            
+
             // Cat Image based on health state
             (store.catHealth?.catState ?? .healthy).image
                 .resizable()
                 .scaledToFit()
                 .frame(height: 280)
-            
+
             VStack(spacing: 16) {
                 // Health Percentage
                 Text("\(store.catHealth?.health ?? 100)%")
                     .font(.custom("Sofia Pro-Bold", size: 50))
                     .tracking(-1)
                     .foregroundColor(DesignSystem.Colors.primaryText)
-                
+
                 // Progress bar with dynamic color based on health
                 ProgressBar(
                     percentage: Double(store.catHealth?.health ?? 100),
                     filledColor: healthBarColor(for: store.catHealth?.health ?? 100)
                 )
                 .frame(width: 256)
-                
+
                 // Cat state label
                 Text(store.catHealth?.catState.shortName ?? "Healthy")
                     .font(.custom("Sofia Pro-Medium", size: 24))
                     .foregroundColor(store.catHealth?.catState.color ?? .green)
             }
             .frame(maxWidth: .infinity)
-            
+
             Spacer()
         }
+    }
+
+    /// Bottom sheet showing ScrollKitty's current state.
+    /// Displayed when user taps the bypass notification.
+    @ViewBuilder
+    private var catStateSheet: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            // Cat image based on current health state
+            (store.catHealth?.catState ?? .healthy).image
+                .resizable()
+                .scaledToFit()
+                .frame(height: 280)
+                .accessibilityLabel("Your cat is \(store.catHealth?.catState.shortName.lowercased() ?? "healthy")")
+
+            // Dismiss button
+            Button {
+                store.send(.dismissCatStateSheet)
+            } label: {
+                Text("Continue")
+                    .font(.custom("Sofia Pro-Medium", size: 18))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(DesignSystem.Colors.primaryBlue)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DesignSystem.Colors.background)
+        .presentationDetents([.medium])
+        .interactiveDismissDisabled(true)
     }
 
     private func healthBarColor(for health: Int) -> Color {

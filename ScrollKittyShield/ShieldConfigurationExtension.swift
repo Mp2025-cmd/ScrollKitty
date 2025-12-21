@@ -3,82 +3,71 @@ import ManagedSettingsUI
 import UIKit
 
 class ShieldConfigurationExtension: ShieldConfigurationDataSource {
-    
+
     private let appGroupID = "group.com.scrollkitty.app"
 
-    private func shieldHealthBand(_ health: Int) -> Int {
-        switch health {
-        case 80...100: return 3  // Healthy
-        case 60...79:  return 2  // Worn
-        case 40...59:  return 1  // Struggling
-        default:       return 0  // Critical (0–39)
-        }
+    private enum ShieldState: String {
+        case normal = "normal"
+        case waitingForTap = "waitingForTap"
+        case notificationResent = "notificationResent"
     }
 
-    private let shieldCaptions: [[String]] = [
-        // Band 0: Critical (0–39 HP)
-        ["Please… not this one.", "I don't have much left.", "I'm struggling right now."],
-        // Band 1: Struggling (40–59 HP)
-        ["I'm not doing so well.", "This one really hurts.", "I need a moment."],
-        // Band 2: Worn (60–79 HP)
-        ["That one stings.", "I'm getting tired.", "Can we pause?"],
-        // Band 3: Healthy (80–100 HP)
-        ["Hey… slow down.", "Hold up a second.", "Before you go in…"]
-    ]
-
-    private func getCaption(for band: Int) -> String {
-        let safeBand = max(0, min(shieldCaptions.count - 1, band))
-        let captions = shieldCaptions[safeBand]
-        guard !captions.isEmpty else { return "" }
-
+    private func getShieldState() -> ShieldState {
         let defaults = UserDefaults(suiteName: appGroupID)
-        let key = "shieldCaption_band\(safeBand)"
-
-        let lastIndex = defaults?.object(forKey: key) as? Int
-        let currentIndex: Int
-        if let lastIndex {
-            currentIndex = (lastIndex + 1) % captions.count
-        } else {
-            currentIndex = 0
-        }
-
-        defaults?.set(currentIndex, forKey: key)
-        return captions[currentIndex]
+        let stateRaw = defaults?.string(forKey: "shieldState") ?? "normal"
+        return ShieldState(rawValue: stateRaw) ?? .normal
     }
 
-    private func getCatImage(for band: Int) -> UIImage? {
-        let imageName: String
-        switch band {
-        case 3: imageName = "1_Healthy_Cheerful"   // 80–100 HP
-        case 2: imageName = "2_Concerned_Anxious"  // 60–79 HP
-        case 1: imageName = "3_Tired_Low-Energy"   // 40–59 HP
-        default: imageName = "4_Extremely_Sick"    // 0–39 HP
-        }
-        return UIImage(named: imageName)
-    }
-    
     private func getHealth() -> Int {
         let defaults = UserDefaults(suiteName: appGroupID)
         let health = defaults?.integer(forKey: "catHealth") ?? 100
         return health  // Return actual value including 0 (dead state)
     }
     
-    private func makeAliveConfiguration() -> ShieldConfiguration {
-        let health = getHealth()
-        let band = shieldHealthBand(health)
-        let caption = getCaption(for: band)
-        let catImage = getCatImage(for: band)
+    private func makeAliveConfiguration(appName: String) -> ShieldConfiguration {
+        let catImage = UIImage(named: "1_Healthy_Cheerful")
+        let state = getShieldState()
 
-        return ShieldConfiguration(
-            backgroundBlurStyle: .dark,
-            backgroundColor: UIColor(red: 0.0, green: 0.35, blue: 0.85, alpha: 1.0), // ScrollKitty Blue
-            icon: catImage,
-            title: ShieldConfiguration.Label(text: caption, color: .white),
-            subtitle: nil,
-            primaryButtonLabel: ShieldConfiguration.Label(text: "Step back", color: .white),
-            primaryButtonBackgroundColor: UIColor(red: 0.0, green: 0.75, blue: 0.3, alpha: 1.0), // Green
-            secondaryButtonLabel: ShieldConfiguration.Label(text: "Continue anyway", color: .systemRed)
-        )
+        let backgroundColor = UIColor(red: 0.0, green: 0.35, blue: 0.85, alpha: 1.0) // ScrollKitty Blue
+        let primaryButtonBgColor = UIColor(red: 0.0, green: 0.75, blue: 0.3, alpha: 1.0) // Green
+
+        switch state {
+        case .normal:
+            return ShieldConfiguration(
+                backgroundBlurStyle: .dark,
+                backgroundColor: .clear,
+                icon: catImage,
+                title: ShieldConfiguration.Label(text: "Before you open \(appName)…", color: .white),
+                subtitle: ShieldConfiguration.Label(text: "ScrollKitty wants a moment.", color: .white),
+                primaryButtonLabel: ShieldConfiguration.Label(text: "Step back", color: .white),
+                primaryButtonBackgroundColor: primaryButtonBgColor,
+                secondaryButtonLabel: ShieldConfiguration.Label(text: "Go in anyway", color: .systemRed)
+            )
+
+        case .waitingForTap:
+            return ShieldConfiguration(
+                backgroundBlurStyle: .dark,
+                backgroundColor: .clear,
+                icon: catImage,
+                title: ShieldConfiguration.Label(text: "ScrollKitty wants to talk", color: .white),
+                subtitle: ShieldConfiguration.Label(text: "I sent you a tap so we can talk together.", color: .white),
+                primaryButtonLabel: ShieldConfiguration.Label(text: "Didn't see it?", color: .white),
+                primaryButtonBackgroundColor: primaryButtonBgColor,
+                secondaryButtonLabel: nil
+            )
+
+        case .notificationResent:
+            return ShieldConfiguration(
+                backgroundBlurStyle: .dark,
+                backgroundColor: .clear,
+                icon: catImage,
+                title: ShieldConfiguration.Label(text: "Notification sent again", color: .white),
+                subtitle: ShieldConfiguration.Label(text: "Make sure you are not in Do not disturb mode", color: .white),
+                primaryButtonLabel: ShieldConfiguration.Label(text: "Send again", color: .white),
+                primaryButtonBackgroundColor: primaryButtonBgColor,
+                secondaryButtonLabel: nil
+            )
+        }
     }
     
     private func makeDeadConfiguration() -> ShieldConfiguration {
@@ -94,20 +83,24 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     }
     
     // MARK: - Configuration Methods
-    
+
     override func configuration(shielding application: Application) -> ShieldConfiguration {
-        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration()
+        let appName = application.localizedDisplayName ?? "this app"
+        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration(appName: appName)
     }
-    
+
     override func configuration(shielding application: Application, in category: ActivityCategory) -> ShieldConfiguration {
-        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration()
+        let appName = application.localizedDisplayName ?? "this app"
+        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration(appName: appName)
     }
-    
+
     override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration {
-        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration()
+        // WebDomain doesn't have localizedDisplayName, so use a generic name
+        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration(appName: "this site")
     }
-    
+
     override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration {
-        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration()
+        // WebDomain doesn't have localizedDisplayName, so use a generic name
+        return getHealth() <= 0 ? makeDeadConfiguration() : makeAliveConfiguration(appName: "this site")
     }
 }

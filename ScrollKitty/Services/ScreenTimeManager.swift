@@ -92,6 +92,7 @@ struct ScreenTimeManager: Sendable {
     var startMonitoring: @Sendable () async throws -> Void
     var stopMonitoring: @Sendable () async -> Void
     var applyShields: @Sendable () async -> Void
+    var removeShieldsAndStartCooldown: @Sendable () async -> Void
 }
 
 // MARK: - Dependency Conformance
@@ -155,9 +156,12 @@ extension ScreenTimeManager: DependencyKey {
         },
         applyShields: {
             await applyShieldsToSelectedApps()
+        },
+        removeShieldsAndStartCooldown: {
+            await removeShieldsAndStartCooldownImpl()
         }
     )
-    
+
     static let testValue = Self(
         getTodayScreenTime: {
             DailyScreenTimeData(
@@ -177,9 +181,10 @@ extension ScreenTimeManager: DependencyKey {
         checkAuthorization: { true },
         startMonitoring: {},
         stopMonitoring: {},
-        applyShields: {}
+        applyShields: {},
+        removeShieldsAndStartCooldown: {}
     )
-    
+
     static let previewValue = testValue
 }
 
@@ -230,6 +235,54 @@ extension DependencyValues {
 
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
+    }
+
+    private func removeShieldsAndStartCooldownImpl() async {
+        let store = ManagedSettingsStore()
+        let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+        let activityCenter = DeviceActivityCenter()
+
+        // Get cooldown duration
+        let cooldownMinutes = defaults?.integer(forKey: "shieldInterval") ?? 20
+
+        // Set cooldown end time
+        let cooldownEnd = Date().addingTimeInterval(Double(cooldownMinutes * 60))
+        defaults?.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
+
+        // Remove shields
+        store.shield.applications = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomains = nil
+
+        // Schedule reshield
+        let calendar = Calendar.current
+        let now = Date()
+
+        let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: now)!
+        let endComponents = calendar.dateComponents([.hour, .minute], from: endTime)
+
+        var startTime = now
+        if cooldownMinutes < 15 {
+            let shiftBack = 15 - cooldownMinutes
+            startTime = calendar.date(byAdding: .minute, value: -shiftBack, to: now)!
+        }
+        let startComponents = calendar.dateComponents([.hour, .minute], from: startTime)
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: startComponents.hour, minute: startComponents.minute),
+            intervalEnd: DateComponents(hour: endComponents.hour, minute: endComponents.minute),
+            repeats: false
+        )
+
+        let activityName = DeviceActivityName("reshield_cooldown")
+
+        activityCenter.stopMonitoring([activityName])
+
+        do {
+            try activityCenter.startMonitoring(activityName, during: schedule)
+        } catch {
+            // Silently fail - not critical
+        }
     }
 
 // MARK: - Private Parsing Helper

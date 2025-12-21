@@ -133,6 +133,27 @@
 			);
 			target = D047E1E82ED17F090058C39E /* ScrollKittyAction */;
 		};
+		D05609F12EF63BDD00614DD7 /* Exceptions for "ScrollKitty" folder in "ScrollKittyReport" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+			);
+			target = C01D17DC525E4AFDB82A9FB3 /* ScrollKittyReport */;
+		};
+		D05609F22EF63BDD00614DD7 /* Exceptions for "ScrollKitty" folder in "ScrollKittyMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+			);
+			target = D047E1BE2ED15E550058C39E /* ScrollKittyMonitor */;
+		};
+		D05609F42EF63BDD00614DD7 /* Exceptions for "ScrollKitty" folder in "ScrollKittyAction" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+			);
+			target = D047E1E82ED17F090058C39E /* ScrollKittyAction */;
+		};
 		D084A4862EBEF95A004E369C /* Exceptions for "ScrollKitty" folder in "ScrollKitty" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -147,6 +168,9 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				D084A4862EBEF95A004E369C /* Exceptions for "ScrollKitty" folder in "ScrollKitty" target */,
+				D05609F12EF63BDD00614DD7 /* Exceptions for "ScrollKitty" folder in "ScrollKittyReport" target */,
+				D05609F22EF63BDD00614DD7 /* Exceptions for "ScrollKitty" folder in "ScrollKittyMonitor" target */,
+				D05609F42EF63BDD00614DD7 /* Exceptions for "ScrollKitty" folder in "ScrollKittyAction" target */,
 			);
 			path = ScrollKitty;
 			sourceTree = "<group>";

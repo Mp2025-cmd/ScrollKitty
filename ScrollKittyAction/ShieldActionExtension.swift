@@ -3,6 +3,10 @@ import ManagedSettingsUI
 import Foundation
 import FamilyControls
 import DeviceActivity
+import UserNotifications
+import os.log
+
+private let logger = Logger(subsystem: "com.scrollkitty.extension", category: "ShieldAction")
 
 private struct TimelineEvent: Codable {
     let id: String  // UUID string
@@ -95,49 +99,116 @@ class ShieldActionExtension: ShieldActionDelegate {
     private let activityCenter = DeviceActivityCenter()
     private let appGroupID = "group.com.scrollkitty.app"
 
+    private enum ShieldState: String {
+        case normal = "normal"
+        case waitingForTap = "waitingForTap"
+        case notificationResent = "notificationResent"
+    }
+
+    private func getShieldState() -> ShieldState {
+        let defaults = UserDefaults(suiteName: appGroupID)
+        let stateRaw = defaults?.string(forKey: "shieldState") ?? "normal"
+        return ShieldState(rawValue: stateRaw) ?? .normal
+    }
+
+    private func setShieldState(_ state: ShieldState) {
+        let defaults = UserDefaults(suiteName: appGroupID)
+        defaults?.set(state.rawValue, forKey: "shieldState")
+    }
+
     override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+        let state = getShieldState()
+
         switch action {
         case .primaryButtonPressed:
-            completionHandler(.close)
-        case .secondaryButtonPressed:
-            handleBypass(appName: "App") {
-                self.startGlobalCooldown()
-                completionHandler(.none)
+            switch state {
+            case .normal:
+                // "Step back" button - just close
+                completionHandler(.close)
+
+            case .waitingForTap, .notificationResent:
+                // "Didn't see it?" or "Send again" - resend notification
+                logger.info("Resending bypass notification")
+                setShieldState(.notificationResent)
+                sendBypassNotification {
+                    completionHandler(.none)  // Keep shield up
+                }
             }
+
+        case .secondaryButtonPressed:
+            // "Go in anyway" - initial bypass
+            logger.info("User pressed 'Go in anyway'")
+            setShieldState(.waitingForTap)
+            handleBypass(appName: "App") {
+                // Use .defer to refresh shield configuration without closing the app
+                // This triggers iOS to re-request the configuration from ShieldConfigurationExtension
+                completionHandler(.defer)
+            }
+
         @unknown default:
             completionHandler(.close)
         }
     }
 
     override func handle(action: ShieldAction, for webDomain: WebDomainToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+        let state = getShieldState()
+
         switch action {
         case .primaryButtonPressed:
-            completionHandler(.close)
-        case .secondaryButtonPressed:
-            handleBypass(appName: "Website") {
-                self.startGlobalCooldown()
-                completionHandler(.none)
+            switch state {
+            case .normal:
+                completionHandler(.close)
+
+            case .waitingForTap, .notificationResent:
+                logger.info("Resending bypass notification (web)")
+                setShieldState(.notificationResent)
+                sendBypassNotification {
+                    completionHandler(.none)
+                }
             }
+
+        case .secondaryButtonPressed:
+            logger.info("User pressed 'Go in anyway' (web)")
+            setShieldState(.waitingForTap)
+            handleBypass(appName: "Website") {
+                completionHandler(.defer)
+            }
+
         @unknown default:
             completionHandler(.close)
         }
     }
 
     override func handle(action: ShieldAction, for category: ActivityCategoryToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+        let state = getShieldState()
+
         switch action {
         case .primaryButtonPressed:
-            completionHandler(.close)
-        case .secondaryButtonPressed:
-            handleBypass(appName: "Category") {
-                self.startGlobalCooldown()
-                completionHandler(.none)
+            switch state {
+            case .normal:
+                completionHandler(.close)
+
+            case .waitingForTap, .notificationResent:
+                logger.info("Resending bypass notification (category)")
+                setShieldState(.notificationResent)
+                sendBypassNotification {
+                    completionHandler(.none)
+                }
             }
+
+        case .secondaryButtonPressed:
+            logger.info("User pressed 'Go in anyway' (category)")
+            setShieldState(.waitingForTap)
+            handleBypass(appName: "Category") {
+                completionHandler(.defer)
+            }
+
         @unknown default:
             completionHandler(.close)
         }
     }
 
-    private func handleBypass(appName: String, completion: () -> Void) {
+    private func handleBypass(appName: String, completion: @escaping () -> Void) {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
             completion()
             return
@@ -167,7 +238,9 @@ class ShieldActionExtension: ShieldActionDelegate {
             eventType: "shieldBypassed"
         )
 
-        completion()
+        sendBypassNotification {
+            completion()
+        }
     }
 
     private func trackSessionStart(defaults: UserDefaults, now: Date) {
@@ -273,6 +346,39 @@ class ShieldActionExtension: ShieldActionDelegate {
 
         if let encoded = try? JSONEncoder().encode(events) {
             defaults.set(encoded, forKey: "timelineEvents")
+        }
+    }
+
+    /// Sends a bypass notification to the user.
+    /// The notification uses the "BYPASS" category which is handled by the main app
+    /// to show a bottom sheet with the cat's current state.
+    ///
+    /// - Parameter completion: Called when the notification has been scheduled or failed
+    private func sendBypassNotification(completion: @escaping () -> Void) {
+        logger.info("Attempting to send bypass notification")
+
+        let content = UNMutableNotificationContent()
+        content.title = "Hold on"
+        content.body = "ScrollKitty needs you for a moment."
+        content.sound = .default
+        content.categoryIdentifier = "BYPASS"
+
+        let request = UNNotificationRequest(
+            identifier: "scrollkitty.bypass.latest",
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                logger.error("Failed to send bypass notification: \(error.localizedDescription)")
+                if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
+                    defaults.set(error.localizedDescription, forKey: "lastNotificationError")
+                }
+            } else {
+                logger.info("Bypass notification sent successfully")
+            }
+            completion()
         }
     }
 }

@@ -112,7 +112,15 @@ actor DailySummaryNotificationService {
             options: .customDismissAction
         )
 
-        center.setNotificationCategories([summaryCategory])
+        // Category for shield bypass
+        let bypassCategory = UNNotificationCategory(
+            identifier: "BYPASS",
+            actions: [],
+            intentIdentifiers: [],
+            options: .customDismissAction
+        )
+
+        center.setNotificationCategories([summaryCategory, bypassCategory])
         logger.info("Notification categories registered")
     }
 }

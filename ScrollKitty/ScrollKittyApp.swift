@@ -81,6 +81,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             // Post notification to trigger daily summary
             NotificationCenter.default.post(name: .dailySummaryNotificationTapped, object: nil)
             logger.info("Daily summary notification tapped")
+        } else if identifier == "BYPASS" {
+            // Post notification to show cat state sheet
+            NotificationCenter.default.post(name: .bypassNotificationTapped, object: nil)
+            logger.info("Bypass notification tapped")
         }
 
         completionHandler()
@@ -91,5 +95,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
 extension Notification.Name {
     static let dailySummaryNotificationTapped = Notification.Name("dailySummaryNotificationTapped")
+    static let bypassNotificationTapped = Notification.Name("bypassNotificationTapped")
     static let notificationPermissionDenied = Notification.Name("notificationPermissionDenied")
 }
