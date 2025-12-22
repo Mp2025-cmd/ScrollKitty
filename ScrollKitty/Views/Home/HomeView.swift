@@ -17,7 +17,8 @@ struct HomeFeature {
         var catHealth: CatHealthData?
         var isLoading = false
         var timeline = TimelineFeature.State()
-        var showCatStateSheet: Bool = false
+        @Presents var bypassFlow: ShieldBypassFlowFeature.State?
+        var cachedBypassMessage: String?
     }
     
     enum Action: BindableAction {
@@ -29,13 +30,14 @@ struct HomeFeature {
         case catHealthLoaded(CatHealthData)
         case tabSelected(HomeTab)
         case timeline(TimelineFeature.Action)
-        case showCatStateSheet
-        case dismissCatStateSheet
+        case bypassFlow(PresentationAction<ShieldBypassFlowFeature.Action>)
+        case showBypassFlow
     }
     
     @Dependency(\.catHealth) var catHealth
     @Dependency(\.notifications) var notifications
     @Dependency(\.screenTimeManager) var screenTimeManager
+    @Dependency(\.bypassMessageService) var bypassMessageService
 
     var body: some Reducer<State, Action> {
         BindingReducer()
@@ -50,7 +52,7 @@ struct HomeFeature {
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask {
                             for await _ in self.notifications.bypassNotificationStream() {
-                                await send(.showCatStateSheet)
+                                await send(.showBypassFlow)
                             }
                         }
 
@@ -97,30 +99,106 @@ struct HomeFeature {
             case .timeline:
                 return .none
 
-            case .showCatStateSheet:
-                state.showCatStateSheet = true
-                // Load fresh health data to ensure sheet shows current state
-                return .send(.loadCatHealth)
+            case .showBypassFlow:
+                let currentHealth = state.catHealth?.health ?? 100
+                let redirectMessage: String
+                if let cached = state.cachedBypassMessage {
+                    redirectMessage = cached
+                } else {
+                    redirectMessage = bypassMessageService.getRedirectMessage(for: currentHealth)
+                    state.cachedBypassMessage = redirectMessage
+                }
+                state.bypassFlow = ShieldBypassFlowFeature.State(catHealth: currentHealth, redirectMessage: redirectMessage)
+                return .none
 
-            case .dismissCatStateSheet:
-                state.showCatStateSheet = false
+            case .bypassFlow(.presented(.delegate(.dismissAndGrantPass(let minutes)))):
+                state.bypassFlow = nil
+                state.cachedBypassMessage = nil
+                return .run { [catHealth] _ in
+                    if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
+                        // Check if catHealth key exists - if not, initialize to 100
+                        if defaults.object(forKey: "catHealth") == nil {
+                            defaults.set(100, forKey: "catHealth")
+                        }
+                        
+                        let currentHealth = defaults.integer(forKey: "catHealth")
+                        
+                        // Should never be 0 here (ShieldActionExtension blocks at 0 HP)
+                        // But if somehow 0, don't allow resurrection - stay at 0
+                        guard currentHealth > 0 else {
+                            return
+                        }
+                        
+                        let healthBefore = currentHealth
+                        let healthAfter = max(0, currentHealth - 5)
+
+                        defaults.set(healthAfter, forKey: "catHealth")
+                        defaults.set("normal", forKey: "shieldState")
+                        defaults.set(minutes, forKey: "selectedBypassMinutes")
+
+                        let now = Date()
+                        if defaults.object(forKey: "firstBypassTime") == nil {
+                            defaults.set(now, forKey: "firstBypassTime")
+                        }
+                        defaults.set(now, forKey: "lastBypassTime")
+                        defaults.set(now, forKey: "sessionStartTime")
+
+                        var events: [TimelineEvent] = []
+                        if let data = defaults.data(forKey: "timelineEvents"),
+                           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
+                            events = decoded
+                        }
+
+                        let event = TimelineEvent(
+                            timestamp: now,
+                            appName: "App",
+                            healthBefore: healthBefore,
+                            healthAfter: healthAfter,
+                            cooldownStarted: now,
+                            eventType: .shieldBypassed
+                        )
+                        events.append(event)
+
+                        if events.count > 100 {
+                            events = Array(events.suffix(100))
+                        }
+
+                        if let encoded = try? JSONEncoder().encode(events) {
+                            defaults.set(encoded, forKey: "timelineEvents")
+                        }
+                    }
+                    await screenTimeManager.removeShieldsAndStartCooldown()
+                }
+
+            case .bypassFlow(.presented(.delegate(.dismissWithoutPass))):
+                state.bypassFlow = nil
                 return .run { _ in
-                    // Reset shield state to normal
                     if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
                         defaults.set("normal", forKey: "shieldState")
                     }
-
-                    // Remove shields and start cooldown
-                    await screenTimeManager.removeShieldsAndStartCooldown()
                 }
+
+            case .bypassFlow(.dismiss):
+                state.bypassFlow = nil
+                state.cachedBypassMessage = nil
+                return .run { _ in
+                    if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
+                        defaults.set("normal", forKey: "shieldState")
+                    }
+                }
+
+            case .bypassFlow:
+                return .none
 
             case .binding:
                 return .none
 
             }
         }
-        ._printChanges()
-        
+        .ifLet(\.$bypassFlow, action: \.bypassFlow) {
+            ShieldBypassFlowFeature()
+        }
+
         Scope(state: \.timeline, action: \.timeline) {
             TimelineFeature()
         }
@@ -215,8 +293,9 @@ struct HomeView: View {
                 store.send(.appBecameActive)
             }
         }
-        .sheet(isPresented: $store.showCatStateSheet) {
-            catStateSheet
+        .sheet(item: $store.scope(state: \.bypassFlow, action: \.bypassFlow)) { store in
+            ShieldBypassFlowView(store: store)
+                .presentationDetents([.large])
         }
     }
 
@@ -291,41 +370,6 @@ struct HomeView: View {
 
             Spacer()
         }
-    }
-
-    /// Bottom sheet showing ScrollKitty's current state.
-    /// Displayed when user taps the bypass notification.
-    @ViewBuilder
-    private var catStateSheet: some View {
-        VStack(spacing: 32) {
-            Spacer()
-
-            // Cat image based on current health state
-            (store.catHealth?.catState ?? .healthy).image
-                .resizable()
-                .scaledToFit()
-                .frame(height: 280)
-                .accessibilityLabel("Your cat is \(store.catHealth?.catState.shortName.lowercased() ?? "healthy")")
-
-            // Dismiss button
-            Button {
-                store.send(.dismissCatStateSheet)
-            } label: {
-                Text("Continue")
-                    .font(.custom("Sofia Pro-Medium", size: 18))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(DesignSystem.Colors.primaryBlue)
-                    .cornerRadius(12)
-            }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(DesignSystem.Colors.background)
-        .presentationDetents([.medium])
-        .interactiveDismissDisabled(true)
     }
 
     private func healthBarColor(for health: Int) -> Color {

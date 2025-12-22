@@ -214,30 +214,23 @@ class ShieldActionExtension: ShieldActionDelegate {
             return
         }
 
+        // Check if catHealth key exists - if not, initialize to 100
+        if defaults.object(forKey: "catHealth") == nil {
+            defaults.set(100, forKey: "catHealth")
+        }
+
         let currentHealth = defaults.integer(forKey: "catHealth")
 
-        if currentHealth == 0 && defaults.object(forKey: "catHealth") != nil {
+        // If cat is dead (0 HP), send terminal notification and block bypass
+        if currentHealth == 0 {
+            logger.info("Cat health is 0 - sending terminal notification")
+            sendTerminalNotification {
+                completion()
+            }
             return
         }
 
-        let healthBefore = currentHealth > 0 ? currentHealth : 100
-
-        let healthAfter = max(0, healthBefore - 5)
-
-        defaults.set(healthAfter, forKey: "catHealth")
-
-        let now = Date()
-        trackSessionStart(defaults: defaults, now: now)
-
-        logTimelineEvent(
-            defaults: defaults,
-            appName: appName,
-            healthBefore: healthBefore,
-            healthAfter: healthAfter,
-            cooldownStarted: now,
-            eventType: "shieldBypassed"
-        )
-
+        // Normal bypass flow - send regular bypass notification
         sendBypassNotification {
             completion()
         }
@@ -377,6 +370,38 @@ class ShieldActionExtension: ShieldActionDelegate {
                 }
             } else {
                 logger.info("Bypass notification sent successfully")
+            }
+            completion()
+        }
+    }
+
+    /// Sends a terminal notification when cat health is at 0 HP.
+    /// The notification informs the user that all apps are locked until midnight.
+    ///
+    /// - Parameter completion: Called when the notification has been scheduled or failed
+    private func sendTerminalNotification(completion: @escaping () -> Void) {
+        logger.info("Attempting to send terminal notification (0 HP)")
+
+        let content = UNMutableNotificationContent()
+        content.title = "I'm at 0 HP"
+        content.body = "All apps are locked until midnight. We'll reset together soon. 😿"
+        content.sound = .default
+        content.categoryIdentifier = "TERMINAL"
+
+        let request = UNNotificationRequest(
+            identifier: "scrollkitty.terminal.latest",
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                logger.error("Failed to send terminal notification: \(error.localizedDescription)")
+                if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
+                    defaults.set(error.localizedDescription, forKey: "lastNotificationError")
+                }
+            } else {
+                logger.info("Terminal notification sent successfully")
             }
             completion()
         }
