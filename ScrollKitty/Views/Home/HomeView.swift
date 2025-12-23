@@ -82,10 +82,7 @@ struct HomeFeature {
             case .catHealthLoaded(let healthData):
                 state.isLoading = false
                 state.catHealth = healthData
-                // Sequential to ensure proper dependency chain:
-                // 1. Check for welcome message (creates first event if needed)
-                // 2. Process raw events (reads timeline after welcome is created)
-                // 3. Check for daily summary (after lazy reset and events are processed)
+
                 return .run { send in
                     await send(.timeline(.checkForWelcomeMessage))
                     await send(.timeline(.processRawEvents))

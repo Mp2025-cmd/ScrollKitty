@@ -160,12 +160,12 @@ struct ShieldBypassFlowView: View {
     @Bindable var store: StoreOf<ShieldBypassFlowFeature>
 
     var body: some View {
-        VStack(spacing: 0) {
-            
+        VStack(spacing: 24) {
             store.state.catState.image
                 .resizable()
                 .scaledToFit()
-                .frame(width: 280, height: 280)
+                .frame(width: 260, height: 260)
+                .padding(.top, 72)
 
             Text(store.state.displayedText)
                 .font(messageFont)
@@ -176,35 +176,25 @@ struct ShieldBypassFlowView: View {
                 .padding(.horizontal, 40)
                 .fixedSize(horizontal: false, vertical: false)
 
-
             if store.state.controlsVisible {
                 controls
                     .transition(.opacity)
             }
+
+            Spacer(minLength: 0)
         }
         .animation(.easeInOut(duration: 0.25), value: store.state.controlsVisible)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 300)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(DesignSystem.Colors.background)
         .onAppear { store.send(.onAppear) }
     }
 
     private var messageFont: Font {
-        switch store.state.stage {
-        case .timePrompt:
-            return .custom("Sofia Pro-Bold", size: 35)
-        case .redirect, .acknowledgment:
-            return .custom("Sofia Pro-Regular", size: 18)
-        }
+        .custom("Sofia Pro-Regular", size: 18)
     }
 
     private var messageTracking: CGFloat {
-        switch store.state.stage {
-        case .timePrompt:
-            return -2.0
-        case .redirect, .acknowledgment:
-            return 0
-        }
+        0
     }
 
     @ViewBuilder
@@ -215,24 +205,37 @@ struct ShieldBypassFlowView: View {
                 PrimaryButton(title: "Step back") {
                     store.send(.delegate(.dismissWithoutPass))
                 }
-                
+
                 PrimaryButton(title: "Go in anyway") {
                     store.send(.goInAnywayTapped)
                 }
             }
-            .padding(.horizontal, 40)
 
         case .timePrompt:
-            VStack(spacing: 16) {
-                ForEach(store.state.allowedTimes, id: \.self) { minutes in
-                    TimeOptionButton(
-                        minutes: minutes,
-                        isSelected: store.state.selectedMinutes == minutes,
-                        onTap: { store.send(.timeSelected(minutes)) }
-                    )
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    ForEach(store.state.allowedTimes.prefix(2), id: \.self) { minutes in
+                        TimeOptionButton(
+                            minutes: minutes,
+                            isSelected: store.state.selectedMinutes == minutes,
+                            onTap: { store.send(.timeSelected(minutes)) }
+                        )
+                    }
+                }
+                
+                if store.state.allowedTimes.count > 2 {
+                    HStack(spacing: 12) {
+                        ForEach(store.state.allowedTimes.dropFirst(2), id: \.self) { minutes in
+                            TimeOptionButton(
+                                minutes: minutes,
+                                isSelected: store.state.selectedMinutes == minutes,
+                                onTap: { store.send(.timeSelected(minutes)) }
+                            )
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, 25)
+            .padding(.horizontal, 24)
 
         case .acknowledgment:
             EmptyView()
@@ -251,40 +254,4 @@ struct ShieldBypassFlowView: View {
             ShieldBypassFlowFeature()
         }
     )
-}
-
-
-
-private struct TimeOptionButton: View {
-    let minutes: Int
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                Text("\(minutes) minutes")
-                    .font(.custom("Sofia Pro-Regular", size: 16))
-                    .foregroundColor(DesignSystem.Colors.primaryText)
-                    .padding(.leading)
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? DesignSystem.Colors.primaryBlue : DesignSystem.Colors.textGray)
-                    .padding(.trailing)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: DesignSystem.ComponentSize.optionHeight)
-            .background(DesignSystem.Colors.selectionBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.selectionOption)
-                    .stroke(
-                        isSelected ? DesignSystem.Colors.selectionBorder : Color.clear,
-                        lineWidth: isSelected ? DesignSystem.BorderWidth.selection : 0
-                    )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.selectionOption))
-        }
-    }
 }
