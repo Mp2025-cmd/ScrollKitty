@@ -68,7 +68,7 @@ struct ShieldBypassFlowFeature {
                 let allowedTimes = bypassMessageService.getAllowedTimes(for: state.catHealth)
                 state.allowedTimes = allowedTimes
                 state.selectedMinutes = nil
-                return startAnimation(into: &state, text: "How long?")
+                return startAnimation(into: &state, text: "How much time do you intent to spend scrolling?")
 
             case .timeSelected(let minutes):
                 state.stage = .acknowledgment
@@ -133,15 +133,9 @@ struct ShieldBypassFlowFeature {
                 )
 
             case .acknowledgment:
-                guard let minutes = state.selectedMinutes else {
-                    return .send(.delegate(.dismissWithoutPass))
-                }
-                let clock = self.clock
-                return .run { send in
-                    try await clock.sleep(for: .milliseconds(300))
-                    await send(.delegate(.dismissAndGrantPass(minutes: minutes)))
-                }
-                .cancellable(id: CancelID.autoDismiss, cancelInFlight: true)
+                // No duplicate logic needed here - .animationComplete will handle the delegate
+                state.controlsVisible = true
+                return .send(.animationComplete)
             }
         }
 
@@ -160,12 +154,13 @@ struct ShieldBypassFlowView: View {
     @Bindable var store: StoreOf<ShieldBypassFlowFeature>
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: -20) {
             store.state.catState.image
                 .resizable()
                 .scaledToFit()
-                .frame(width: 260, height: 260)
+                .frame(width: 350, height: 350)
                 .padding(.top, 72)
+                .padding(.bottom)
 
             Text(store.state.displayedText)
                 .font(messageFont)
@@ -201,15 +196,46 @@ struct ShieldBypassFlowView: View {
     private var controls: some View {
         switch store.state.stage {
         case .redirect:
-            VStack(spacing: 16) {
-                PrimaryButton(title: "Step back") {
+            HStack(spacing: 12) {
+                // Step back - Green (Safe/Positive)
+                Button {
                     store.send(.delegate(.dismissWithoutPass))
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.uturn.backward")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Step back")
+                            .font(.custom("Sofia Pro-Medium", size: 15))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(hex: "#34C759"))
+                    )
                 }
-
-                PrimaryButton(title: "Go in anyway") {
+                
+                // Go in anyway - Red (Warning/Danger)
+                Button {
                     store.send(.goInAnywayTapped)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Go in anyway")
+                            .font(.custom("Sofia Pro-Medium", size: 15))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(hex: "#FF3B30"))
+                    )
                 }
             }
+            .padding(.horizontal, 24)
 
         case .timePrompt:
             VStack(spacing: 12) {

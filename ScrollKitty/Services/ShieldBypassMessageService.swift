@@ -11,10 +11,10 @@ struct ShieldBypassMessageService {
         return messages.randomElement() ?? "Hey. Let's pause for a second."
     }
 
-    /// Returns a pain-line acknowledgment message based on health and selected minutes.
-    /// Health deterministically maps to a band, then randomly selects from that band's messages.
+    /// Returns a pain-line acknowledgment message based on selected minutes.
+    /// Message selection is purely time-based, independent of health state.
     func getPainLineMessage(for health: Int, minutes: Int) -> String {
-        let messages = HealthBasedLimitMessages.messages(forHealth: health, minutes: minutes)
+        let messages = HealthBasedLimitMessages.messages(forMinutes: minutes)
         return messages.randomElement() ?? "Okay. \(minutes) minutes."
     }
 
@@ -29,7 +29,7 @@ struct ShieldBypassMessageService {
 
         switch band {
         case .healthy:
-            return [5, 10, 15, 30]
+            return BypassTimeOption.allMinutes  // [5, 10, 15, 30]
         case .worn:
             return [5, 10, 15]
         case .struggling:
