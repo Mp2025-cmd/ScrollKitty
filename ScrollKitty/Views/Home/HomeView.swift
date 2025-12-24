@@ -32,12 +32,14 @@ struct HomeFeature {
         case timeline(TimelineFeature.Action)
         case bypassFlow(PresentationAction<ShieldBypassFlowFeature.Action>)
         case showBypassFlow
+        case checkPendingBypassFlow
     }
     
     @Dependency(\.catHealth) var catHealth
     @Dependency(\.notifications) var notifications
     @Dependency(\.screenTimeManager) var screenTimeManager
     @Dependency(\.bypassMessageService) var bypassMessageService
+    @Dependency(\.userSettings) var userSettings
 
     var body: some Reducer<State, Action> {
         BindingReducer()
@@ -47,6 +49,7 @@ struct HomeFeature {
             case .onAppear:
                 return .run { send in
                     await send(.loadCatHealth)
+                    await send(.checkPendingBypassFlow)
 
                     // Subscribe to bypass notifications
                     await withTaskGroup(of: Void.self) { group in
@@ -68,8 +71,10 @@ struct HomeFeature {
                 return .none
                 
             case .appBecameActive:
-                
-                return .send(.loadCatHealth)
+                return .run { send in
+                    await send(.loadCatHealth)
+                    await send(.checkPendingBypassFlow)
+                }
 
             case .loadCatHealth:
                 // Lazy reset happens automatically inside loadHealth()
@@ -108,6 +113,15 @@ struct HomeFeature {
                 state.bypassFlow = ShieldBypassFlowFeature.State(catHealth: currentHealth, redirectMessage: redirectMessage)
                 return .none
 
+            case .checkPendingBypassFlow:
+                guard state.bypassFlow == nil else { return .none }
+                let defaults = UserDefaults.appGroup
+                let shieldState = defaults.string(forKey: "shieldState") ?? "normal"
+                if shieldState == "waitingForTap" || shieldState == "notificationResent" {
+                    return .send(.showBypassFlow)
+                }
+                return .none
+
             case .bypassFlow(.presented(.delegate(.dismissAndGrantPass(let minutes)))):
                 state.bypassFlow = nil
                 state.cachedBypassMessage = nil
@@ -123,7 +137,7 @@ struct HomeFeature {
                 // Persist immediately so other features (Timeline/TCA deps) that read from UserDefaults
                 // don't lag behind and require an app lifecycle refresh.
                 let defaults = UserDefaults.appGroup
-                defaults.set(healthAfter, forKey: "catHealth")
+                CatHealthStore.set(healthAfter, in: defaults)
                 defaults.set("normal", forKey: "shieldState")
                 defaults.set(minutes, forKey: "selectedBypassMinutes")
 
@@ -136,12 +150,6 @@ struct HomeFeature {
                 }
                 defaults.set(now, forKey: "lastBypassTimeToday")
 
-                var events: [TimelineEvent] = []
-                if let data = defaults.data(forKey: "timelineEvents"),
-                   let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
-                    events = decoded
-                }
-
                 let event = TimelineEvent(
                     timestamp: now,
                     appName: "App",
@@ -150,17 +158,8 @@ struct HomeFeature {
                     cooldownStarted: now,
                     eventType: .shieldBypassed
                 )
-                events.append(event)
-
-                if events.count > 100 {
-                    events = Array(events.suffix(100))
-                }
-
-                if let encoded = try? JSONEncoder().encode(events) {
-                    defaults.set(encoded, forKey: "timelineEvents")
-                }
-
                 return .run { _ in
+                    await userSettings.appendTimelineEvent(event)
                     await screenTimeManager.removeShieldsAndStartCooldown()
                 }
 

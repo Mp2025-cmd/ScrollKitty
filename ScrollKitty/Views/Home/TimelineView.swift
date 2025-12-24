@@ -12,18 +12,23 @@ struct TimelineFeature {
         var isLoading = false
         var selectedDay: Date? = nil
         var currentWeekStart: Date? = nil
+        var moodNow: CatState? = nil
     }
     @Dependency(\.userSettings) var userSettings
     @Dependency(\.timelineManager) var timelineManager
     @Dependency(\.catHealth) var catHealth
+    @Dependency(\.notifications) var notifications
     @Dependency(\.date) var date
     @Dependency(\.calendar) var calendar
     
     enum Action: BindableAction, Equatable {
         case binding(BindingAction<State>)
         case onAppear
+        case onDisappear
         case loadTimeline
         case timelineLoaded([TimelineEvent])
+        case loadMoodNow
+        case moodNowLoaded(CatHealthData)
         case processRawEvents
         case rawEventsProcessed([TimelineEvent])
         case checkForWelcomeMessage
@@ -45,6 +50,7 @@ struct TimelineFeature {
     var body: some Reducer<State, Action> {
         BindingReducer()
         Reduce { state, action in
+            enum CancelID { case timelineEvents }
             switch action {
             case .binding:
                 return .none
@@ -54,11 +60,21 @@ struct TimelineFeature {
                 let todayStart = calendar.startOfDay(for: today)
                 state.selectedDay = todayStart
                 state.currentWeekStart = calendar.startOfWeek(for: todayStart)
-                
-                return .run { send in
-                    await send(.loadTimeline)
-                    await send(.checkForDailySummary)
-                }
+
+                return .merge(
+                    .send(.loadTimeline),
+                    .send(.checkForDailySummary),
+                    .send(.loadMoodNow),
+                    .run { send in
+                        for await _ in notifications.timelineEventsDidChangeStream() {
+                            await send(.loadTimeline)
+                        }
+                    }
+                    .cancellable(id: CancelID.timelineEvents, cancelInFlight: true)
+                )
+
+            case .onDisappear:
+                return .cancel(id: CancelID.timelineEvents)
                 
             case .processRawEvents:
                 return state.processRawEvents()
@@ -81,6 +97,16 @@ struct TimelineFeature {
             case .timelineLoaded(let events):
                 state.timelineEvents = events
                 state.isLoading = false
+                return .none
+
+            case .loadMoodNow:
+                return .run { send in
+                    let healthData = await catHealth.loadHealth()
+                    await send(.moodNowLoaded(healthData))
+                }
+
+            case .moodNowLoaded(let data):
+                state.moodNow = data.catState
                 return .none
                 
             case .checkForWelcomeMessage:
@@ -251,6 +277,9 @@ struct TimelineView: View {
         .onAppear {
             store.send(.onAppear)
         }
+        .onDisappear {
+            store.send(.onDisappear)
+        }
     }
     
     private var calendar: Calendar {
@@ -359,9 +388,15 @@ struct TimelineItemView: View {
                 HStack(spacing: 0) {
                     // Left side - Text content
                     VStack(alignment: .leading, spacing: 13) {
-                        Text(formattedTime)
-                            .font(DesignSystem.Typography.timelineTime())
-                            .foregroundColor(catState.timeColor)
+                        HStack(spacing: 10) {
+                            Text(formattedTime)
+                                .font(DesignSystem.Typography.timelineTime())
+                                .foregroundColor(catState.timeColor)
+                            Text("Mood then")
+                                .font(.custom("Sofia Pro-Regular", size: 12))
+                                .foregroundColor(catState.timeColor.opacity(0.85))
+                            Spacer()
+                        }
                         
                         VStack(alignment: .leading, spacing: 6) {
                             Text(messageText)

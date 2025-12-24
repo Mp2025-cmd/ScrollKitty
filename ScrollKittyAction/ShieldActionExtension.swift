@@ -214,12 +214,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             return
         }
 
-        // Check if catHealth key exists - if not, initialize to 100
-        if defaults.object(forKey: "catHealth") == nil {
-            defaults.set(100, forKey: "catHealth")
-        }
-
-        let currentHealth = defaults.integer(forKey: "catHealth")
+        let currentHealth = CatHealthStore.readOrInitialize(in: defaults)
 
         // If cat is dead (0 HP), send terminal notification and block bypass
         if currentHealth == 0 {
@@ -296,11 +291,7 @@ class ShieldActionExtension: ShieldActionDelegate {
         cooldownStarted: Date,
         eventType: String
     ) {
-        var events: [TimelineEvent] = []
-        if let data = defaults.data(forKey: "timelineEvents"),
-           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
-            events = decoded
-        }
+        var events = loadTimelineEvents(defaults: defaults)
 
         let now = Date()
         let recentDuplicate = events.contains { event in
@@ -323,13 +314,50 @@ class ShieldActionExtension: ShieldActionDelegate {
         )
         events.append(event)
 
-        if events.count > 100 {
-            events = Array(events.suffix(100))
-        }
+        events = pruneTimelineEvents(events)
+        saveTimelineEvents(events, defaults: defaults)
+        TimelineEventsSignal.post()
+    }
 
-        if let encoded = try? JSONEncoder().encode(events) {
+    private func loadTimelineEvents(defaults: UserDefaults) -> [TimelineEvent] {
+        if let url = timelineEventsFileURL(),
+           let data = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
+            return decoded
+        }
+        if let data = defaults.data(forKey: "timelineEvents"),
+           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
+            return decoded
+        }
+        return []
+    }
+
+    private func saveTimelineEvents(_ events: [TimelineEvent], defaults: UserDefaults) {
+        guard let url = timelineEventsFileURL() else { return }
+        guard let encoded = try? JSONEncoder().encode(events) else { return }
+        do {
+            try encoded.write(to: url, options: [.atomic])
+        } catch {
             defaults.set(encoded, forKey: "timelineEvents")
         }
+    }
+
+    private func timelineEventsFileURL() -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent("timelineEvents.json")
+    }
+
+    private func pruneTimelineEvents(_ events: [TimelineEvent]) -> [TimelineEvent] {
+        let calendar = Calendar.current
+        let cutoff = calendar.date(byAdding: .day, value: -90, to: Date()) ?? Date.distantPast
+
+        let retained = events
+            .filter { $0.timestamp >= cutoff }
+            .sorted { $0.timestamp < $1.timestamp }
+
+        let maxEvents = 5_000
+        return retained.count > maxEvents ? Array(retained.suffix(maxEvents)) : retained
     }
 
     /// Sends a bypass notification to the user.

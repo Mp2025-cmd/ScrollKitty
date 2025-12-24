@@ -65,6 +65,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        let identifier = notification.request.content.categoryIdentifier
+        if identifier == "DAILY_SUMMARY" {
+            NotificationCenter.default.post(name: .dailySummaryNotificationReceived, object: nil)
+            logger.info("Daily summary notification received in foreground")
+        } else if identifier == "BYPASS" {
+            NotificationCenter.default.post(name: .bypassNotificationReceived, object: nil)
+            logger.info("Bypass notification received in foreground")
+        }
+
         // Show notification even when app is in foreground
         completionHandler([.banner, .sound])
     }
@@ -96,5 +105,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 extension Notification.Name {
     static let dailySummaryNotificationTapped = Notification.Name("dailySummaryNotificationTapped")
     static let bypassNotificationTapped = Notification.Name("bypassNotificationTapped")
+    static let dailySummaryNotificationReceived = Notification.Name("dailySummaryNotificationReceived")
+    static let bypassNotificationReceived = Notification.Name("bypassNotificationReceived")
     static let notificationPermissionDenied = Notification.Name("notificationPermissionDenied")
+    static let timelineEventsDidChange = Notification.Name("timelineEventsDidChange")
 }

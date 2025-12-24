@@ -3,7 +3,7 @@
 //  ScrollKitty
 //
 //  PRESERVED: AI infrastructure for future shield dialogue feature.
-//  Currently unused for Terminal/Nightly summaries (replaced with templates in NightlyTerminalTemplates.swift).
+//  Currently unused for Terminal/Nightly summaries (replaced with templates in DailySummaryTemplates.swift).
 //  
 //  This file contains:
 //  - @Generable macro for structured AI output (CatTimelineMessage)
@@ -39,9 +39,9 @@ enum TimelineEntryTrigger: String, Codable, Equatable, Sendable {
     case welcomeMessage       // First-time timeline after install (static)
     case dailyWelcome         // AI-generated daily welcome after midnight reset
     case healthBandDrop       // Health crossed a 10-point boundary (100→90, 90→80, etc.)
-    case dailySummary         // 11 PM or health reached 0
+    case dailySummary         // Daily closeout summary (midnight rollover)
     case terminal             // Health reached 0 - stark, final closing message
-    case nightly              // 11 PM reflection (22:55-23:05 window)
+    case nightly              // Daily reflection (generated at midnight rollover)
 }
 
 // MARK: - AI Context

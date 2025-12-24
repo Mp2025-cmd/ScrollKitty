@@ -80,11 +80,16 @@ extension TimelineFeature.State {
 
     // MARK: - Timeline Display Helpers
 
-    func dailyHealthStates(from events: [TimelineEvent], using calendar: Calendar) -> [Date: Int] {
+    func dailySummaryHealthStates(from events: [TimelineEvent], using calendar: Calendar) -> [Date: Int] {
         var healthStates: [Date: Int] = [:]
 
-        // Group events by date and get the final health for each day
-        let grouped = Dictionary(grouping: events) { event in
+        let summaryEvents = events.filter { event in
+            event.trigger == TimelineEntryTrigger.nightly.rawValue ||
+            event.trigger == TimelineEntryTrigger.terminal.rawValue
+        }
+
+        // Group summary events by date and take the final summary health for each day
+        let grouped = Dictionary(grouping: summaryEvents) { event in
             calendar.startOfDay(for: event.timestamp)
         }
 
@@ -128,7 +133,7 @@ extension TimelineFeature.State {
         selectedDay: Date?,
         using calendar: Calendar
     ) -> [WeeklyCatReportView.DayPresentation] {
-        let healthStates = dailyHealthStates(from: events, using: calendar)
+        let healthStates = dailySummaryHealthStates(from: events, using: calendar)
         let weekDates = weekDays(using: calendar)
         let todayStart = calendar.startOfDay(for: Date())
 

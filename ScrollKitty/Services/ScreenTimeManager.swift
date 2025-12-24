@@ -248,15 +248,22 @@ extension DependencyValues {
 
     private func removeShieldsAndStartCooldownImpl() async {
         let store = ManagedSettingsStore()
-        let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+        let defaults = UserDefaults.appGroup
         let activityCenter = DeviceActivityCenter()
 
         // Get cooldown duration
-        let cooldownMinutes = defaults?.integer(forKey: "shieldInterval") ?? 20
+        let overrideMinutes = defaults.integer(forKey: "selectedBypassMinutes")
+        let configuredMinutes = defaults.integer(forKey: "shieldInterval")
+        let cooldownMinutes = overrideMinutes > 0 ? overrideMinutes : configuredMinutes
+        guard cooldownMinutes > 0 else {
+            // Should never happen after onboarding, since user must choose a shield frequency.
+            return
+        }
+        defaults.removeObject(forKey: "selectedBypassMinutes")
 
         // Set cooldown end time
         let cooldownEnd = Date().addingTimeInterval(Double(cooldownMinutes * 60))
-        defaults?.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
+        defaults.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
 
         // Remove shields
         store.shield.applications = nil

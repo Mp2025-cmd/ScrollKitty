@@ -60,7 +60,12 @@ extension TimelineEvent: Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
+        do {
+            id = try container.decode(UUID.self, forKey: .id)
+        } catch {
+            let idString = try container.decode(String.self, forKey: .id)
+            id = UUID(uuidString: idString) ?? UUID()
+        }
         timestamp = try container.decode(Date.self, forKey: .timestamp)
         appName = try container.decode(String.self, forKey: .appName)
         healthBefore = try container.decode(Int.self, forKey: .healthBefore)
@@ -200,7 +205,7 @@ extension UserSettingsManager: DependencyKey {
             loadShieldInterval: {
                 let defaults = UserDefaults(suiteName: appGroupID)
                 let interval = defaults?.integer(forKey: "shieldInterval") ?? 0
-                return interval > 0 ? interval : 20 // Default to 20 minutes
+                return interval > 0 ? interval : nil
             },
             
             // Focus Window
@@ -227,9 +232,8 @@ extension UserSettingsManager: DependencyKey {
             },
             loadGlobalHealth: {
                 let defaults = UserDefaults(suiteName: appGroupID)
-                let health = defaults?.integer(forKey: "catHealth") ?? 100
-                // If never set (0), return 100
-                return health > 0 ? health : 100
+                guard let defaults else { return 100 }
+                return CatHealthStore.readOrInitialize(in: defaults)
             },
             initializeHealth: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -259,13 +263,9 @@ extension UserSettingsManager: DependencyKey {
                 let defaults = UserDefaults(suiteName: appGroupID)
                 var events = loadTimelineEventsSync(defaults: defaults)
                 events.append(event)
-                // Keep only last 100 events
-                if events.count > 100 {
-                    events = Array(events.suffix(100))
-                }
-                if let encoded = try? JSONEncoder().encode(events) {
-                    defaults?.set(encoded, forKey: "timelineEvents")
-                }
+                let pruned = pruneTimelineEvents(events)
+                saveTimelineEventsSync(pruned, defaults: defaults)
+                TimelineEventsSignal.post()
             },
             loadTimelineEvents: {
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -273,15 +273,13 @@ extension UserSettingsManager: DependencyKey {
             },
             clearTimelineEvents: {
                 let defaults = UserDefaults(suiteName: appGroupID)
-                defaults?.removeObject(forKey: "timelineEvents")
+                clearTimelineEventsSync(defaults: defaults)
             },
             saveTimelineEvents: { events in
                 let defaults = UserDefaults(suiteName: appGroupID)
-                // Keep only last 100 events
-                let eventsToSave = events.count > 100 ? Array(events.suffix(100)) : events
-                if let encoded = try? JSONEncoder().encode(eventsToSave) {
-                    defaults?.set(encoded, forKey: "timelineEvents")
-                }
+                let pruned = pruneTimelineEvents(events)
+                saveTimelineEventsSync(pruned, defaults: defaults)
+                TimelineEventsSignal.post()
             },
             
             // Onboarding Profile
@@ -371,11 +369,59 @@ extension UserSettingsManager: DependencyKey {
 // MARK: - Helper Functions
 
 private func loadTimelineEventsSync(defaults: UserDefaults?) -> [TimelineEvent] {
-    guard let data = defaults?.data(forKey: "timelineEvents"),
+    // Preferred storage: file in App Group container (keeps long history across days).
+    if let url = timelineEventsFileURL(),
+       let data = try? Data(contentsOf: url),
+       let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
+        return decoded
+    }
+
+    // Migration path: if we have legacy UserDefaults data, migrate it to the file once.
+    guard let defaults,
+          let data = defaults.data(forKey: "timelineEvents"),
           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) else {
         return []
     }
+
+    saveTimelineEventsSync(pruneTimelineEvents(decoded), defaults: defaults)
     return decoded
+}
+
+private func saveTimelineEventsSync(_ events: [TimelineEvent], defaults: UserDefaults?) {
+    guard let url = timelineEventsFileURL() else { return }
+    guard let encoded = try? JSONEncoder().encode(events) else { return }
+
+    do {
+        try encoded.write(to: url, options: [.atomic])
+    } catch {
+        // Fallback to legacy store on write failures.
+        defaults?.set(encoded, forKey: "timelineEvents")
+    }
+}
+
+private func clearTimelineEventsSync(defaults: UserDefaults?) {
+    if let url = timelineEventsFileURL() {
+        try? FileManager.default.removeItem(at: url)
+    }
+    defaults?.removeObject(forKey: "timelineEvents")
+}
+
+private func timelineEventsFileURL() -> URL? {
+    FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: "group.com.scrollkitty.app")?
+        .appendingPathComponent("timelineEvents.json")
+}
+
+private func pruneTimelineEvents(_ events: [TimelineEvent]) -> [TimelineEvent] {
+    let calendar = Calendar.current
+    let cutoff = calendar.date(byAdding: .day, value: -90, to: Date()) ?? Date.distantPast
+
+    let retained = events
+        .filter { $0.timestamp >= cutoff }
+        .sorted { $0.timestamp < $1.timestamp }
+
+    let maxEvents = 5_000
+    return retained.count > maxEvents ? Array(retained.suffix(maxEvents)) : retained
 }
 
 private func loadMessageHistorySync(defaults: UserDefaults?) -> [MessageHistory] {

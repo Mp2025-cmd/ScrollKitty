@@ -26,7 +26,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         defaults?.removeObject(forKey: "cooldownEnd")
 
-        let health = defaults?.integer(forKey: "catHealth") ?? 100
+        let health = defaults.map { CatHealthStore.readOrInitialize(in: $0) } ?? 100
         if health <= 0 {
             applyShields()
             return
@@ -38,8 +38,6 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private func applyShields() {
         let defaults = UserDefaults(suiteName: appGroupID)
 
-        accumulateSessionTime(defaults: defaults)
-
         guard let data = defaults?.data(forKey: "selectedApps"),
               let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
             return
@@ -47,20 +45,5 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
-    }
-
-    private func accumulateSessionTime(defaults: UserDefaults?) {
-        guard let defaults = defaults,
-              let sessionStart = defaults.object(forKey: "sessionStartTime") as? Date else {
-            return
-        }
-
-        let elapsed = Date().timeIntervalSince(sessionStart)
-
-        let currentTotal = defaults.double(forKey: "cumulativePhoneUseSeconds")
-        let newTotal = currentTotal + elapsed
-        defaults.set(newTotal, forKey: "cumulativePhoneUseSeconds")
-
-        defaults.removeObject(forKey: "sessionStartTime")
     }
 }
