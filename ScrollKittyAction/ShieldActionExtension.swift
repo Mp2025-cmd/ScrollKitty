@@ -236,16 +236,6 @@ class ShieldActionExtension: ShieldActionDelegate {
         }
     }
 
-    private func trackSessionStart(defaults: UserDefaults, now: Date) {
-        if defaults.object(forKey: "firstBypassTime") == nil {
-            defaults.set(now, forKey: "firstBypassTime")
-        }
-
-        defaults.set(now, forKey: "lastBypassTime")
-
-        defaults.set(now, forKey: "sessionStartTime")
-    }
-
     private func startGlobalCooldown() {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
             return

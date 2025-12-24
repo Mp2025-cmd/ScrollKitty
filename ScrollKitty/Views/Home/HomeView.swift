@@ -111,59 +111,56 @@ struct HomeFeature {
             case .bypassFlow(.presented(.delegate(.dismissAndGrantPass(let minutes)))):
                 state.bypassFlow = nil
                 state.cachedBypassMessage = nil
-                return .run { [catHealth] _ in
-                    if let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app") {
-                        // Check if catHealth key exists - if not, initialize to 100
-                        if defaults.object(forKey: "catHealth") == nil {
-                            defaults.set(100, forKey: "catHealth")
-                        }
-                        
-                        let currentHealth = defaults.integer(forKey: "catHealth")
-                        
-                        // Should never be 0 here (ShieldActionExtension blocks at 0 HP)
-                        // But if somehow 0, don't allow resurrection - stay at 0
-                        guard currentHealth > 0 else {
-                            return
-                        }
-                        
-                        let healthBefore = currentHealth
-                        let healthAfter = max(0, currentHealth - 5)
+                // Update UI immediately (so health changes without needing an app refresh).
+                let healthBefore = state.catHealth?.health ?? 100
+                let healthAfter = max(0, healthBefore - 5)
+                state.catHealth = CatHealthData(
+                    health: healthAfter,
+                    catState: CatState.from(health: healthAfter),
+                    formattedTime: state.catHealth?.formattedTime ?? "0m"
+                )
 
-                        defaults.set(healthAfter, forKey: "catHealth")
-                        defaults.set("normal", forKey: "shieldState")
-                        defaults.set(minutes, forKey: "selectedBypassMinutes")
+                // Persist immediately so other features (Timeline/TCA deps) that read from UserDefaults
+                // don't lag behind and require an app lifecycle refresh.
+                let defaults = UserDefaults.appGroup
+                defaults.set(healthAfter, forKey: "catHealth")
+                defaults.set("normal", forKey: "shieldState")
+                defaults.set(minutes, forKey: "selectedBypassMinutes")
 
-                        let now = Date()
-                        if defaults.object(forKey: "firstBypassTime") == nil {
-                            defaults.set(now, forKey: "firstBypassTime")
-                        }
-                        defaults.set(now, forKey: "lastBypassTime")
-                        defaults.set(now, forKey: "sessionStartTime")
+                let now = Date()
+                defaults.set(defaults.integer(forKey: "bypassCountToday") + 1, forKey: "bypassCountToday")
+                defaults.set(defaults.integer(forKey: "totalBypassMinutesToday") + minutes, forKey: "totalBypassMinutesToday")
 
-                        var events: [TimelineEvent] = []
-                        if let data = defaults.data(forKey: "timelineEvents"),
-                           let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
-                            events = decoded
-                        }
+                if defaults.object(forKey: "firstBypassTimeToday") == nil {
+                    defaults.set(now, forKey: "firstBypassTimeToday")
+                }
+                defaults.set(now, forKey: "lastBypassTimeToday")
 
-                        let event = TimelineEvent(
-                            timestamp: now,
-                            appName: "App",
-                            healthBefore: healthBefore,
-                            healthAfter: healthAfter,
-                            cooldownStarted: now,
-                            eventType: .shieldBypassed
-                        )
-                        events.append(event)
+                var events: [TimelineEvent] = []
+                if let data = defaults.data(forKey: "timelineEvents"),
+                   let decoded = try? JSONDecoder().decode([TimelineEvent].self, from: data) {
+                    events = decoded
+                }
 
-                        if events.count > 100 {
-                            events = Array(events.suffix(100))
-                        }
+                let event = TimelineEvent(
+                    timestamp: now,
+                    appName: "App",
+                    healthBefore: healthBefore,
+                    healthAfter: healthAfter,
+                    cooldownStarted: now,
+                    eventType: .shieldBypassed
+                )
+                events.append(event)
 
-                        if let encoded = try? JSONEncoder().encode(events) {
-                            defaults.set(encoded, forKey: "timelineEvents")
-                        }
-                    }
+                if events.count > 100 {
+                    events = Array(events.suffix(100))
+                }
+
+                if let encoded = try? JSONEncoder().encode(events) {
+                    defaults.set(encoded, forKey: "timelineEvents")
+                }
+
+                return .run { _ in
                     await screenTimeManager.removeShieldsAndStartCooldown()
                 }
 
