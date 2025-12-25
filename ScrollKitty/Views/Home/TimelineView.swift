@@ -388,15 +388,9 @@ struct TimelineItemView: View {
                 HStack(spacing: 0) {
                     // Left side - Text content
                     VStack(alignment: .leading, spacing: 13) {
-                        HStack(spacing: 10) {
-                            Text(formattedTime)
-                                .font(DesignSystem.Typography.timelineTime())
-                                .foregroundColor(catState.timeColor)
-                            Text("Mood then")
-                                .font(.custom("Sofia Pro-Regular", size: 12))
-                                .foregroundColor(catState.timeColor.opacity(0.85))
-                            Spacer()
-                        }
+                        Text(formattedTime)
+                            .font(DesignSystem.Typography.timelineTime())
+                            .foregroundColor(catState.timeColor)
                         
                         VStack(alignment: .leading, spacing: 6) {
                             Text(messageText)
