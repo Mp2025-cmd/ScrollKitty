@@ -126,11 +126,11 @@ public struct UserSettingsManager: Sendable {
     // Shield Interval (cooldown duration)
     var saveShieldInterval: @Sendable (Int) async -> Void
     var loadShieldInterval: @Sendable () async -> Int?
-    
-    // Focus Window
-    var saveFocusWindow: @Sendable (FocusWindowData) async -> Void
-    var loadFocusWindow: @Sendable () async -> FocusWindowData?
-    
+
+    // Blocking Schedule (when shields should be active)
+    var saveBlockingSchedule: @Sendable (BlockingSchedule) async -> Void
+    var loadBlockingSchedule: @Sendable () async -> BlockingSchedule?
+
     // Global Cat Health (0-100)
     var saveGlobalHealth: @Sendable (Int) async -> Void
     var loadGlobalHealth: @Sendable () async -> Int
@@ -207,23 +207,23 @@ extension UserSettingsManager: DependencyKey {
                 let interval = defaults?.integer(forKey: "shieldInterval") ?? 0
                 return interval > 0 ? interval : nil
             },
-            
-            // Focus Window
-            saveFocusWindow: { data in
+
+            // Blocking Schedule
+            saveBlockingSchedule: { schedule in
                 let defaults = UserDefaults(suiteName: appGroupID)
-                if let encoded = try? JSONEncoder().encode(data) {
-                    defaults?.set(encoded, forKey: "focusWindow")
+                if let encoded = try? JSONEncoder().encode(schedule) {
+                    defaults?.set(encoded, forKey: "blockingSchedule")
                 }
             },
-            loadFocusWindow: {
+            loadBlockingSchedule: {
                 let defaults = UserDefaults(suiteName: appGroupID)
-                guard let data = defaults?.data(forKey: "focusWindow"),
-                      let decoded = try? JSONDecoder().decode(FocusWindowData.self, from: data) else {
+                guard let data = defaults?.data(forKey: "blockingSchedule"),
+                      let decoded = try? JSONDecoder().decode(BlockingSchedule.self, from: data) else {
                     return nil
                 }
                 return decoded
             },
-            
+
             // Global Cat Health
             saveGlobalHealth: { health in
                 let defaults = UserDefaults(suiteName: appGroupID)
@@ -342,8 +342,8 @@ extension UserSettingsManager: DependencyKey {
             loadDailyLimit: { 240 },
             saveShieldInterval: { _ in },
             loadShieldInterval: { 20 },
-            saveFocusWindow: { _ in },
-            loadFocusWindow: { nil },
+            saveBlockingSchedule: { _ in },
+            loadBlockingSchedule: { nil },
             saveGlobalHealth: { _ in },
             loadGlobalHealth: { 100 },
             initializeHealth: { },

@@ -5,12 +5,10 @@ import FamilyControls
 // Make FamilyActivitySelection conform to Equatable
 extension FamilyActivitySelection {
     public static func == (lhs: FamilyActivitySelection, rhs: FamilyActivitySelection) -> Bool {
-        let encoder = JSONEncoder()
-        guard let lhsData = try? encoder.encode(lhs),
-              let rhsData = try? encoder.encode(rhs) else {
-            return false
-        }
-        return lhsData == rhsData
+        lhs.includeEntireCategory == rhs.includeEntireCategory
+            && lhs.applicationTokens == rhs.applicationTokens
+            && lhs.categoryTokens == rhs.categoryTokens
+            && lhs.webDomainTokens == rhs.webDomainTokens
     }
 }
 

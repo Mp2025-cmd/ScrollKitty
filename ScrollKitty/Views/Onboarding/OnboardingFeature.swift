@@ -20,7 +20,6 @@ struct OnboardingFeature {
         var selectedApps: FamilyActivitySelection?
         var selectedLimit: DailyLimitOption?
         var selectedInterval: ShieldIntervalOption?
-        var selectedFocusWindow: FocusWindowData?
     }
 
     enum Action: Equatable {
@@ -52,7 +51,8 @@ struct OnboardingFeature {
         case appSelection(AppSelectionFeature)
         case dailyLimit(DailyLimitFeature)
         case shieldFrequency(ShieldFrequencyFeature)
-        //case focusWindow(FocusWindowFeature)
+        case blockingSchedulePreset(BlockingSchedulePresetFeature)
+        case blockingScheduleDetail(BlockingScheduleDetailFeature)
         case characterIntro(CharacterIntroFeature)
         case scrollKittyLifecycle(ScrollKittyLifecycleFeature)
         case commitment(CommitmentFeature)
@@ -60,6 +60,7 @@ struct OnboardingFeature {
 
     @Dependency(\.userSettings) var userSettings
     @Dependency(\.screenTimeManager) var screenTimeManager
+    @Dependency(\.dateProvider) var dateProvider
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -227,21 +228,49 @@ struct OnboardingFeature {
             case .path(.element(id: let id, action: .shieldFrequency(.delegate(.completeWithSelection(let selection))))):
                 guard id == state.path.ids.last else { return .none }
                 state.selectedInterval = selection
-                // Skip FocusWindow for now - go directly to CharacterIntro
-                // state.path.append(.focusWindow(FocusWindowFeature.State()))
-                state.path.append(.characterIntro(CharacterIntroFeature.State()))
+                state.path.append(.blockingSchedulePreset(BlockingSchedulePresetFeature.State()))
                 return .run { [userSettings] _ in
                     await userSettings.saveShieldInterval(selection.minutes)
                 }
 
-            // FocusWindow skipped - commented out
-            // case .path(.element(id: let id, action: .focusWindow(.delegate(.completeWithSelection(let data))))):
-            //     guard id == state.path.ids.last else { return .none }
-            //     state.selectedFocusWindow = data
-            //     state.path.append(.characterIntro(CharacterIntroFeature.State()))
-            //     return .run { [userSettings] _ in
-            //         await userSettings.saveFocusWindow(data)
-            //     }
+            case .path(.element(id: let id, action: .blockingSchedulePreset(.delegate(.continueToDetail(let preset))))):
+                guard id == state.path.ids.last else { return .none }
+                state.path.append(.blockingScheduleDetail(BlockingScheduleDetailFeature.State(preset: preset)))
+                return .none
+
+            case .path(.element(id: let id, action: .blockingSchedulePreset(.delegate(.skipForNow)))),
+                 .path(.element(id: let id, action: .blockingScheduleDetail(.delegate(.skipForNow)))):
+                guard id == state.path.ids.last else { return .none }
+                state.path.append(.characterIntro(CharacterIntroFeature.State()))
+                return .run { [userSettings, screenTimeManager, dateProvider] _ in
+                    let now = dateProvider.now()
+                    let calendar = dateProvider.calendar()
+                    let end = calendar.date(byAdding: .minute, value: 1, to: now) ?? now.addingTimeInterval(60)
+
+                    // Default: disabled schedule (keeps shields off) until user configures it in Settings.
+                    let schedule = BlockingSchedule(
+                        name: "Disabled",
+                        emoji: "⏸️",
+                        startTime: now,
+                        endTime: end,
+                        selectedDays: [],
+                        isEnabled: false
+                    )
+
+                    await userSettings.saveBlockingSchedule(schedule)
+                    try? await screenTimeManager.startMonitoring()
+                }
+
+            case .path(.element(id: let id, action: .blockingScheduleDetail(.delegate(.completeWithSchedule(let schedule))))):
+                guard id == state.path.ids.last else { return .none }
+                state.path.append(.characterIntro(CharacterIntroFeature.State()))
+                return .run { [userSettings, screenTimeManager] _ in
+                    await userSettings.saveBlockingSchedule(schedule)
+                    do {
+                        try await screenTimeManager.startMonitoring()
+                    } catch {
+                    }
+                }
 
             case let .path(.element(id: id, action: .characterIntro(.delegate(.showNextScreen)))):
                 guard id == state.path.ids.last else { return .none }
@@ -300,8 +329,8 @@ struct OnboardingFeature {
                  .path(.element(id: let id, action: .appSelection(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .dailyLimit(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .shieldFrequency(.delegate(.goBack)))),
-                 // FocusWindow skipped - commented out
-                 // .path(.element(id: let id, action: .focusWindow(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .blockingSchedulePreset(.delegate(.goBack)))),
+                 .path(.element(id: let id, action: .blockingScheduleDetail(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .characterIntro(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .scrollKittyLifecycle(.delegate(.goBack)))),
                  .path(.element(id: let id, action: .commitment(.delegate(.goBack)))):

@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "scrollkitty_healthy_idle_sheet.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import SwiftUI
+import Charts
 
 // MARK: - Feature
 @Reducer
@@ -7,14 +8,9 @@ struct AddictionScoreFeature {
     @ObservableState
     struct State: Equatable {
         var userData: UserPhoneData?
+        var userHours: Double = 0
         var userScore: Double = 0
-        var recommendedUsage: Double = 2.0 // Science-based recommendation (2 hours/day)
-        var userPercentage: Double = 0
-        var recommendedPercentage: Double = 0
-
-        // Animation states
-        var userBarHeight: CGFloat = 0
-        var recommendedBarHeight: CGFloat = 0
+        var recommendedHours: Double = 2.0
         var showWarning = false
         var showContinueButton = false
     }
@@ -33,11 +29,10 @@ struct AddictionScoreFeature {
         }
     }
 
-    // Calculate severity multiplier based on survey responses (1.0 - 1.5x range)
+    // Used downstream (YearsLost). Not used for the chart on this screen.
     private func calculateSeverityMultiplier(_ data: UserPhoneData) -> Double {
         var multiplier = 1.0
 
-        // High addiction indicators add to multiplier
         if data.addictionLevel == .yes || data.addictionLevel == .often {
             multiplier += 0.2
         }
@@ -48,7 +43,7 @@ struct AddictionScoreFeature {
             multiplier += 0.15
         }
 
-        return min(multiplier, 1.5) // Cap at 1.5x max
+        return min(multiplier, 1.5)
     }
 
     var body: some Reducer<State, Action> {
@@ -60,19 +55,9 @@ struct AddictionScoreFeature {
             case let .calculateScore(userData):
                 state.userData = userData
 
-                // Calculate user score (honest, simplified approach)
-                let baseHours = userData.dailyHours
-                let severityMultiplier = calculateSeverityMultiplier(userData)
-
-                state.userScore = baseHours * severityMultiplier
-
-                // Recommended usage is constant (2 hours/day - science based)
-                state.recommendedUsage = 2.0
-
-                // Calculate percentages for bar chart display
-                let maxDisplayHours = 12.0 // Cap display at 12 hours
-                state.userPercentage = min((state.userScore / maxDisplayHours) * 100, 100)
-                state.recommendedPercentage = (state.recommendedUsage / maxDisplayHours) * 100 // ~16.7%
+                state.userHours = userData.dailyHours
+                state.recommendedHours = 2.0
+                state.userScore = userData.dailyHours * calculateSeverityMultiplier(userData)
 
                 return .none
                 
@@ -94,93 +79,160 @@ struct AddictionScoreFeature {
     }
 }
 
-// MARK: - Animated Bar Graph Component
-struct AnimatedBarGraph: View {
-    let userPercentage: Double
-    let recommendedPercentage: Double
+// MARK: - Bullet Graph (Usage vs Recommended)
+private struct UsageBulletChart: View {
+    let userHours: Double
+    let recommendedHours: Double
     let onAnimationCompleted: () -> Void
-    @State private var userBarHeight: CGFloat = 0
-    @State private var recommendedBarHeight: CGFloat = 0
-    
+
+    @State private var animatedUserHours: Double = 0
+
+    private var axisMaxHours: Double {
+        let maxHours = max(userHours, recommendedHours)
+        return max(maxHours * 1.2, 1)
+    }
+
+    private var formattedUserTime: String {
+        UsageBulletChart.formatHours(userHours)
+    }
+
+    private var formattedRecommendedTime: String {
+        UsageBulletChart.formatHours(recommendedHours)
+    }
+
+    private var overageColor: Color {
+        if userHours >= (recommendedHours * 2) {
+            return DesignSystem.Colors.highlightRed
+        } else {
+            return DesignSystem.Colors.highlightOrange
+        }
+    }
+
     var body: some View {
-        HStack(spacing: 36) {
-            // User Score Bar
-            VStack(spacing: 8) {
-                ZStack(alignment: .bottom) {
-                    // Background bar
-                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: DesignSystem.ComponentSize.barGraphHeight)
+        VStack(spacing: 14) {
+            Chart {
+                BarMark(
+                    x: .value("Hours", axisMaxHours),
+                    y: .value("Metric", "Usage")
+                )
+                .foregroundStyle(DesignSystem.Colors.progressBarBackground)
+                .cornerRadius(6)
 
-                    // Animated user bar
-                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
-                        .fill(DesignSystem.Colors.highlightOrange)
-                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: userBarHeight)
-                        .animation(.easeOut(duration: 2.0), value: userBarHeight)
+                BarMark(
+                    xStart: .value("Start", 0),
+                    xEnd: .value("Within", min(animatedUserHours, recommendedHours)),
+                    y: .value("Metric", "Usage")
+                )
+                .foregroundStyle(DesignSystem.Colors.progressBarFill)
+                .cornerRadius(6)
 
-                    // Percentage text
-                    Text("\(Int(userPercentage))%")
-                        .font(DesignSystem.Typography.percentage25())
-                        .tracking(DesignSystem.Typography.titleLetterSpacing)
-                        .foregroundColor(DesignSystem.Colors.white)
-                        .opacity(userBarHeight > 50 ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.5).delay(1.5), value: userBarHeight)
+                if animatedUserHours > recommendedHours {
+                    BarMark(
+                        xStart: .value("Recommended", recommendedHours),
+                        xEnd: .value("Over", animatedUserHours),
+                        y: .value("Metric", "Usage")
+                    )
+                    .foregroundStyle(overageColor)
+                    .cornerRadius(6)
                 }
 
-                Text("Your Usage")
-                    .font(DesignSystem.Typography.subtitle())
-                    .foregroundColor(DesignSystem.Colors.primaryText)
+                RuleMark(x: .value("Recommended", recommendedHours))
+                    .foregroundStyle(DesignSystem.Colors.textGray)
+                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [4]))
             }
+            .chartXScale(domain: 0...axisMaxHours)
+            .chartYAxis(.hidden)
+            .chartXAxis {
+                AxisMarks(position: .bottom, values: .automatic(desiredCount: 4)) { value in
+                    AxisGridLine()
+                        .foregroundStyle(DesignSystem.Colors.progressBarBackground)
+                    AxisTick()
+                        .foregroundStyle(DesignSystem.Colors.textGray)
+                    AxisValueLabel {
+                        if let hours = value.as(Double.self) {
+                            Text("\(Int(hours))h")
+                                .font(DesignSystem.Typography.body12())
+                                .foregroundColor(DesignSystem.Colors.textGray)
+                        }
+                    }
+                }
+            }
+            .frame(height: 64)
 
-            // Recommended Bar
-            VStack(spacing: 8) {
-                ZStack(alignment: .bottom) {
-                    // Background bar
-                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: DesignSystem.ComponentSize.barGraphHeight)
-
-                    // Animated recommended bar
-                    RoundedRectangle(cornerRadius: DesignSystem.BorderRadius.barGraph)
-                        .fill(DesignSystem.Colors.lightBlue)
-                        .frame(width: DesignSystem.ComponentSize.barGraphWidth, height: recommendedBarHeight)
-                        .animation(.easeOut(duration: 1.5).delay(0.5), value: recommendedBarHeight)
-
-                    // Percentage text
-                    Text("\(Int(recommendedPercentage))%")
-                        .font(DesignSystem.Typography.percentage25())
-                        .tracking(DesignSystem.Typography.titleLetterSpacing)
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your usage")
+                        .font(DesignSystem.Typography.body12())
+                        .foregroundColor(DesignSystem.Colors.textGray)
+                    Text(formattedUserTime)
+                        .font(DesignSystem.Typography.title24())
                         .foregroundColor(DesignSystem.Colors.primaryText)
-                        .opacity(recommendedBarHeight > 30 ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.5).delay(1.0), value: recommendedBarHeight)
                 }
 
-                Text("Recommended")
-                    .font(DesignSystem.Typography.subtitle())
-                    .foregroundColor(DesignSystem.Colors.primaryText)
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Recommended")
+                        .font(DesignSystem.Typography.body12())
+                        .foregroundColor(DesignSystem.Colors.textGray)
+                    Text(formattedRecommendedTime)
+                        .font(DesignSystem.Typography.title24())
+                        .foregroundColor(DesignSystem.Colors.primaryText)
+                }
             }
+            .padding(.horizontal, 24)
         }
         .onAppear {
-            // Start animations
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                userBarHeight = CGFloat(userPercentage / 100 * DesignSystem.ComponentSize.barGraphHeight)
+            withAnimation(.easeOut(duration: 1.2)) {
+                animatedUserHours = userHours
             }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                recommendedBarHeight = CGFloat(recommendedPercentage / 100 * DesignSystem.ComponentSize.barGraphHeight)
-            }
-
-            // Trigger animation completion after all animations finish
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.35) {
                 onAnimationCompleted()
             }
         }
+    }
+
+    static func formatHours(_ hours: Double) -> String {
+        let totalMinutes = max(0, Int((hours * 60).rounded()))
+        let displayHours = totalMinutes / 60
+        let displayMinutes = totalMinutes % 60
+
+        if displayHours == 0 {
+            return "\(displayMinutes)m"
+        }
+        if displayMinutes == 0 {
+            return "\(displayHours)h"
+        }
+        return "\(displayHours)h \(displayMinutes)m"
     }
 }
 
 // MARK: - View
 struct AddictionScoreView: View {
     let store: StoreOf<AddictionScoreFeature>
+
+    private var overByText: String? {
+        guard store.userHours > store.recommendedHours else { return nil }
+        return UsageBulletChart.formatHours(store.userHours - store.recommendedHours)
+    }
+
+    private var reflectionTitle: String {
+        "Here’s how your day compares"
+    }
+
+    private var reflectionSubtitle: String {
+        "to the recommended limit"
+    }
+
+    private var reflectionNudge: String {
+        "You’re trending high. Your future self won’t thank the scroll."
+    }
+
+    private var reflectionOverByLine: String? {
+        guard let overByText else { return nil }
+        return "\(overByText) over recommended"
+    }
     
     var body: some View {
         ZStack {
@@ -219,8 +271,8 @@ struct AddictionScoreView: View {
                 
                 // Main Message
                 VStack(spacing: 0) {
-                    Text("Your daily usage is way above")
-                    Text("recommended levels")
+                    Text(reflectionTitle)
+                    Text(reflectionSubtitle)
                 }
                 .font(DesignSystem.Typography.title24())
                 .foregroundColor(DesignSystem.Colors.primaryText)
@@ -228,10 +280,9 @@ struct AddictionScoreView: View {
                 .padding(.top, 40)
                 .padding(.horizontal, 16)
 
-                // Animated Bar Graph
-                AnimatedBarGraph(
-                    userPercentage: store.userPercentage,
-                    recommendedPercentage: store.recommendedPercentage,
+                UsageBulletChart(
+                    userHours: store.userHours,
+                    recommendedHours: store.recommendedHours,
                     onAnimationCompleted: {
                         store.send(.animationCompleted)
                     }
@@ -239,12 +290,23 @@ struct AddictionScoreView: View {
                 .padding(.top, 40)
 
                 // Sarcastic Warning Message
-                Text("You're above average — but not in a good way.")
-                    .font(DesignSystem.Typography.subtitle())
-                    .foregroundColor(DesignSystem.Colors.highlightOrange)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 24)
-                    .padding(.horizontal, 16)
+                VStack(spacing: 6) {
+                    Text(reflectionNudge)
+                        .font(DesignSystem.Typography.subtitle())
+                        .foregroundColor(DesignSystem.Colors.highlightOrange)
+                        .multilineTextAlignment(.center)
+
+                    if let reflectionOverByLine {
+                        Text(reflectionOverByLine)
+                            .font(DesignSystem.Typography.body12())
+                            .foregroundColor(DesignSystem.Colors.textGray)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(.top, 24)
+                .padding(.horizontal, 16)
+                .opacity(store.showWarning ? 1 : 0)
+                .animation(.easeInOut(duration: 0.5), value: store.showWarning)
 
                 Spacer()
                 
@@ -272,11 +334,54 @@ struct AddictionScoreView: View {
     }
 }
 
-#Preview {
-    AddictionScoreView(
+#Preview("Over recommended") {
+    let userData = UserPhoneData(
+        dailyHours: 6.5,
+        addictionLevel: .yes,
+        sleepImpact: .almostEveryNight,
+        withoutPhoneAnxiety: .veryAnxious,
+        idleCheckFrequency: .everyFewMinutes,
+        ageGroup: .age25to34
+    )
+
+    return AddictionScoreView(
         store: Store(
-            initialState: AddictionScoreFeature.State(),
-            reducer: { AddictionScoreFeature() }
-        )
+            initialState: AddictionScoreFeature.State(
+                userData: userData,
+                userHours: userData.dailyHours,
+                userScore: 8.9,
+                recommendedHours: 2.0,
+                showWarning: true,
+                showContinueButton: true
+            )
+        ) {
+            AddictionScoreFeature()
+        }
+    )
+}
+
+#Preview("Edge case: Under recommended") {
+    let userData = UserPhoneData(
+        dailyHours: 1.75,
+        addictionLevel: .sometimes,
+        sleepImpact: .rarely,
+        withoutPhoneAnxiety: .mostlyFine,
+        idleCheckFrequency: .fewTimesDay,
+        ageGroup: .age25to34
+    )
+
+    return AddictionScoreView(
+        store: Store(
+            initialState: AddictionScoreFeature.State(
+                userData: userData,
+                userHours: userData.dailyHours,
+                userScore: 1.9,
+                recommendedHours: 2.0,
+                showWarning: true,
+                showContinueButton: true
+            )
+        ) {
+            AddictionScoreFeature()
+        }
     )
 }

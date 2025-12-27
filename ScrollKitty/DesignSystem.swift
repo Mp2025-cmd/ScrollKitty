@@ -79,55 +79,55 @@ enum DesignSystem {
         
         // Font Styles
         static func splashTitle() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 65)
+            Font.custom("SofiaPro-Bold", size: 65)
         }
-        
+
         static func largeTitle() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 35)
+            Font.custom("SofiaPro-Bold", size: 35)
         }
         
         static func buttonText() -> Font {
-            Font.custom(primaryFontFamily + "-Regular", size: 20)
+            Font.custom("SofiaPro", size: 20)
         }
         
         static func subtitle() -> Font {
-            Font.custom(primaryFontFamily + "-Medium", size: 16)
+            Font.custom("SofiaPro-Medium", size: 16)
         }
         
         static func body() -> Font {
-            Font.custom(primaryFontFamily + "-Regular", size: 16)
+            Font.custom("SofiaPro", size: 16)
         }
         
         static func title40() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 40)
+            Font.custom("SofiaPro-Bold", size: 40)
         }
-        
+
         static func title30() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 30)
+            Font.custom("SofiaPro-Bold", size: 30)
         }
-        
+
         static func title24() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 24)
+            Font.custom("SofiaPro-Bold", size: 24)
         }
-        
+
         static func title20() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 20)
+            Font.custom("SofiaPro-Bold", size: 20)
         }
         
         static func body18() -> Font {
-            Font.custom(primaryFontFamily + "-Regular", size: 18)
+            Font.custom("SofiaPro", size: 18)
         }
         
         static func body12() -> Font {
-            Font.custom(primaryFontFamily + "-Regular", size: 12)
+            Font.custom("SofiaPro", size: 12)
         }
         
         static func percentage65() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 65)
+            Font.custom("SofiaPro-Bold", size: 65)
         }
-        
+
         static func percentage25() -> Font {
-            Font.custom(primaryFontFamily + "-Bold", size: 25)
+            Font.custom("SofiaPro-Bold", size: 25)
         }
         
         static func statusBarTime() -> Font {
@@ -144,11 +144,11 @@ enum DesignSystem {
         
         // Timeline Typography
         static func timelineTime() -> Font {
-            Font.custom(primaryFontFamily + "-Medium", size: 12)
+            Font.custom("SofiaPro-Medium", size: 12)
         }
         
         static func timelineMessage() -> Font {
-            Font.custom(primaryFontFamily + "-Semi_Bold", size: 14)
+            Font.custom("SofiaPro-SemiBold", size: 14)
         }
         
         // Letter Spacing

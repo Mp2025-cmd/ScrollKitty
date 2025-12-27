@@ -18,6 +18,7 @@ struct HomeFeature {
         var isLoading = false
         var timeline = TimelineFeature.State()
         @Presents var bypassFlow: ShieldBypassFlowFeature.State?
+        @Presents var settings: SettingsFeature.State?
         var cachedBypassMessage: String?
     }
     
@@ -31,6 +32,8 @@ struct HomeFeature {
         case tabSelected(HomeTab)
         case timeline(TimelineFeature.Action)
         case bypassFlow(PresentationAction<ShieldBypassFlowFeature.Action>)
+        case settings(PresentationAction<SettingsFeature.Action>)
+        case showSettings
         case showBypassFlow
         case checkPendingBypassFlow
     }
@@ -99,6 +102,10 @@ struct HomeFeature {
                 return .none
                 
             case .timeline:
+                return .none
+
+            case .showSettings:
+                state.settings = SettingsFeature.State()
                 return .none
 
             case .showBypassFlow:
@@ -183,6 +190,13 @@ struct HomeFeature {
             case .bypassFlow:
                 return .none
 
+            case .settings(.presented(.dismissTapped)):
+                state.settings = nil
+                return .none
+
+            case .settings:
+                return .none
+
             case .binding:
                 return .none
 
@@ -190,6 +204,9 @@ struct HomeFeature {
         }
         .ifLet(\.$bypassFlow, action: \.bypassFlow) {
             ShieldBypassFlowFeature()
+        }
+        .ifLet(\.$settings, action: \.settings) {
+            SettingsFeature()
         }
 
         Scope(state: \.timeline, action: \.timeline) {
@@ -290,6 +307,9 @@ struct HomeView: View {
             ShieldBypassFlowView(store: store)
                 .presentationDetents([.large])
         }
+        .sheet(item: $store.scope(state: \.settings, action: \.settings)) { store in
+            SettingsView(store: store)
+        }
     }
 
     @ViewBuilder
@@ -322,15 +342,27 @@ struct HomeView: View {
     @ViewBuilder
     private var dashboardContent: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
+            ZStack {
                 Text("Scroll Kitty")
                     .font(.custom("Sofia Pro-Bold", size: 36))
                     .tracking(-1)
                     .foregroundColor(DesignSystem.Colors.primaryText)
-                Spacer()
+
+                HStack {
+                    Spacer()
+                    Button {
+                        store.send(.showSettings)
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(DesignSystem.Colors.primaryText)
+                            .padding(12)
+                    }
+                    .accessibilityLabel("Settings")
+                }
             }
             .padding(.top, 16)
+            .padding(.horizontal, 8)
 
             Spacer()
 

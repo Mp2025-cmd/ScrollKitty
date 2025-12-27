@@ -150,26 +150,29 @@ struct TimelineTemplateMessages {
 
     // MARK: - Daily Welcome (shown later in Timeline, so past tense too)
     static let dailyWelcome: [String] = [
-        "This morning felt like a clean reset. I wanted a lighter day.",
-        "You started the day with a fresh bar. I wanted you to keep it gentle.",
-        "The day began steady. I wanted us to stay intentional.",
-        "This morning felt calm. I wanted fewer automatic checks.",
-        "You got a fresh start today. I wanted you present early.",
-        "The reset felt good. I wanted you to protect that feeling.",
-        "Today started clean. I wanted the first hour to be yours.",
-        "This morning felt stable. I wanted less reaching for the screen.",
-        "The day opened quietly. I wanted you grounded before the feed.",
-        "This morning felt like a chance to recover. I wanted smaller pulls.",
-        "You started with full energy. I wanted a softer pace.",
-        "The reset felt real. I wanted us to not lose it quickly.",
-        "This morning felt clear. I wanted fewer quick checks.",
-        "The day began steady. I wanted you to choose on purpose.",
-        "You had a new start today. I wanted less scrolling for relief.",
-        "This morning felt light. I wanted us to keep it that way.",
-        "The reset felt strong. I wanted you to hold onto control.",
-        "Today started clean. I wanted fewer distractions early.",
-        "This morning felt better. I wanted a day that stayed yours.",
-        "The day began calm. I wanted us to move slower."
+        
+            "We’re starting fresh today. Let’s keep it light.",
+            "You’ve got a full start this morning. Try not to rush into the screen.",
+            "The day just started. Let’s be a little more intentional.",
+            "This morning is calm so far. Let’s not break it automatically.",
+            "You’re starting clean today. Stay present early.",
+            "The reset helped. Let’s not undo it right away.",
+            "New day. Try to keep the first hour yours.",
+            "Things feel steady this morning. Less reaching for the phone.",
+            "The day opened quietly. Pause before the feed pulls you in.",
+            "We’ve got a chance to recover today. Go easy on the pulls.",
+            "You’re starting with energy. Let’s pace it.",
+            "Fresh start today. Let’s not lose it fast.",
+            "This morning is clear so far. Fewer quick checks.",
+            "The day just began. Make choices on purpose.",
+            "New start today. Try not to scroll for relief.",
+            "This morning feels lighter. Let’s keep it that way.",
+            "You’re in control right now. Hold onto it.",
+            "Clean start today. Fewer early distractions.",
+            "This morning feels better. Let’s protect that.",
+            "The day is calm so far. Move a little slower."
+        
+
     ]
 
     // MARK: - Message Selection (unchanged)

@@ -33,5 +33,12 @@
 	</array>
 	<key>NSScreenTimeAPIUsageDescription</key>
 	<string>We need access to your screen time to help you manage your phone usage and keep Scroll Kitty healthy!</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/Sofia Pro Regular Az.otf</string>
+		<string>Fonts/Sofia Pro Bold Az.otf</string>
+		<string>Fonts/Sofia Pro Medium Az.otf</string>
+		<string>Fonts/Sofia Pro Semi Bold Az.otf</string>
+	</array>
 </dict>
 </plist>

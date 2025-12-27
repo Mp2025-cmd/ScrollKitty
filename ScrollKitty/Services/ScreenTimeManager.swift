@@ -158,7 +158,11 @@ extension ScreenTimeManager: DependencyKey {
             }
         },
         startMonitoring: {
-            try await startDeviceActivityMonitoring()
+            @Dependency(\.dateProvider) var dateProvider
+            try await startDeviceActivityMonitoring(
+                now: dateProvider.now(),
+                calendar: dateProvider.calendar()
+            )
         },
         stopMonitoring: {
             await stopDeviceActivityMonitoring()
@@ -167,7 +171,11 @@ extension ScreenTimeManager: DependencyKey {
             await applyShieldsToSelectedApps()
         },
         removeShieldsAndStartCooldown: {
-            await removeShieldsAndStartCooldownImpl()
+            @Dependency(\.dateProvider) var dateProvider
+            await removeShieldsAndStartCooldownImpl(
+                now: dateProvider.now(),
+                calendar: dateProvider.calendar()
+            )
         }
     )
 
@@ -208,29 +216,105 @@ extension DependencyValues {
 
     // MARK: - DeviceActivity Monitoring
     
-    private func startDeviceActivityMonitoring() async throws {
+    private func startDeviceActivityMonitoring(now: Date, calendar: Calendar) async throws {
         let center = DeviceActivityCenter()
         
         // 1. Stop any existing monitoring
         await stopDeviceActivityMonitoring()
-        
-        // 2. Create Schedule (All Day)
-        // We monitor 24/7 so the shield is always active until unlocked
+
+        let defaults = UserDefaults(suiteName: "group.com.scrollkitty.app")
+
+        // If missing, fall back to a full-day schedule (defensive; onboarding should set this).
+        let scheduleModel: BlockingSchedule = {
+            guard let data = defaults?.data(forKey: "blockingSchedule"),
+                  let decoded = try? JSONDecoder().decode(BlockingSchedule.self, from: data) else {
+                let start = calendar.date(from: DateComponents(hour: 0, minute: 0)) ?? now
+                let end = calendar.date(from: DateComponents(hour: 23, minute: 59)) ?? now
+                return BlockingSchedule(
+                    name: "All day",
+                    emoji: "⏰",
+                    startTime: start,
+                    endTime: end,
+                    selectedDays: Set(Weekday.allCases),
+                    isEnabled: true
+                )
+            }
+            return decoded
+        }()
+
+        let startComponents = calendar.dateComponents([.hour, .minute], from: scheduleModel.startTime)
+        let endComponents = calendar.dateComponents([.hour, .minute], from: scheduleModel.endTime)
+
         let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
-            intervalEnd: DateComponents(hour: 23, minute: 59),
+            intervalStart: DateComponents(hour: startComponents.hour ?? 0, minute: startComponents.minute ?? 0),
+            intervalEnd: DateComponents(hour: endComponents.hour ?? 23, minute: endComponents.minute ?? 59),
             repeats: true
         )
-        
-        // 3. Start Monitoring (No Events needed for active shielding)
-        let activityName = DeviceActivityName("daily_monitor")
 
+        let activityName = DeviceActivityName("blocking_schedule")
         try center.startMonitoring(activityName, during: schedule)
+
+        // Apply immediately if we start monitoring during the active window.
+        if shouldApplyShieldsNow(schedule: scheduleModel, defaults: defaults, calendar: calendar, now: now) {
+            await applyShieldsToSelectedApps()
+        } else {
+            // Ensure shields are not active outside the schedule.
+            let store = ManagedSettingsStore()
+            store.shield.applications = nil
+            store.shield.applicationCategories = nil
+            store.shield.webDomains = nil
+        }
     }
     
     private func stopDeviceActivityMonitoring() async {
         let center = DeviceActivityCenter()
-        center.stopMonitoring([DeviceActivityName("daily_monitor")])
+        center.stopMonitoring([
+            DeviceActivityName("daily_monitor"),
+            DeviceActivityName("blocking_schedule")
+        ])
+    }
+
+	    private func shouldApplyShieldsNow(
+	        schedule: BlockingSchedule,
+	        defaults: UserDefaults?,
+	        calendar: Calendar,
+	        now: Date
+	    ) -> Bool {
+	        guard schedule.isEnabled else { return false }
+
+	        // Respect selected days (if empty, treat as inactive).
+	        let weekdayIndex = calendar.component(.weekday, from: now) - 1
+	        let weekday = Weekday(rawValue: weekdayIndex)
+	        guard let weekday, schedule.selectedDays.contains(weekday) else { return false }
+
+        // Respect cooldown.
+        if let defaults {
+            let ts = defaults.double(forKey: "cooldownEnd")
+            if ts > 0, Date(timeIntervalSince1970: ts) > now { return false }
+        }
+
+        let start = calendar.dateComponents([.hour, .minute], from: schedule.startTime)
+        let end = calendar.dateComponents([.hour, .minute], from: schedule.endTime)
+        guard let startHour = start.hour,
+              let startMinute = start.minute,
+              let endHour = end.hour,
+              let endMinute = end.minute else { return false }
+
+        let nowMinutes = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
+        let startMinutes = startHour * 60 + startMinute
+        let endMinutes = endHour * 60 + endMinute
+
+        if startMinutes == endMinutes {
+            // Treat as always active (24h).
+            return true
+        }
+
+        if startMinutes < endMinutes {
+            return nowMinutes >= startMinutes && nowMinutes < endMinutes
+        } else {
+            // Crosses midnight.
+            return nowMinutes >= startMinutes || nowMinutes < endMinutes
+        }
     }
 
     private func applyShieldsToSelectedApps() async {
@@ -246,7 +330,7 @@ extension DependencyValues {
         store.shield.applicationCategories = .specific(selection.categoryTokens)
     }
 
-    private func removeShieldsAndStartCooldownImpl() async {
+    private func removeShieldsAndStartCooldownImpl(now: Date, calendar: Calendar) async {
         let store = ManagedSettingsStore()
         let defaults = UserDefaults.appGroup
         let activityCenter = DeviceActivityCenter()
@@ -262,7 +346,7 @@ extension DependencyValues {
         defaults.removeObject(forKey: "selectedBypassMinutes")
 
         // Set cooldown end time
-        let cooldownEnd = Date().addingTimeInterval(Double(cooldownMinutes * 60))
+        let cooldownEnd = now.addingTimeInterval(Double(cooldownMinutes * 60))
         defaults.set(cooldownEnd.timeIntervalSince1970, forKey: "cooldownEnd")
 
         // Remove shields
@@ -271,9 +355,6 @@ extension DependencyValues {
         store.shield.webDomains = nil
 
         // Schedule reshield
-        let calendar = Calendar.current
-        let now = Date()
-
         guard let endTime = calendar.date(byAdding: .minute, value: cooldownMinutes, to: now) else {
             return
         }

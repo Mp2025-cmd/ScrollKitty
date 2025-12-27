@@ -50,6 +50,7 @@ struct ShieldBypassFlowFeature {
 
     @Dependency(\.bypassMessageService) var bypassMessageService
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.haptics) var haptics
 
     private enum CancelID {
         static let characterAnimation = "ShieldBypassFlowFeature.characterAnimation"
@@ -78,17 +79,39 @@ struct ShieldBypassFlowFeature {
                 return startAnimation(into: &state, text: message)
 
             case .characterTick:
-                let currentIndex = state.displayedText.count
-                guard currentIndex < state.fullText.count else {
+                let currentCharacterIndex = state.displayedText.count
+                guard currentCharacterIndex < state.fullText.count else {
                     return .send(.animationComplete)
                 }
                 
-                let index = state.fullText.index(state.fullText.startIndex, offsetBy: currentIndex)
-                state.displayedText.append(state.fullText[index])
-                if state.displayedText.count >= state.fullText.count {
-                    return .send(.animationComplete)
+                let nextCharacterIndex = state.fullText.index(state.fullText.startIndex, offsetBy: currentCharacterIndex)
+                let nextCharacter = state.fullText[nextCharacterIndex]
+                let previousCharacter = state.displayedText.last
+
+                state.displayedText.append(nextCharacter)
+
+                let isLastCharacter = currentCharacterIndex == (state.fullText.count - 1)
+                let completedWord = (nextCharacter.isWhitespace && previousCharacter != nil && !(previousCharacter?.isWhitespace ?? true))
+                let completedFinalWord = (isLastCharacter && !nextCharacter.isWhitespace)
+                let shouldHaptic = completedWord || completedFinalWord
+
+                var effects: [Effect<Action>] = []
+
+                if shouldHaptic {
+                    let haptics = self.haptics
+                    effects.append(.run { _ in
+                        await haptics.wordTick()
+                    })
                 }
-                return .none
+
+                if state.displayedText.count >= state.fullText.count {
+                    effects.append(.send(.animationComplete))
+                }
+
+                if effects.isEmpty {
+                    return .none
+                }
+                return .merge(effects)
 
             case .animationComplete:
                 switch state.stage {

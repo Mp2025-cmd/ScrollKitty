@@ -94,10 +94,14 @@ struct OnboardingView: View {
                     .toolbarRole(.editor)
                     .navigationBarBackButtonHidden(true)
 
-            // FocusWindow skipped - commented out
-            // case let .focusWindow(store):
-            //     FocusWindowView(store: store)
-            //         .toolbarRole(.editor)
+            case let .blockingSchedulePreset(store):
+                BlockingSchedulePresetView(store: store)
+                    .toolbarRole(.editor)
+                    .navigationBarBackButtonHidden(true)
+
+            case let .blockingScheduleDetail(store):
+                BlockingScheduleDetailView(store: store)
+                    .toolbarRole(.editor)
                     .navigationBarBackButtonHidden(true)
 
             case let .characterIntro(store):
